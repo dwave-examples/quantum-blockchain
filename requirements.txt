@@ -1,0 +1,2 @@
+dash[diskcache]~=3.0
+dwave-ocean-sdk~=8.3
