@@ -71,6 +71,47 @@ def render_initial_state(slider_value: int) -> str:
     return f"Put demo input here. The current slider value is {slider_value}."
 
 
+@dash.callback(
+    Output("miner_display", "src"),
+    inputs=[
+        Input("miner_graph_update", "n_intervals"),
+    ],
+)
+def render_miner_graph(n_intervals: int) -> str:
+    """Runs on load and any time the value of the slider is updated.
+        Add `prevent_initial_call=True` to skip on load runs.
+
+    Args:
+        slider_value: The value of the slider.
+
+    Returns:
+        str: The content of the input tab.
+    """
+    pet_num = n_intervals % 10 + 1
+    return f"static/pet{pet_num}.jpg"
+
+
+@dash.callback(
+    Output("global_display", "src"),
+    inputs=[
+        Input("global_graph_update", "n_intervals"),
+    ],
+)
+def render_global_graph(n_intervals: int) -> str:
+    """Runs on load and any time the value of the slider is updated.
+        Add `prevent_initial_call=True` to skip on load runs.
+
+    Args:
+        slider_value: The value of the slider.
+
+    Returns:
+        str: The content of the input tab.
+    """
+    pet_num = n_intervals % 10 + 1
+    return f"static/pet{pet_num}.jpg"
+
+
+
 class RunOptimizationReturn(NamedTuple):
     """Return type for the ``run_optimization`` callback function."""
 
@@ -101,7 +142,7 @@ class RunOptimizationReturn(NamedTuple):
         (Output("run-button", "className"), "display-none", ""),  # Hides run button while running.
         (Output("results-tab", "disabled"), True, False),  # Disables results tab while running.
         (Output("results-tab", "label"), "Loading...", "Results"),
-        (Output("tabs", "value"), "input-tab", "input-tab"),  # Switch to input tab while running.
+        (Output("tabs", "value"), "miner-tab", "miner-tab"),  # Switch to input tab while running.
         (Output("run-in-progress", "data"), True, False),  # Can block certain callbacks.
     ],
     cancel=[Input("cancel-button", "n_clicks")],

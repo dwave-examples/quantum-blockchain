@@ -331,45 +331,28 @@ def create_interface():
                         children=[
                             dcc.Tabs(
                                 id="tabs",
-                                value="input-tab",
+                                value="miner-tab",
                                 mobile_breakpoint=0,
                                 children=[
                                     dcc.Tab(
-                                        label="Input",
-                                        id="input-tab",
-                                        value="input-tab",  # used for switching tabs programatically
+                                        label="Miner View",
+                                        id="miner-tab",
+                                        value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Loading(
-                                                parent_className="input",
-                                                type="circle",
-                                                color=THEME_COLOR_SECONDARY,
-                                                # A Dash callback (in app.py) will generate content in the Div below
-                                                children=html.Div(id="input"),
-                                            ),
+                                            dcc.Interval(id="miner_graph_update", interval=2000),
+                                            html.Img(id="miner_display", width=800),                                          
                                         ],
                                     ),
                                     dcc.Tab(
-                                        label="Results",
-                                        id="results-tab",
+                                        label="Global View",
+                                        id="global-tab",
+                                        value="global-tab",
                                         className="tab",
-                                        disabled=True,
                                         children=[
-                                            html.Div(
-                                                className="tab-content-results",
-                                                children=[
-                                                    dcc.Loading(
-                                                        parent_className="results",
-                                                        type="circle",
-                                                        color=THEME_COLOR_SECONDARY,
-                                                        # A Dash callback (in app.py) will generate content in the Div below
-                                                        children=html.Div(id="results"),
-                                                    ),
-                                                    # Problem details dropdown
-                                                    html.Div([html.Hr(), problem_details(1)]),
-                                                ],
-                                            )
-                                        ],
+                                            dcc.Interval(id="global_graph_update", interval=2000),
+                                            html.Img(id="global_display", width=800),
+                                        ]
                                     ),
                                 ],
                             )
