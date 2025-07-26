@@ -132,6 +132,21 @@ def radio(label: str, id: str, options: list, value: int, inline: bool = True) -
         ],
     )
 
+def num_blocks_input() -> html.Div:
+    return html.Div(
+        className="blocks-input-wrapper",
+        children=[
+            html.Label("Number of Blocks"),
+            dcc.Input(
+                value=10,
+                type= "number",
+                min=2,
+                max=200,
+                step=1
+            )
+        ],
+    )
+
 
 def generate_options(options_list: list) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
@@ -156,38 +171,11 @@ def generate_settings_form() -> html.Div:
         className="settings",
         children=[
             slider(
-                "Example Slider",
+                "Number of Miners",
                 "slider",
                 SLIDER,
             ),
-            dropdown(
-                "Example Dropdown",
-                "dropdown",
-                sorted(dropdown_options, key=lambda op: op["value"]),
-            ),
-            checklist(
-                "Example Checklist",
-                "checklist",
-                sorted(checklist_options, key=lambda op: op["value"]),
-                [0],
-            ),
-            radio(
-                "Example Radio",
-                "radio",
-                sorted(radio_options, key=lambda op: op["value"]),
-                0,
-            ),
-            dropdown(
-                "Solver",
-                "solver-type-select",
-                sorted(solver_options, key=lambda op: op["value"]),
-            ),
-            html.Label("Solver Time Limit (seconds)"),
-            dcc.Input(
-                id="solver-time-limit",
-                type="number",
-                **SOLVER_TIME,
-            ),
+            num_blocks_input(),
         ],
     )
 
@@ -197,10 +185,10 @@ def generate_run_buttons() -> html.Div:
     return html.Div(
         id="button-group",
         children=[
-            html.Button(id="run-button", children="Run Optimization", n_clicks=0, disabled=False),
+            html.Button(id="run-button", children="Begin Simulation", n_clicks=0, disabled=False),
             html.Button(
                 id="cancel-button",
-                children="Cancel Optimization",
+                children="Pause Simulation",
                 n_clicks=0,
                 className="display-none",
             ),
@@ -340,7 +328,7 @@ def create_interface():
                                         value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="miner_graph_update", interval=2000),
+                                            dcc.Interval(id="miner_graph_update", interval=1200),
                                             html.Img(id="miner_display", width=800),                                          
                                         ],
                                     ),

@@ -87,8 +87,8 @@ def render_miner_graph(n_intervals: int) -> str:
     Returns:
         str: The content of the input tab.
     """
-    pet_num = n_intervals % 10 + 1
-    return f"static/pet{pet_num}.jpg"
+    graph_num = n_intervals % 25 + 1
+    return f"static/graphs/miner_graph{graph_num}.png"
 
 
 @dash.callback(

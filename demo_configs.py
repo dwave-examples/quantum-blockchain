@@ -22,10 +22,10 @@ THEME_COLOR_SECONDARY = "#2A7DE1"  # D-Wave blue default #2A7DE1
 
 THUMBNAIL = "static/dwave_logo.svg"
 
-APP_TITLE = "Demo Name"
-MAIN_HEADER = "Demo Name"
+APP_TITLE = "Quantum Blockchain"
+MAIN_HEADER = "Quantum Blockchain"
 DESCRIPTION = """\
-This is a Dash template for new examples. It includes some basic settings, tabs, and styling.
+A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Quantum Annealer
 """
 
 #######################################
@@ -34,10 +34,10 @@ This is a Dash template for new examples. It includes some basic settings, tabs,
 
 # an example slider
 SLIDER = {
-    "min": 1,
-    "max": 10,
+    "min": 3,
+    "max": 50,
     "step": 1,
-    "value": 5,
+    "value": 7,
 }
 
 # an example dropdown
