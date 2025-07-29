@@ -21,7 +21,7 @@ from dash import MATCH, ctx
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_interface import generate_problem_details_table_rows
+from demo_interface import generate_miner_status_table
 from src.demo_enums import SolverType
 
 
@@ -69,6 +69,24 @@ def render_initial_state(slider_value: int) -> str:
         str: The content of the input tab.
     """
     return f"Put demo input here. The current slider value is {slider_value}."
+
+@dash.callback(
+    Output("miner_stats", "children"),
+    inputs=[
+        Input("miner_stats_update", "n_intervals"),
+    ],
+)
+def render_miner_status(n_intervals: int) -> list:
+    """Runs on load and any time the value of the slider is updated.
+        Add `prevent_initial_call=True` to skip on load runs.
+
+    Args:
+        slider_value: The value of the slider.
+
+    Returns:
+        str: The content of the input tab.
+    """
+    return generate_miner_status_table()
 
 
 @dash.callback(

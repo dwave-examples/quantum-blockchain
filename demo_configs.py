@@ -49,6 +49,8 @@ CHECKLIST = ["Option 1", "Option 2"]
 # an example radio list
 RADIO = ["Option 1", "Option 2"]
 
+MINER_STATUS = ["True", "False", "False", "True", "False", "William Jennings-Bryan"]
+
 # solver time limits in seconds (value means default)
 SOLVER_TIME = {
     "min": 10,

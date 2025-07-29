@@ -27,6 +27,7 @@ from demo_configs import (
     SOLVER_TIME,
     THEME_COLOR_SECONDARY,
     THUMBNAIL,
+    MINER_STATUS
 )
 from src.demo_enums import SolverType
 
@@ -196,6 +197,18 @@ def generate_run_buttons() -> html.Div:
     )
 
 
+def generate_miner_status_table(miner_status: list = MINER_STATUS) -> list[html.Tr]:
+    """Generates table rows 
+    """
+
+    table_rows = (
+        [f"Miner {i}" for i in range(len(miner_status))],
+        [stat for stat in miner_status]
+        ### Add more table rows here. Each tuple is a row in the table.
+    )
+
+    return [html.Tr([html.Td(cell) for cell in row]) for row in table_rows]
+
 def generate_problem_details_table_rows(solver: str, time_limit: int) -> list[html.Tr]:
     """Generates table rows for the problem details table.
 
@@ -328,8 +341,10 @@ def create_interface():
                                         value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
+                                            dcc.Interval(id="miner_stats_update", interval=500),  
+                                            html.Div(id="miner_stats"),   
                                             dcc.Interval(id="miner_graph_update", interval=1200),
-                                            html.Img(id="miner_display", width=800),                                          
+                                            html.Img(id="miner_display", width=800),                                  
                                         ],
                                     ),
                                     dcc.Tab(
