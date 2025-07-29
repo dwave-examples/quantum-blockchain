@@ -1,0 +1,75 @@
+"""
+Modifictions:
+    - Added docstrings to the class and methods.
+
+"""
+
+import binascii
+import json
+
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
+
+from src.common.utils import calculate_hash
+
+
+class Stack:
+    def __init__(self):
+        self.elements = []
+
+    def push(self, element):
+        self.elements.append(element)
+
+    def pop(self):
+        return self.elements.pop()
+
+
+class StackScript(Stack):
+    """This class is used to execute the unlocking and locking scripts of a transaction.
+    It is designed to mirror the behavior of the Bitcoin Script language. This script is
+    used to execute transactions and gets called by the Transaction class.
+
+    For more, see https://medium.com/@gruyaume/create-your-own-blockchain-using-python-pt-5-d90cff185380
+    """
+    def __init__(self, transaction_data: dict):
+        """Initializes the StackScript object.
+
+        Args:
+            transaction_data (dict): A dictionary containing the transaction data, including inputs and outputs.
+        """
+        super().__init__()
+        for count, tx_input in enumerate(transaction_data["inputs"]):
+            tx_input.pop("unlocking_script")
+            transaction_data["inputs"][count] = tx_input
+        self.transaction_data = transaction_data
+
+    def op_dup(self):
+        """Duplicates the top element of the stack."""
+        last_element = self.pop()
+        self.push(last_element)
+        self.push(last_element)
+
+    def op_hash160(self):
+        """Hashes the top element of the stack with SHA-256 and then RIPEMD-160."""
+        last_element = self.pop()
+        self.push(calculate_hash(calculate_hash(last_element, hash_function="sha256"), hash_function="ripemd160"))
+
+    def op_equal_verify(self):
+        """Compares the top two elements of the stack and raises an exception if they are not equal."""
+        last_element_1 = self.pop()
+        last_element_2 = self.pop()
+        assert last_element_1 == last_element_2
+
+    def op_checksig(self):
+        """Verifies a signature using a public key."""
+        public_key = self.pop()
+        signature = self.pop()
+        signature_decoded = binascii.unhexlify(signature.encode("utf-8"))
+        public_key_bytes = public_key.encode("utf-8")
+        public_key_object = RSA.import_key(binascii.unhexlify(public_key_bytes))
+        transaction_bytes = json.dumps(self.transaction_data, indent=2).encode('utf-8')
+        transaction_hash = SHA256.new(transaction_bytes)
+        pkcs1_15.new(public_key_object).verify(transaction_hash, signature_decoded)
+
+
