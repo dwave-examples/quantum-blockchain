@@ -15,15 +15,21 @@
 from __future__ import annotations
 
 from typing import NamedTuple, Union
+import os, json
+from pathlib import Path
 
 import dash
 from dash import MATCH, ctx
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
+import networkx as nx
+from plotly import graph_objects as go
+import plotly.express as px
 
 from demo_interface import generate_miner_status_table
 from src.demo_enums import SolverType
-
+from src.common.block_score_tree import BlockScoreTree
+from demo_configs import GRAPHS_FILEPATH
 
 @dash.callback(
     Output({"type": "to-collapse-class", "index": MATCH}, "className"),
@@ -95,7 +101,7 @@ def render_miner_status(n_intervals: int) -> list:
         Input("miner_graph_update", "n_intervals"),
     ],
 )
-def render_miner_graph(n_intervals: int) -> str:
+def render_miner_graph(n_intervals: int):
     """Runs on load and any time the value of the slider is updated.
         Add `prevent_initial_call=True` to skip on load runs.
 
@@ -105,9 +111,30 @@ def render_miner_graph(n_intervals: int) -> str:
     Returns:
         str: The content of the input tab.
     """
-    graph_num = n_intervals % 25 + 1
-    return f"static/graphs/miner_graph{graph_num}.png"
 
+    ALT_MINER_FILES = [os.path.join(GRAPHS_FILEPATH, f"miner_graph{n}.png") for n in range(10)]
+
+    base_graph_name = os.path.join(GRAPHS_FILEPATH, "miner_graph.png")
+    current = 0
+    next = 1
+    found = False
+
+    for i in range(10):
+        if os.path.exists(ALT_MINER_FILES[i]):
+            current = i
+            next = (i +1)%10
+            found = True
+
+    if os.path.exists(base_graph_name):
+        os.rename(base_graph_name, ALT_MINER_FILES[next])
+        os.remove(ALT_MINER_FILES[current])
+        graph_file = ALT_MINER_FILES[next]
+    elif found:
+        graph_file  = ALT_MINER_FILES[current]
+    else:
+        graph_file = "static/pet3.jpg"
+
+    return graph_file
 
 @dash.callback(
     Output("global_display", "src"),
@@ -125,9 +152,12 @@ def render_global_graph(n_intervals: int) -> str:
     Returns:
         str: The content of the input tab.
     """
-    pet_num = n_intervals % 10 + 1
-    return f"static/pet{pet_num}.jpg"
-
+    if os.path.exists("static/graphs/iter_num.txt"):
+        with open("static/graphs/iter_num.txt","r") as f:
+            iter_num = int(f.read())
+        return f"static/graphs/miner_graph{iter_num}.png"
+    else:
+        return "static/pet9.jpg"
 
 
 class RunOptimizationReturn(NamedTuple):

@@ -1,2 +1,11 @@
 dash[diskcache]~=3.0
 dwave-ocean-sdk~=8.3
+dwave-system>=1.30.0
+dwave-preprocessing>=0.6.8
+pycryptodome
+flask
+requests
+pandas
+numpy
+matplotlib
+pynauty ##TODO: remove

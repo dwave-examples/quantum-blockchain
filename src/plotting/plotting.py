@@ -2,6 +2,7 @@ from typing import Union
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import json, os
 
 def get_predecessors(directed_tree: nx.DiGraph, val, root=None):
     """Return all predecessors
@@ -159,6 +160,9 @@ def plot_graph(G: Union[nx.Graph,nx.DiGraph], strongest_edge_color='blue',
         
     ax.set_aspect('auto')
     plt.tight_layout()
+
+
+    plt.close
 
     if save_as is not None:
         plt.savefig(save_as)

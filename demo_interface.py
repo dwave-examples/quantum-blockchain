@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 from dash import dcc, html
+import json, os
 
 from demo_configs import (
     CHECKLIST,
@@ -27,7 +28,8 @@ from demo_configs import (
     SOLVER_TIME,
     THEME_COLOR_SECONDARY,
     THUMBNAIL,
-    MINER_STATUS
+    MINER_STATUS,
+    MINER_STATS_FILEPATH
 )
 from src.demo_enums import SolverType
 
@@ -201,10 +203,14 @@ def generate_miner_status_table(miner_status: list = MINER_STATUS) -> list[html.
     """Generates table rows 
     """
 
+    if os.path.exists(MINER_STATS_FILEPATH):
+        with open(MINER_STATS_FILEPATH, 'r') as f:
+            miner_status = json.load(f)
+
     table_rows = (
         [f"Miner {i}" for i in range(len(miner_status))],
         [stat for stat in miner_status]
-        ### Add more table rows here. Each tuple is a row in the table.
+
     )
 
     return [html.Tr([html.Td(cell) for cell in row]) for row in table_rows]
@@ -330,6 +336,8 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
+                            dcc.Interval(id="miner_stats_update", interval=500),  
+                            html.Div(id="miner_stats"),   
                             dcc.Tabs(
                                 id="tabs",
                                 value="miner-tab",
@@ -341,9 +349,7 @@ def create_interface():
                                         value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="miner_stats_update", interval=500),  
-                                            html.Div(id="miner_stats"),   
-                                            dcc.Interval(id="miner_graph_update", interval=1200),
+                                            dcc.Interval(id="miner_graph_update", interval=400),
                                             html.Img(id="miner_display", width=800),                                  
                                         ],
                                     ),
@@ -353,7 +359,7 @@ def create_interface():
                                         value="global-tab",
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="global_graph_update", interval=2000),
+                                            dcc.Interval(id="global_graph_update", interval=400),
                                             html.Img(id="global_display", width=800),
                                         ]
                                     ),

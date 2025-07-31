@@ -33,6 +33,26 @@ A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Q
 #######################################
 
 # an example slider
+TRIAL_INIT_FILENAME= "trial_init.txt"
+
+GRAPHS_FILEPATH = "assets/graphs"
+
+MINER_STATS_FILEPATH = "static/miner_stats.json"
+
+INIT_DICT = {"Miners":8, "Blocks": 20}
+
+EMBEDDINGS_DIRECTORY = "src/trials/embeddings"
+
+TRIAL_DEFAULTS = {"Validation": 64, 
+                 "Random_Solver": False, 
+                 "Profile": "default",
+                 "Random_Embedding":False, 
+                 "Solver": "Advantage_system4.1", 
+                 "Annealing_Time":0.005,
+                 "Ensemble": "PMJ", 
+                 "Scoring_Function": "Basic", 
+                 "Transactions": True,}
+
 SLIDER = {
     "min": 3,
     "max": 50,

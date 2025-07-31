@@ -2,10 +2,12 @@ import json
 import os
 import random
 import time
+import copy
 
 import networkx as nx
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from src.trials.trial_owners import TrialOwners
 from src.common.owner import Owner
@@ -15,6 +17,7 @@ from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocol
 from src.trials.graph_generator import graph_gen_main
 from src.common.initialize_default_blockchain import initialize_blockchain
 from src.common.values import NUMBER_OF_LEADING_ZEROS, TRIAL_PARAMETERS_FILE, BLOCKCHAIN_FILE
+from demo_configs import GRAPHS_FILEPATH, MINER_STATS_FILEPATH
 class TrialManager:
     """This class manages a trial of blockchain mining. The purpose of this
     class is to be able to iterate through a series of blocks and maintain
@@ -79,14 +82,13 @@ class TrialManager:
         #Intialize Output folders/structures
         self.output_dfs = []
         self.iteration_summaries = []
+        self.miner_stats_list = ["..." for i in range(self.num_miners)]
 
         self.miner_dag_dir = os.path.join(self.trial_directory, 'miner_dags')
         if not os.path.exists(self.miner_dag_dir):
             os.makedirs(self.miner_dag_dir)
             
-        self.graph_dir = os.path.join(self.trial_directory, 'graphs')
-        if not os.path.exists(self.graph_dir):
-            os.makedirs(self.graph_dir)
+        
 
 
 
@@ -118,6 +120,25 @@ class TrialManager:
         self.mining_miner = None
         self.mined_block = None
         self.mined_block_result = None
+        self.miner_stats_list = ["..." for i in range(self.num_miners)]
+
+    def update_miner_stats(self, miner: Miner, mining: bool, finished: bool, succeeded: bool = True):
+        if mining:
+            miner_status = "Min"
+        else:
+            miner_status = "Validat"
+
+        if not finished:
+            miner_status += "ing"
+        elif not succeeded:
+            miner_status += "ation failed"
+        else:
+            miner_status += "ed"
+
+        self.miner_stats_list[miner.id] = miner_status
+        with open(MINER_STATS_FILEPATH, 'w') as f:
+            json.dump(self.miner_stats_list, f)
+
 
     def record_iteration_timing(self):
         iter_total_time = self.timing["Mining_Time"][-1] + self.timing["Validation_Time"][-1]
@@ -211,12 +232,16 @@ class TrialManager:
         self.waiting_miners.remove(active_miner_id)
         active_miner = self.miners[active_miner_id]
         if self.mining_miner == None:
+            self.update_miner_stats(active_miner, True, False)
             self.create_random_transaction()
             mining = True
             self.mining_miner = active_miner
             miner_result, num_failures = self.mine_new_block(active_miner)
+            self.update_miner_stats(active_miner, True, True)
         else:
+            self.update_miner_stats(active_miner, False, False)
             miner_result, num_failures = self.validate_new_block(active_miner)
+            self.update_miner_stats(active_miner, False, True, succeeded=(num_failures == 0))
                 
         block_score = int(1 -2 * (num_failures != 0))
         active_miner.add_block_to_chain(self.mined_block, block_score)
@@ -280,12 +305,33 @@ class TrialManager:
         for miner in self.miners: #TODO change as necessary to allow this to be easily read in.
             out_loc = os.path.join(miner.subdir, self.chain_rep_file_suffix)
             miner.blockchain.tree.write_to_file(out_loc)
-            dag_file_name = 'dag_' + str(miner.id) + '.json'
+            dag_file_name = f"dag_{miner.id}.json"
             miner.blockchain.tree.write_to_file_json(os.path.join(self.miner_dag_dir, dag_file_name))
-
-        graph_gen_main(self.miner_dag_dir, save_as=os.path.join(self.graph_dir, f"global_graph.png"))
-        graph_gen_main(self.miner_dag_dir, save_as=os.path.join(self.graph_dir, f"miner_graph.png"), miner=0)
+            
+        #miner_fileA = os.path.join(GRAPHS_FILEPATH, "miner_graphA.json")
+        #miner_fileB = os.path.join(GRAPHS_FILEPATH, "miner_graphB.json")
         
+        #if os.path.exists(miner_fileA):
+            #os.remove(miner_fileA)
+            #miner_graph_file = miner_fileB
+        #else:
+            #if os.path.exists(miner_fileB):
+                #os.remove(miner_fileB)
+            #miner_graph_file = miner_fileA
 
+        #if os.path.exists(GRAPHS_FILEPATH):
+         #   p = Path(GRAPHS_FILEPATH)
+          #  for file in p.iterdir():
+           #     if not os.path.isdir(file):
+            #        os.remove(file)
+        
+        miner_graph_file = os.path.join(GRAPHS_FILEPATH, "miner_graph.png")
+        global_graph_file = os.path.join(GRAPHS_FILEPATH, "global_graph.png")
+        #old_global_file = os.path.join(self.graph_dir, f"global_graph{self.iteration_number - 1}.png")
+        #if os.path.exists(old_global_file):
+            #os.remove(old_global_file)
+
+        graph_gen_main(self.miner_dag_dir, save_as=miner_graph_file, miner=0)
+        graph_gen_main(self.miner_dag_dir, save_as=global_graph_file)
 
 
