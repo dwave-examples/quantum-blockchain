@@ -22,14 +22,17 @@ import dash
 from dash import MATCH, ctx
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-import networkx as nx
-from plotly import graph_objects as go
-import plotly.express as px
 
 from demo_interface import generate_miner_status_table
 from src.demo_enums import SolverType
-from src.common.block_score_tree import BlockScoreTree
-from demo_configs import GRAPHS_FILEPATH
+from demo_configs import(GRAPHS_PATH, 
+                         DYNAMIC_PARAMS_PATH, 
+                         BASE_MINER_GRAPH_FILE, 
+                         BASE_GLOBAL_GRAPH_FILE,
+                         STATIC_PARAMS_FILE,
+                         TRIAL_INIT_FILE,
+                         MIN_MINERS,
+                         PAUSE_FILE )
 
 @dash.callback(
     Output({"type": "to-collapse-class", "index": MATCH}, "className"),
@@ -112,9 +115,8 @@ def render_miner_graph(n_intervals: int):
         str: The content of the input tab.
     """
 
-    ALT_MINER_FILES = [os.path.join(GRAPHS_FILEPATH, f"miner_graph{n}.png") for n in range(10)]
+    ALT_MINER_FILES = [os.path.join(GRAPHS_PATH, f"miner_graph{n}.png") for n in range(10)]
 
-    base_graph_name = os.path.join(GRAPHS_FILEPATH, "miner_graph.png")
     current = 0
     next = 1
     found = False
@@ -125,14 +127,14 @@ def render_miner_graph(n_intervals: int):
             next = (i +1)%10
             found = True
 
-    if os.path.exists(base_graph_name):
-        os.rename(base_graph_name, ALT_MINER_FILES[next])
+    if os.path.exists(BASE_MINER_GRAPH_FILE):
+        os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next])
         os.remove(ALT_MINER_FILES[current])
         graph_file = ALT_MINER_FILES[next]
     elif found:
         graph_file  = ALT_MINER_FILES[current]
     else:
-        graph_file = "static/pet3.jpg"
+        graph_file = "static/pet1.jpg"
 
     return graph_file
 
@@ -152,13 +154,29 @@ def render_global_graph(n_intervals: int) -> str:
     Returns:
         str: The content of the input tab.
     """
-    if os.path.exists("static/graphs/iter_num.txt"):
-        with open("static/graphs/iter_num.txt","r") as f:
-            iter_num = int(f.read())
-        return f"static/graphs/miner_graph{iter_num}.png"
-    else:
-        return "static/pet9.jpg"
 
+    ALT_GLOBAL_FILES = [os.path.join(GRAPHS_PATH, f"global_graph{n}.png") for n in range(10)]
+
+    current = 0
+    next = 1
+    found = False
+
+    for i in range(10):
+        if os.path.exists(ALT_GLOBAL_FILES[i]):
+            current = i
+            next = (i +1)%10
+            found = True
+
+    if os.path.exists(BASE_GLOBAL_GRAPH_FILE):
+        os.rename(BASE_GLOBAL_GRAPH_FILE, ALT_GLOBAL_FILES[next])
+        os.remove(ALT_GLOBAL_FILES[current])
+        graph_file = ALT_GLOBAL_FILES[next]
+    elif found:
+        graph_file  = ALT_GLOBAL_FILES[current]
+    else:
+        graph_file = "static/pet2.jpg"
+
+    return graph_file
 
 class RunOptimizationReturn(NamedTuple):
     """Return type for the ``run_optimization`` callback function."""
@@ -168,27 +186,31 @@ class RunOptimizationReturn(NamedTuple):
     # Add more return variables here. Return values for callback functions
     # with many variables should be returned as a NamedTuple for clarity.
 
+@dash.callback(
+    Output("bucket", "children"),
+    inputs=[
+        Input("cancel-button", "n_clicks"),
+    ],
+)
+def pause_simulation(pause_click: int):
+    with open(PAUSE_FILE, "w") as f:
+        f.write("")
+    return "Paused"
 
 @dash.callback(
     # The Outputs below must align with `RunOptimizationReturn`.
-    Output("results", "children"),
-    Output("problem-details", "children"),
+    Output("bucket", "children"),
     background=True,
     inputs=[
         # The first string in the Input/State elements below must match an id in demo_interface.py
         # Remove or alter the following id's to match any changes made to demo_interface.py
         Input("run-button", "n_clicks"),
-        State("solver-type-select", "value"),
-        State("solver-time-limit", "value"),
-        State("slider", "value"),
-        State("dropdown", "value"),
-        State("checklist", "value"),
-        State("radio", "value"),
+        State("miner-slider", "value"),
+        State("blocks-input", "value"),
     ],
     running=[
         (Output("cancel-button", "className"), "", "display-none"),  # Show/hide cancel button.
         (Output("run-button", "className"), "display-none", ""),  # Hides run button while running.
-        (Output("results-tab", "disabled"), True, False),  # Disables results tab while running.
         (Output("results-tab", "label"), "Loading...", "Results"),
         (Output("tabs", "value"), "miner-tab", "miner-tab"),  # Switch to input tab while running.
         (Output("run-in-progress", "data"), True, False),  # Can block certain callbacks.
@@ -196,17 +218,13 @@ class RunOptimizationReturn(NamedTuple):
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True,
 )
-def run_optimization(
+def run_simulation(
     # The parameters below must match the `Input` and `State` variables found
     # in the `inputs` list above.
     run_click: int,
-    solver_type: Union[SolverType, int],
-    time_limit: float,
-    slider_value: int,
-    dropdown_value: int,
-    checklist_value: list,
-    radio_value: int,
-) -> RunOptimizationReturn:
+    miner_slider_val: int,
+    block_input_val: int,
+) -> str:
     """Runs the optimization and updates UI accordingly.
 
     This is the main function which is called when the ``Run Optimization`` button is clicked.
@@ -216,12 +234,7 @@ def run_optimization(
 
     Args:
         run_click: The (total) number of times the run button has been clicked.
-        solver_type: The solver to use for the optimization run defined by SolverType in demo_enums.py.
-        time_limit: The solver time limit.
-        slider_value: The value of the slider.
-        dropdown_value: The value of the dropdown.
-        checklist_value: A list of the values of the checklist.
-        radio_value: The value of the radio.
+
 
     Returns:
         A NamedTuple (RunOptimizationReturn) containing all outputs to be used when updating the HTML
@@ -234,24 +247,18 @@ def run_optimization(
     # Only run optimization code if this function was triggered by a click on `run-button`.
     # Setting `Input` as exclusively `run-button` and setting `prevent_initial_call=True`
     # also accomplishes this.
+    print(run_click)
+
     if run_click == 0 or ctx.triggered_id != "run-button":
         raise PreventUpdate
+    else:
+        if not miner_slider_val:
+            miner_slider_val = MIN_MINERS
+        with open(STATIC_PARAMS_FILE, 'r') as f:
+            trial_params = json.load(f)
+        trial_params.update({"Miners":miner_slider_val,"Blocks":block_input_val})
+        with open(TRIAL_INIT_FILE, 'w') as f:
+            json.dump(trial_params, f)
 
-    solver_type = SolverType(solver_type)
 
-
-    ###########################
-    ### YOUR CODE GOES HERE ###
-    ###########################
-
-
-    # Generates a list of table rows for the problem details table.
-    problem_details_table = generate_problem_details_table_rows(
-        solver=solver_type.label,
-        time_limit=time_limit,
-    )
-
-    return RunOptimizationReturn(
-        results="Put demo results here.",
-        problem_details_table=problem_details_table,
-    )
+    return "Not an error!"

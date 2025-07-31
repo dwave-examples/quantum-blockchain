@@ -14,6 +14,8 @@
 
 """This file stores input parameters for the app."""
 
+import os
+
 # THEME_COLOR is used for the button, text, and banner and should be dark
 # and pass accessibility checks with white: https://webaim.org/resources/contrastchecker/
 # THEME_COLOR_SECONDARY can be light or dark and is used for sliders, loading icon, and tabs
@@ -33,31 +35,41 @@ A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Q
 #######################################
 
 # an example slider
-TRIAL_INIT_FILENAME= "trial_init.txt"
+DYNAMIC_PARAMS_PATH = os.path.join("src", "dynamic", "params")
 
-GRAPHS_FILEPATH = "assets/graphs"
+GRAPHS_PATH = os.path.join("src", "dynamic", "graphs")
 
-MINER_STATS_FILEPATH = "static/miner_stats.json"
+TRIAL_OUTPUTS_PATH = os.path.join("src", "trials", "outputs")
 
-INIT_DICT = {"Miners":8, "Blocks": 20}
+MINER_NUM_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "miners.txt")
 
-EMBEDDINGS_DIRECTORY = "src/trials/embeddings"
+BLOCK_NUM_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "blocks.txt")
 
-TRIAL_DEFAULTS = {"Validation": 64, 
-                 "Random_Solver": False, 
-                 "Profile": "default",
-                 "Random_Embedding":False, 
-                 "Solver": "Advantage_system4.1", 
-                 "Annealing_Time":0.005,
-                 "Ensemble": "PMJ", 
-                 "Scoring_Function": "Basic", 
-                 "Transactions": True,}
+TRIAL_INIT_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "trial_init.json")
 
-SLIDER = {
-    "min": 3,
-    "max": 50,
+PAUSE_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "pause.txt")
+
+RESET_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "reset.txt")
+
+STATIC_PARAMS_FILE = os.path.join("static", "defualt_params.json")
+
+MINER_STATS_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "miner_stats.json")
+
+BASE_MINER_GRAPH_FILE = os.path.join(GRAPHS_PATH, "miner_graph.png")
+
+BASE_GLOBAL_GRAPH_FILE = os.path.join(GRAPHS_PATH, "global_graph.png")
+
+EMBEDDINGS_DIRECTORY = os.path.join("src", "trials", "embeddings")
+
+MIN_MINERS = 3
+
+MAX_MINERS = 30
+
+MINER_SLIDER = {
+    "min": MIN_MINERS,
+    "max": MAX_MINERS,
     "step": 1,
-    "value": 7,
+    "value": 7
 }
 
 # an example dropdown
@@ -69,7 +81,6 @@ CHECKLIST = ["Option 1", "Option 2"]
 # an example radio list
 RADIO = ["Option 1", "Option 2"]
 
-MINER_STATUS = ["True", "False", "False", "True", "False", "William Jennings-Bryan"]
 
 # solver time limits in seconds (value means default)
 SOLVER_TIME = {

@@ -19,11 +19,12 @@ import argparse
 import dash
 import diskcache
 from dash import DiskcacheManager
-import time, os, json
-from demo_configs import APP_TITLE, THEME_COLOR, THEME_COLOR_SECONDARY, TRIAL_INIT_FILENAME, INIT_DICT, GRAPHS_FILEPATH
-from demo_interface import create_interface
+from demo_utils import directory_setup
+from demo_configs import APP_TITLE, THEME_COLOR, THEME_COLOR_SECONDARY
+    
 from trial_process import TrialProcess
 from pathlib import Path
+from demo_interface import create_interface
 
 # Essential for initializing callbacks. Do not remove.
 import demo_callbacks
@@ -86,25 +87,11 @@ with open("assets/__generated_theme.css", "w") as f:
 if __name__ == "__main__":
     # Imports the Dash HTML code and sets it in the app.
     # Creates the visual layout and app (see `demo_interface.py`)
+
+    output_directory = directory_setup()
     app.layout = create_interface()
-
-    CUR_DIR = os.path.dirname(os.path.realpath(__file__))
-    output_directory = os.path.join(CUR_DIR, 'assets','trial_outputs', time.strftime('%Y%m%d-%H%M%S'))
-    os.makedirs(output_directory)
     trial_proc = TrialProcess(output_directory)
-
-    if os.path.exists(GRAPHS_FILEPATH):
-        p = Path(GRAPHS_FILEPATH)
-        for file in p.iterdir():
-            if not os.path.isdir(file):
-                os.remove(file)
-    else:
-        os.mkdir(GRAPHS_FILEPATH)
-
     trial_proc.start()
-
-    with open(os.path.join(output_directory, TRIAL_INIT_FILENAME), 'w') as f:
-        json.dump(INIT_DICT, f)
 
     # Run the server
     app.run(debug=DEBUG)

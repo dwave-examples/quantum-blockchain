@@ -1,0 +1,1 @@
+{"Miners": 5, "Blocks": 10}

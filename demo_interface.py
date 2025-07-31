@@ -28,8 +28,9 @@ from demo_configs import (
     SOLVER_TIME,
     THEME_COLOR_SECONDARY,
     THUMBNAIL,
-    MINER_STATUS,
-    MINER_STATS_FILEPATH
+    MINER_STATS_FILE,
+    MIN_MINERS,
+    MAX_MINERS
 )
 from src.demo_enums import SolverType
 
@@ -86,55 +87,6 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
     )
 
 
-def checklist(label: str, id: str, options: list, values: list, inline: bool = True) -> html.Div:
-    """Checklist element for option selection.
-
-    Args:
-        label: The title that goes above the checklist.
-        id: A unique selector for this element.
-        options: A list of dictionaries of labels and values.
-        values: A list of values that should be preselected in the checklist.
-        inline: Whether the options of the checklist are displayed beside or below each other.
-    """
-    return html.Div(
-        className="checklist-wrapper",
-        children=[
-            html.Label(label),
-            dcc.Checklist(
-                id=id,
-                className=f"checklist{' checklist--inline' if inline else ''}",
-                inline=inline,
-                options=options,
-                value=values,
-            ),
-        ],
-    )
-
-
-def radio(label: str, id: str, options: list, value: int, inline: bool = True) -> html.Div:
-    """Radio element for option selection.
-
-    Args:
-        label: The title that goes above the radio.
-        id: A unique selector for this element.
-        options: A list of dictionaries of labels and values.
-        value: The value of the radio that should be preselected.
-        inline: Whether the options are displayed beside or below each other.
-    """
-    return html.Div(
-        className="radio-wrapper",
-        children=[
-            html.Label(label),
-            dcc.RadioItems(
-                id=id,
-                className=f"radio{' radio--inline' if inline else ''}",
-                inline=inline,
-                options=options,
-                value=value,
-            ),
-        ],
-    )
-
 def num_blocks_input() -> html.Div:
     return html.Div(
         className="blocks-input-wrapper",
@@ -142,6 +94,7 @@ def num_blocks_input() -> html.Div:
             html.Label("Number of Blocks"),
             dcc.Input(
                 value=10,
+                id = "blocks-input",
                 type= "number",
                 min=2,
                 max=200,
@@ -175,8 +128,8 @@ def generate_settings_form() -> html.Div:
         children=[
             slider(
                 "Number of Miners",
-                "slider",
-                SLIDER,
+                "miner-slider",
+                {"min": MIN_MINERS, "max": MAX_MINERS, "step": 1},
             ),
             num_blocks_input(),
         ],
@@ -199,13 +152,15 @@ def generate_run_buttons() -> html.Div:
     )
 
 
-def generate_miner_status_table(miner_status: list = MINER_STATUS) -> list[html.Tr]:
+def generate_miner_status_table(miner_status: list = None) -> list[html.Tr]:
     """Generates table rows 
     """
 
-    if os.path.exists(MINER_STATS_FILEPATH):
-        with open(MINER_STATS_FILEPATH, 'r') as f:
+    if os.path.exists(MINER_STATS_FILE):
+        with open(MINER_STATS_FILE, 'r') as f:
             miner_status = json.load(f)
+    elif miner_status == None:
+        miner_status = ["..."]
 
     table_rows = (
         [f"Miner {i}" for i in range(len(miner_status))],
@@ -336,6 +291,7 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
+                            html.Div(id="bucket"),
                             dcc.Interval(id="miner_stats_update", interval=500),  
                             html.Div(id="miner_stats"),   
                             dcc.Tabs(
@@ -349,7 +305,7 @@ def create_interface():
                                         value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="miner_graph_update", interval=400),
+                                            dcc.Interval(id="miner_graph_update", interval=800),
                                             html.Img(id="miner_display", width=800),                                  
                                         ],
                                     ),
@@ -359,7 +315,7 @@ def create_interface():
                                         value="global-tab",
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="global_graph_update", interval=400),
+                                            dcc.Interval(id="global_graph_update", interval=800),
                                             html.Img(id="global_display", width=800),
                                         ]
                                     ),
