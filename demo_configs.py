@@ -41,15 +41,9 @@ GRAPHS_PATH = os.path.join("static", "graphs")
 
 TRIAL_OUTPUTS_PATH = os.path.join("src", "trials", "outputs")
 
-MINER_NUM_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "miners.txt")
-
-BLOCK_NUM_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "blocks.txt")
-
 TRIAL_INIT_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "trial_init.json")
 
 PAUSE_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "pause.txt")
-
-RESET_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "reset.txt")
 
 STATIC_PARAMS_FILE = os.path.join("static", "defualt_params.json")
 
@@ -59,11 +53,17 @@ BASE_MINER_GRAPH_FILE = os.path.join(GRAPHS_PATH, "miner_graph.png")
 
 BASE_GLOBAL_GRAPH_FILE = os.path.join(GRAPHS_PATH, "global_graph.png")
 
+INTRO_SCREEN_FILE = os.path.join("static","pet1.jpg")
+
+LOADING_SCREEN_FILE = os.path.join("static", "pet2.jpg")
+
 EMBEDDINGS_DIRECTORY = os.path.join("src", "trials", "embeddings")
 
 MIN_MINERS = 3
 
 MAX_MINERS = 30
+
+RUN_STATUS = {"Ready": True, "Running": True, "Paused": False}
 
 MINER_SLIDER = {
     "min": MIN_MINERS,

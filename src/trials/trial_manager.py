@@ -130,8 +130,10 @@ class TrialManager:
             miner_status = prefix[int(mining)] + suffix[int(finished)]
 
         self.miner_stats_list[miner.id] = miner_status
+
+        stats_dict = {"Block": self.iteration_number, "Miners": self.miner_stats_list}
         with open(MINER_STATS_FILE, 'w') as f:
-            json.dump(self.miner_stats_list, f)
+            json.dump(stats_dict, f)
 
 
     def record_iteration_timing(self):

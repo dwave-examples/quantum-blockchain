@@ -18,6 +18,7 @@ from __future__ import annotations
 from dash import dcc, html
 import json, os
 
+from demo_utils import pad_name
 from demo_configs import (
     DESCRIPTION,
     MAIN_HEADER,
@@ -26,8 +27,6 @@ from demo_configs import (
     MINER_STATS_FILE,
     MINER_SLIDER
 )
-from src.demo_enums import SolverType
-
 
 def slider(label: str, id: str, config: dict) -> html.Div:
     """Slider element for value selection.
@@ -124,7 +123,7 @@ def generate_settings_form() -> html.Div:
 
 
 def generate_run_buttons() -> html.Div:
-    """Run and cancel buttons to run the optimization."""
+    """Run, Pause, Reset and Resume buttons for the simulation"""
     return html.Div(
         id="button-group",
         children=[
@@ -140,102 +139,51 @@ def generate_run_buttons() -> html.Div:
                         n_clicks=0, 
                         className="display-none",
             ),
+            html.Button(id="resume-button", 
+                        children="Resume Simulation", 
+                        n_clicks=0, 
+                        className="display-none",
+            ),
         ],
     )
 
 
-def generate_miner_status_table(miner_status: list = None) -> list[html.Tr]:
+def generate_miner_status_table() -> list[html.Tr]:
     """Generates table rows 
     """
 
     if os.path.exists(MINER_STATS_FILE):
         with open(MINER_STATS_FILE, 'r') as f:
-            miner_status = json.load(f)
-    elif miner_status == None:
-        miner_status = ["..."]
+            miner_dict = json.load(f)
 
-    table_rows = (
-        [f"Miner {i}" for i in range(len(miner_status))],
-        [stat for stat in miner_status]
+        miner_status = miner_dict["Miners"]
+        block_number = miner_dict["Block"] + 1
+        miner_names = [f"Miner {i}" for i in range(1, len(miner_status)+1)]
+        max_name = max([len(e) for e in miner_names])
+        round_state = "Mining"
+        max_state = max([len(e) for e in miner_status])
+        if max_state > len(round_state):
+            round_state = "Validating"
+        max_length = max(max_name, max_state)
+        for i in range(len(miner_names)):
+            miner_names[i] = pad_name(miner_names[i], max_length)
+            miner_status[i] = pad_name(miner_status[i], max_length)
 
-    )
+
+        table_header = [" " for item in miner_status]
+        start_index = (len(table_header)//2)
+        table_header[start_index] = round_state
+        table_header[start_index + 1] = f"Block {block_number}"
+        table_rows = (
+            table_header,
+            [name for name in miner_names],
+            [stat for stat in miner_status]
+        )
+
+    else:
+        table_rows = ([""])
 
     return [html.Tr([html.Td(cell) for cell in row]) for row in table_rows]
-
-def generate_problem_details_table_rows(solver: str, time_limit: int) -> list[html.Tr]:
-    """Generates table rows for the problem details table.
-
-    Args:
-        solver: The solver used for optimization.
-        time_limit: The solver time limit.
-
-    Returns:
-        list[html.Tr]: List of rows for the problem details table.
-    """
-
-    table_rows = (
-        ("Solver:", solver, "Time Limit:", f"{time_limit}s"),
-        ### Add more table rows here. Each tuple is a row in the table.
-    )
-
-    return [html.Tr([html.Td(cell) for cell in row]) for row in table_rows]
-
-
-def problem_details(index: int) -> html.Div:
-    """Generate the problem details section.
-
-    Args:
-        index: Unique element id to differentiate matching elements.
-            Must be different from left column collapse button.
-
-    Returns:
-        html.Div: Div containing a collapsable table.
-    """
-    return html.Div(
-        id={"type": "to-collapse-class", "index": index},
-        className="details-collapse-wrapper collapsed",
-        children=[
-            # Problem details collapsible button and header
-            html.Button(
-                id={"type": "collapse-trigger", "index": index},
-                className="details-collapse",
-                children=[
-                    html.H5("Problem Details"),
-                    html.Div(className="collapse-arrow"),
-                ],
-            ),
-            html.Div(
-                className="details-to-collapse",
-                children=[
-                    html.Table(
-                        className="solution-stats-table",
-                        children=[
-                            # Problem details table header (optional)
-                            html.Thead(
-                                [
-                                    html.Tr(
-                                        [
-                                            html.Th(
-                                                colSpan=2,
-                                                children=["Problem Specifics"],
-                                            ),
-                                            html.Th(
-                                                colSpan=2,
-                                                children=["Run Time"],
-                                            ),
-                                        ]
-                                    )
-                                ]
-                            ),
-                            # A Dash callback function will generate content in Tbody
-                            html.Tbody(id="problem-details"),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    )
-
 
 def create_interface():
     """Set the application HTML."""
@@ -283,9 +231,10 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
-                            html.Div(id="bucket"),
-                            dcc.Interval(id="miner_stats_update", interval=500),  
-                            html.Div(id="miner_stats"),   
+                            html.Div(id="run-status", children="Ready"),
+                            html.Div(id="pause-status", children=""),
+                            dcc.Interval(id="miner-status-update", interval=101),  
+                            html.Div(id="miner-status"),   
                             dcc.Tabs(
                                 id="tabs",
                                 value="miner-tab",
@@ -297,8 +246,8 @@ def create_interface():
                                         value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="miner_graph_update", interval=401),
-                                            html.Img(id="miner_display", width=800),                                  
+                                            dcc.Interval(id="miner-graph-update", interval=102),
+                                            html.Img(id="miner-display", width=800),                                  
                                         ],
                                     ),
                                     dcc.Tab(
@@ -307,8 +256,8 @@ def create_interface():
                                         value="global-tab",
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="global_graph_update", interval=379),
-                                            html.Img(id="global_display", width=800),
+                                            dcc.Interval(id="global-graph-update", interval=103),
+                                            html.Img(id="global-display", width=800),
                                         ]
                                     ),
                                 ],

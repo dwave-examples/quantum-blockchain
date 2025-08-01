@@ -1,0 +1,1 @@
+{"Validation": 64, "Random_Solver": false, "Profile": "default", "Random_Embedding": false, "Solver": "Advantage_system4.1", "Annealing_Time": 0.005, "Ensemble": "PMJ", "Scoring_Function": "Basic", "Transactions": true}

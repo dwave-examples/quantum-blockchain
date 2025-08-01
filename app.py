@@ -19,11 +19,8 @@ import argparse
 import dash
 import diskcache
 from dash import DiskcacheManager
-from demo_utils import directory_setup
-from demo_configs import APP_TITLE, THEME_COLOR, THEME_COLOR_SECONDARY
-    
-from trial_process import TrialProcess
-from pathlib import Path
+from demo_configs import APP_TITLE, THEME_COLOR, THEME_COLOR_SECONDARY, GRAPHS_PATH, DYNAMIC_PARAMS_PATH
+from demo_utils import prep_directory
 from demo_interface import create_interface
 
 # Essential for initializing callbacks. Do not remove.
@@ -83,15 +80,13 @@ css = f"""/* Automatically generated theme settings css file, see app.py */
 with open("assets/__generated_theme.css", "w") as f:
     f.write(css)
 
-
 if __name__ == "__main__":
     # Imports the Dash HTML code and sets it in the app.
     # Creates the visual layout and app (see `demo_interface.py`)
 
-    output_directory = directory_setup()
+    prep_directory(GRAPHS_PATH)
+    prep_directory(DYNAMIC_PARAMS_PATH)
     app.layout = create_interface()
-    trial_proc = TrialProcess(output_directory)
-    trial_proc.start()
 
     # Run the server
     app.run(debug=DEBUG)

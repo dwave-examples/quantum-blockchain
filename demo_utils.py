@@ -22,3 +22,16 @@ def directory_setup() -> str:
     prep_directory(DYNAMIC_PARAMS_PATH)
     out_dir = make_output_directory()
     return out_dir
+
+def pad_name(name: str, length: int) -> str:
+    left = False
+    new_name = name
+    while len(new_name) < length:
+        if left:
+            new_name = " " + new_name
+            left = False
+        else:
+            new_name = new_name + " "
+            left = True
+        
+    return new_name
