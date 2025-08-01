@@ -9,7 +9,7 @@ def prep_directory(directory: str):
             if not os.path.isdir(file):
                 os.remove(file)
     else:
-        os.mkdir(directory)
+        os.makedirs(directory)
 
 def make_output_directory() -> str:
     CUR_DIR = os.path.dirname(os.path.realpath(__file__))

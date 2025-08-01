@@ -126,7 +126,7 @@ class TrialManager:
             miner_status = "Rejected"
         else:
             prefix = ["Validat", "Min"]
-            suffix = ["ed", "ing"]
+            suffix = ["ing", "ed"]
             miner_status = prefix[int(mining)] + suffix[int(finished)]
 
         self.miner_stats_list[miner.id] = miner_status

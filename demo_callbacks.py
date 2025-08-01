@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from typing import NamedTuple, Union
-import os, json
+import os, json, time
 from pathlib import Path
 
 import dash
@@ -84,6 +84,7 @@ def render_initial_state(slider_value: int) -> str:
     inputs=[
         Input("miner_stats_update", "n_intervals"),
     ],
+    prevent_initial_call = True
 )
 def render_miner_status(n_intervals: int) -> list:
     """Runs on load and any time the value of the slider is updated.
@@ -115,21 +116,25 @@ def render_miner_graph(n_intervals: int):
         str: The content of the input tab.
     """
 
-    ALT_MINER_FILES = [os.path.join(GRAPHS_PATH, f"miner_graph{n}.png") for n in range(10)]
+    num_alts = 4
+
+    ALT_MINER_FILES = [os.path.join(GRAPHS_PATH, f"miner_graph{n}.png") for n in range(num_alts)]
 
     current = 0
     next = 1
     found = False
 
-    for i in range(10):
+    for i in range(num_alts):
         if os.path.exists(ALT_MINER_FILES[i]):
             current = i
-            next = (i +1)%10
+            next = (i +1)%num_alts
             found = True
 
     if os.path.exists(BASE_MINER_GRAPH_FILE):
+        for file in ALT_MINER_FILES:
+            if os.path.exists(file):
+                os.remove(file)
         os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next])
-        os.remove(ALT_MINER_FILES[current])
         graph_file = ALT_MINER_FILES[next]
     elif found:
         graph_file  = ALT_MINER_FILES[current]
@@ -154,22 +159,25 @@ def render_global_graph(n_intervals: int) -> str:
     Returns:
         str: The content of the input tab.
     """
+    num_alts = 4
 
-    ALT_GLOBAL_FILES = [os.path.join(GRAPHS_PATH, f"global_graph{n}.png") for n in range(10)]
+    ALT_GLOBAL_FILES = [os.path.join(GRAPHS_PATH, f"global_graph{n}.png") for n in range(num_alts)]
 
     current = 0
     next = 1
     found = False
 
-    for i in range(10):
+    for i in range(num_alts):
         if os.path.exists(ALT_GLOBAL_FILES[i]):
             current = i
-            next = (i +1)%10
+            next = (i +1)%num_alts
             found = True
 
     if os.path.exists(BASE_GLOBAL_GRAPH_FILE):
+        for file in ALT_GLOBAL_FILES:
+            if os.path.exists(file):
+                os.remove(file)
         os.rename(BASE_GLOBAL_GRAPH_FILE, ALT_GLOBAL_FILES[next])
-        os.remove(ALT_GLOBAL_FILES[current])
         graph_file = ALT_GLOBAL_FILES[next]
     elif found:
         graph_file  = ALT_GLOBAL_FILES[current]
@@ -178,29 +186,52 @@ def render_global_graph(n_intervals: int) -> str:
 
     return graph_file
 
-class RunOptimizationReturn(NamedTuple):
-    """Return type for the ``run_optimization`` callback function."""
-
-    results: str = dash.no_update
-    problem_details_table: list = dash.no_update
-    # Add more return variables here. Return values for callback functions
-    # with many variables should be returned as a NamedTuple for clarity.
 
 @dash.callback(
-    Output("bucket", "children"),
+    Output("bucket", "children", allow_duplicate=True),
+    Output("miner_display", "src", allow_duplicate=True),
+    Output("global_display", "src", allow_duplicate=True),
+    Output("run-button", "className", allow_duplicate=True),
     inputs=[
-        Input("cancel-button", "n_clicks"),
+        Input("reset-button", "n_clicks"),
     ],
+    prevent_initial_call = True
+)
+def reset_simulation(reset_click: int):
+    with open(PAUSE_FILE, "w") as f:
+        f.write("")
+    #TODO change button layout
+    return "Paused", "static/pet3.jpg", "static/pet4.jpg", ""
+
+@dash.callback(
+    Output("bucket", "children", allow_duplicate=True),
+    background=True,
+    inputs=[
+        Input("pause-button", "n_clicks"),
+    ],
+    running=[
+        (Output("pause-button", "className"), "display-none", ""),  # Hides run button while running.
+        (Output("run-button", "className"),"", "display-none"),  # Shows run button while running
+        (Output("reset-button", "className"), "", "display-none"),  # Shows reset button while running.
+        #(Output("run-in-progress", "data"), True, False),  #TODO figure out how/where to use
+    ],
+    cancel=[Input("run-button", "n_clicks"), Input("reset-button", "n_clicks")],
+    prevent_initial_call = True
 )
 def pause_simulation(pause_click: int):
     with open(PAUSE_FILE, "w") as f:
         f.write("")
+    while os.path.exists(PAUSE_FILE):
+        time.sleep(0.1)
+
     return "Paused"
 
 @dash.callback(
     # The Outputs below must align with `RunOptimizationReturn`.
     Output("bucket", "children"),
-    background=True,
+    Output("pause-button", "className"),
+    Output("run-button", "className"),
+    Output("reset-button", "className"),
     inputs=[
         # The first string in the Input/State elements below must match an id in demo_interface.py
         # Remove or alter the following id's to match any changes made to demo_interface.py
@@ -208,14 +239,6 @@ def pause_simulation(pause_click: int):
         State("miner-slider", "value"),
         State("blocks-input", "value"),
     ],
-    running=[
-        (Output("cancel-button", "className"), "", "display-none"),  # Show/hide cancel button.
-        (Output("run-button", "className"), "display-none", ""),  # Hides run button while running.
-        (Output("results-tab", "label"), "Loading...", "Results"),
-        (Output("tabs", "value"), "miner-tab", "miner-tab"),  # Switch to input tab while running.
-        (Output("run-in-progress", "data"), True, False),  # Can block certain callbacks.
-    ],
-    cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def run_simulation(
@@ -224,7 +247,7 @@ def run_simulation(
     run_click: int,
     miner_slider_val: int,
     block_input_val: int,
-) -> str:
+):
     """Runs the optimization and updates UI accordingly.
 
     This is the main function which is called when the ``Run Optimization`` button is clicked.
@@ -247,18 +270,17 @@ def run_simulation(
     # Only run optimization code if this function was triggered by a click on `run-button`.
     # Setting `Input` as exclusively `run-button` and setting `prevent_initial_call=True`
     # also accomplishes this.
-    print(run_click)
 
     if run_click == 0 or ctx.triggered_id != "run-button":
         raise PreventUpdate
     else:
-        if not miner_slider_val:
-            miner_slider_val = MIN_MINERS
         with open(STATIC_PARAMS_FILE, 'r') as f:
             trial_params = json.load(f)
         trial_params.update({"Miners":miner_slider_val,"Blocks":block_input_val})
         with open(TRIAL_INIT_FILE, 'w') as f:
             json.dump(trial_params, f)
+        if os.path.exists(PAUSE_FILE):
+            os.remove(PAUSE_FILE)
 
 
-    return "Not an error!"
+    return "Not an error!", "", "display-none", "display-none"

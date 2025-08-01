@@ -71,9 +71,9 @@ def graph_gen_main(
     # It's amazing plot_graph runs at all! I'll try to fix it later (once we want
     # to draw chains with multiple miners (later).
     
-    plotting.plot_graph(G, save_as=save_as, show=(save_as is None), use_spiral=True, labels=node_order)
+    plt = plotting.plot_graph(G, save_as=save_as, show=(save_as is None), use_spiral=True, labels=node_order)
    
-
+    return plt
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

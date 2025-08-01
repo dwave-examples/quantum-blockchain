@@ -47,12 +47,12 @@ class TrialProcess(Process):
                 json.dump(trial_params, f)
             manager = TrialManager(self.trial_directory)
             while not os.path.exists(RESET_FILE):
-                if not(os.path.exists(PAUSE_FILE) or manager.iteration_number >= manager.max_blocks):
+                if manager.iteration_number < manager.max_blocks:
                     manager.miner_step()
-                time.sleep(0.1)
+                time.sleep(0.15)
 
             with open(RESET_FILE, 'r') as f:
                 self.trial_directory = f.read()
             with open(TRIAL_INIT_FILE, 'r') as f:
                 trial_params = json.load(f)
-            os.remove(RESET_FILE)
+            os.remove(RESET_FILE) #TODO replace with utils call

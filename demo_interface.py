@@ -19,18 +19,12 @@ from dash import dcc, html
 import json, os
 
 from demo_configs import (
-    CHECKLIST,
     DESCRIPTION,
-    DROPDOWN,
     MAIN_HEADER,
-    RADIO,
-    SLIDER,
-    SOLVER_TIME,
     THEME_COLOR_SECONDARY,
     THUMBNAIL,
     MINER_STATS_FILE,
-    MIN_MINERS,
-    MAX_MINERS
+    MINER_SLIDER
 )
 from src.demo_enums import SolverType
 
@@ -115,13 +109,6 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    dropdown_options = generate_options(DROPDOWN)
-    checklist_options = generate_options(CHECKLIST)
-    radio_options = generate_options(RADIO)
-
-    solver_options = [
-        {"label": solver_type.label, "value": solver_type.value} for solver_type in SolverType
-    ]
 
     return html.Div(
         className="settings",
@@ -129,7 +116,7 @@ def generate_settings_form() -> html.Div:
             slider(
                 "Number of Miners",
                 "miner-slider",
-                {"min": MIN_MINERS, "max": MAX_MINERS, "step": 1},
+                MINER_SLIDER,
             ),
             num_blocks_input(),
         ],
@@ -143,10 +130,15 @@ def generate_run_buttons() -> html.Div:
         children=[
             html.Button(id="run-button", children="Begin Simulation", n_clicks=0, disabled=False),
             html.Button(
-                id="cancel-button",
+                id="pause-button",
                 children="Pause Simulation",
                 n_clicks=0,
                 className="display-none",
+            ),
+            html.Button(id="reset-button", 
+                        children="Reset Simulation", 
+                        n_clicks=0, 
+                        className="display-none",
             ),
         ],
     )
@@ -305,7 +297,7 @@ def create_interface():
                                         value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="miner_graph_update", interval=800),
+                                            dcc.Interval(id="miner_graph_update", interval=401),
                                             html.Img(id="miner_display", width=800),                                  
                                         ],
                                     ),
@@ -315,7 +307,7 @@ def create_interface():
                                         value="global-tab",
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="global_graph_update", interval=800),
+                                            dcc.Interval(id="global_graph_update", interval=379),
                                             html.Img(id="global_display", width=800),
                                         ]
                                     ),

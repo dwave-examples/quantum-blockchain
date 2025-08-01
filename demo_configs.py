@@ -35,9 +35,9 @@ A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Q
 #######################################
 
 # an example slider
-DYNAMIC_PARAMS_PATH = os.path.join("src", "dynamic", "params")
+DYNAMIC_PARAMS_PATH = os.path.join("static", "params")
 
-GRAPHS_PATH = os.path.join("src", "dynamic", "graphs")
+GRAPHS_PATH = os.path.join("static", "graphs")
 
 TRIAL_OUTPUTS_PATH = os.path.join("src", "trials", "outputs")
 
@@ -70,22 +70,4 @@ MINER_SLIDER = {
     "max": MAX_MINERS,
     "step": 1,
     "value": 7
-}
-
-# an example dropdown
-DROPDOWN = ["Option 1", "Option 2"]
-
-# an example checklist
-CHECKLIST = ["Option 1", "Option 2"]
-
-# an example radio list
-RADIO = ["Option 1", "Option 2"]
-
-
-# solver time limits in seconds (value means default)
-SOLVER_TIME = {
-    "min": 10,
-    "max": 300,
-    "step": 5,
-    "value": 10,
 }
