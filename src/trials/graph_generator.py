@@ -16,7 +16,8 @@ def graph_gen_main(
     node_list: Optional[list] = None,
     save_as: str =None,
     use_spiral: bool =True,
-    miner: int = None
+    miner: int = None,
+    cutoff: int = None
 ):
     """Wraps plotting.plot_graph for purposes of spiral plotting.
 
@@ -36,11 +37,15 @@ def graph_gen_main(
     file_prefix = "dag_"
 
     if edge_list is None:
-        dag_list = load_dags(directory, file_prefix)
-        if miner and miner < len(dag_list):
-            working_dag = dag_list[miner]
+        if cutoff:
+            dag_list = load_dags(directory, file_prefix, cutoff)
         else:
-            composite_dag = combine_dags(dag_list)
+            dag_list = load_dags(directory, file_prefix)
+        if miner is not None:
+            working_dag = dag_list[miner]
+            active_blocks = {working_dag.trunk[-1].hash}
+        else:
+            composite_dag, active_blocks = combine_dags(dag_list)
             working_dag = composite_dag
 
         block_list =[]
@@ -49,12 +54,20 @@ def graph_gen_main(
                 block_list.append(block)
 
         block_list.sort(key= lambda x: x.block_number)
-        node_list = [node.hash for node in block_list]
-        node_order = {block.hash:block.block_number for block in block_list if block.block_number % 10 == 0}
 
-        edge_list = [(node.hash, node.prev_hash) for node in block_list if node.block_height > 0] 
+        edge_list = [(node.hash, node.prev_hash) for node in block_list if node.prev_hash is not None] 
+        node_list = [edge_list[0][1]]
+        for edge in edge_list:
+            node_list.append(edge[0])
+
+        node_labels = {}
+        for block in block_list:
+            if block.hash in node_list and (block.block_number%10 == 0):
+                node_labels.update({block.hash: block.block_number})
+
     else:
-        node_order = None
+        node_labels = None
+        active_blocks = None
 
     if node_list is None:
         # Failed branches are plotted at the spiral center. By default
@@ -71,7 +84,7 @@ def graph_gen_main(
     # It's amazing plot_graph runs at all! I'll try to fix it later (once we want
     # to draw chains with multiple miners (later).
     
-    plt = plotting.plot_graph(G, save_as=save_as, show=(save_as is None), use_spiral=True, labels=node_order)
+    plt = plotting.plot_graph(G, save_as=save_as, show=(save_as is None), use_spiral=True, labels=node_labels, active_blocks=active_blocks)
    
     return plt
 

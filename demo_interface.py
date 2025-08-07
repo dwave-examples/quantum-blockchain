@@ -157,7 +157,7 @@ def generate_miner_status_table() -> list[html.Tr]:
             miner_dict = json.load(f)
 
         miner_status = miner_dict["Miners"]
-        block_number = miner_dict["Block"] + 1
+        block_number = miner_dict["Block"]
         miner_names = [f"Miner {i}" for i in range(1, len(miner_status)+1)]
         max_name = max([len(e) for e in miner_names])
         round_state = "Mining"

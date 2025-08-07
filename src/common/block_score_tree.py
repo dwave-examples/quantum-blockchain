@@ -159,6 +159,42 @@ class BlockScoreTree:
         if new_block.total_score > self.high_score:
             self.high_score = new_block.total_score
             self.strongest_block_hash = new_block.hash 
+
+    def add_block_as_node(self, block: BlockNode, canonical: bool = True):
+
+        if block.hash in self.block_loc_dict: 
+            raise Exception("Duplicate Block!")
+
+        #A block whose predecessor isn't in the tree is added at the root
+        if block.prev_hash not in self.block_loc_dict:
+
+            #If trunk is empty, new block the first of the trunk
+            if len(self.trunk) == 0 and canonical:
+                self.trunk.append(block)
+                self.block_loc_dict.update({block.hash:(self.trunk,0)})
+
+            #Otherwise it forms a disconnected branch (technically a new tree)
+            else:
+                new_branch = [block]
+                self.branches.append(new_branch)
+                self.block_loc_dict.update({block.hash:(new_branch,0)})
+
+        #A block whose predecessor is found is added to the tree in the proper spot
+        else:          
+            prev_block_branch,prev_block_loc = self.block_loc_dict[block.prev_hash]
+
+            if prev_block_loc == (len(prev_block_branch)-1) and canonical: #Block goes on branch tip
+                prev_block_branch.append(block)
+                self.block_loc_dict.update({block.hash:(prev_block_branch, prev_block_loc+1)})
+            else: #Block goes in new branch
+                new_branch = [block] 
+                self.branches.append(new_branch)
+                self.block_loc_dict.update({block.hash:(self.branches[-1],0)})
+            
+
+        if block.total_score > self.high_score:
+            self.high_score = block.total_score
+            self.strongest_block_hash = block.hash 
      
 
     def pop_block(self, branch: list[BlockNode]) -> int:
@@ -391,15 +427,65 @@ class BlockScoreTree:
             json.dump(self.branches, f)
 
     @staticmethod
-    def load_from_json_file(filename):
+    def json_to_blocknode(node_as_list) -> BlockNode:
+        block_hash = node_as_list[0]
+        prev_hash = node_as_list[1]
+        score = node_as_list[2]
+        tot_score = node_as_list[3]
+        number = node_as_list[4]
+        height = node_as_list[5]
+        return BlockNode(block_hash, prev_hash, score, tot_score, number, height)
+
+    @staticmethod
+    def load_from_json_file(filename: str, cutoff: int=-1):
+        """ Given an appropriately formatted file, loads a BlockScoreTree object.
+            Ought to keep the same graph structure and scores under realistic circumstances
+            (but this is diffuclt to guarantee in all cases). If provided a positive value for 
+            cutoff parameter, will reconstruct the graph block by block so that the scores and 
+            structure can be re-calculated to match the older graph state (rather than using)
+            the structural info from the current version of the graph.
+
+            Args:
+                filename: the name of the file (including path) containing the graph info
+                cutoff: how many blocks of the graph to reconstruct. If left at -1, will
+                reconstruct the whole graph, and used the saved structural information to
+                determine the new graph structure.
+        """ 
+    
         new_tree = BlockScoreTree()
         with open(filename, 'r') as f:
-            tree_data = json.load(f)
-        for branch in tree_data:
+            branch_list = json.load(f)
+
+        node_list = []
+        new_branch_list = []
+        for branch in branch_list:
+            branch_nodes = []
             for element in branch:
-                new_tree.add_block(block_hash=element[0], prev_block_hash=element[1], block_score=float(element[2]), 
-                                   canonical=bool(float(element[2])>0), block_number=element[4])
+                new_node = BlockScoreTree.json_to_blocknode(element)
+                node_list.append(new_node)
+                branch_nodes.append(new_node)
+            new_branch_list.append(branch_nodes)
+
+        if cutoff > 0:
+            node_list.sort(key= lambda x: x.block_number)
+            for i in range(cutoff):
+                node = node_list[i]
+                if node.block_number <= cutoff:
+                    new_tree.add_block(node.hash, node.prev_hash, node.block_score, bool(node.block_score>0))
+                    if new_tree.high_score > new_tree.trunk[-1].total_score:
+                        new_tree.promote_to_trunk(new_tree.get_branch(node.hash))
+        else:
+            for branch in new_branch_list:
+                for element in branch:
+                    if element == branch[0] and branch != new_branch_list[0]:
+                        new_tree.add_block_as_node(element, False)
+                    else:
+                        new_tree.add_block_as_node(element)
+            for branch in new_tree.branches:  #TODO check if this is disarable and necessary
+                if branch[-1].total_score > new_tree.high_score:
+                    new_tree.promote_to_trunk(branch)
 
         return new_tree
+
 
 	

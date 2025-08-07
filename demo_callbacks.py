@@ -31,13 +31,9 @@ from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocol
 from src.common.values import TRIAL_PARAMETERS_FILE
 from demo_utils import directory_setup
 from demo_configs import(GRAPHS_PATH, 
-                         DYNAMIC_PARAMS_PATH, 
                          BASE_MINER_GRAPH_FILE, 
                          BASE_GLOBAL_GRAPH_FILE,
                          STATIC_PARAMS_FILE,
-                         TRIAL_INIT_FILE,
-                         MIN_MINERS,
-                         RUN_STATUS,
                          PAUSE_FILE,
                          EMBEDDINGS_DIRECTORY,
                          INTRO_SCREEN_FILE,
@@ -115,34 +111,42 @@ def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
             graph-file
     """
 
-    num_alts = 5
+    num_alts = 25
 
     ALT_MINER_FILES = [os.path.join(GRAPHS_PATH, f"miner_graph{n}.png") for n in range(num_alts)]
 
-    current = 0
-    next = 1
+    current_file = 0
+    next_file = 1
     found = False
+    old_graph_file = "static/pet8.jpg"
 
     for i in range(num_alts):
         if os.path.exists(ALT_MINER_FILES[i]):
-            current = i
-            next = (i +1)%num_alts
-            found = True
+            if not os.path.exists(ALT_MINER_FILES[(i+1)%num_alts]):
+                current_file = i
+                next_file = (i +1)%num_alts 
+                found = True
 
     if os.path.exists(BASE_MINER_GRAPH_FILE):
+        if os.path.exists(ALT_MINER_FILES[current_file]):
+            old_graph_file = ALT_MINER_FILES[current_file]
         for file in ALT_MINER_FILES:
             if os.path.exists(file):
-                os.remove(file)
-        os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next])
-        graph_file = ALT_MINER_FILES[next]
+                if file != old_graph_file:
+                    os.remove(file)
+        os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next_file])
+        graph_file = ALT_MINER_FILES[next_file]
     elif found:
-        graph_file  = ALT_MINER_FILES[current]
+        graph_file  = ALT_MINER_FILES[current_file]
     elif run_status == "Running...":
         graph_file = LOADING_SCREEN_FILE
     else:
         graph_file = INTRO_SCREEN_FILE
 
-    return graph_file
+    if os.path.exists(graph_file):
+        return graph_file
+    else:
+        return old_graph_file
 
 #========================================================================================
 
@@ -165,7 +169,7 @@ def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
         Returns:
             graph-file
     """
-    num_alts = 4
+    num_alts = 25
 
     ALT_GLOBAL_FILES = [os.path.join(GRAPHS_PATH, f"global_graph{n}.png") for n in range(num_alts)]
 

@@ -41,8 +41,6 @@ GRAPHS_PATH = os.path.join("static", "graphs")
 
 TRIAL_OUTPUTS_PATH = os.path.join("src", "trials", "outputs")
 
-TRIAL_INIT_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "trial_init.json")
-
 PAUSE_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "pause.txt")
 
 STATIC_PARAMS_FILE = os.path.join("static", "defualt_params.json")

@@ -25,24 +25,27 @@ def get_predecessors(directed_tree: nx.DiGraph, val, root=None):
 
 
 def common_predecessors(directed_tree: nx.DiGraph, *, nodes):
-    """Two validators determine strongest chains. Find their last common predecessor
+    """ Given a digraph and a set of graph nodes, constructs a set of predecessors for
+    each node and returns the intersection and the union of those sets.
 
-    If with high probability any two independent validators agree at depth D,
-    then transactions at depth D or more can be considered secure. It is essential
-    that D is finite, and small for practical purposes.
+    Args:
+        -directed_tree: an nx.DiGraph object
+        -nodes: a set or list of digraph nodes
 
-    directed_tree: blocktree
-    P: block failure rate (ignored if node attributes)
+    Returns:
+        -intersection_predecessors: the set of nodes that is a predecessor of every node in
+        the input list
+        -union_predecessors: the set of nodes that is a predecessor of any node in the input list
     """
-    predecessors = get_predecessors(directed_tree, nodes[0])
-    union_predecessors = set(predecessors)
-    for n in nodes[1:]:
-        new_path = set(get_predecessors(directed_tree, n))
-        union_predecessors.update(new_path)
-        while predecessors[-1] not in new_path:
-            predecessors.pop()
-    return predecessors, union_predecessors
+    
+    predecessor_sets = [set(get_predecessors(directed_tree, node)) for node in nodes]
+    union_predecessors = set()
+    intersection_predecessors = set(predecessor_sets[0])
+    for item in predecessor_sets:
+        union_predecessors = union_predecessors.union(item)
+        intersection_predecessors = intersection_predecessors.intersection(item)
 
+    return intersection_predecessors, union_predecessors
 
 def to_directed(G: nx.Graph):
     DG = nx.DiGraph()
@@ -52,7 +55,7 @@ def to_directed(G: nx.Graph):
 
 def plot_graph(G: Union[nx.Graph,nx.DiGraph], strongest_edge_color='blue',
                show: bool=True, save_as: str=None, scale: int=1, use_spiral=True, recolor_jack=True, 
-               miner_on_last_node=True, strongest_node=None, labels = None) -> None:
+               miner_on_last_node=True, strongest_node=None, labels = None, active_blocks: dict = None) -> None:
     """This function plots a graph with the given nodes and edges. It will plot
     the strongest path in a horizontal line and the branches in vertical lines.
 
@@ -65,6 +68,7 @@ def plot_graph(G: Union[nx.Graph,nx.DiGraph], strongest_edge_color='blue',
             color attribute
         show (bool, optional): Whether to show the plot. Defaults to True.
         save_as (str, optional): The path to save the plot. Defaults to None.
+        active_blocks (dict, optional): A list of mined nodes, with number of miners.
     """
     edges = G.edges()
     try:
@@ -78,7 +82,7 @@ def plot_graph(G: Union[nx.Graph,nx.DiGraph], strongest_edge_color='blue',
         nx.set_node_attributes(G, name='color', values=colorsN)
         nx.set_edge_attributes(G, name='color', values={e: colorsN[e[1]] for e in G.edges()})
         colors = [colorsN[e[1]] for e in G.edges()]
-        
+
     node_colors = ['red' for node in G.nodes]
     for node in G.nodes:
         G.nodes[node]['color'] = 'red'
@@ -89,8 +93,7 @@ def plot_graph(G: Union[nx.Graph,nx.DiGraph], strongest_edge_color='blue',
     straight_line_edges = [list(edges)[idx] for idx,color in enumerate(colors) if color == strongest_edge_color]
     branch_edges = [list(edges)[idx] for idx,color in enumerate(colors) if color != strongest_edge_color]
     node_labels = nx.get_node_attributes(G, 'label')
-    
-    
+
     positions = {}
     last_pos_x = 0
     diff = 1 * scale
@@ -123,20 +126,21 @@ def plot_graph(G: Union[nx.Graph,nx.DiGraph], strongest_edge_color='blue',
 
     # node_colors = {node: G.nodes[node]['color'] for node in G.nodes}
     if recolor_jack:
-        if miner_on_last_node is True and G.number_of_nodes()>0:
+        if active_blocks is not None:
+            nx.set_node_attributes(G, values={n: 'black' for n in active_blocks}, name='color')
+        elif miner_on_last_node is True and G.number_of_nodes()>0:
             G.nodes[list(G.nodes())[-1]]['color'] = 'black'
+            active_blocks = {node for node in G.nodes if G.nodes[node]['color']=='black'}
 
-        mined_nodes = [node for node in G.nodes if G.nodes[node]['color']=='black']
-
-        if len(mined_nodes) >= 1:
-            ns, ns2 = common_predecessors(to_directed(G), nodes=mined_nodes)
+        if len(active_blocks) >= 1:
+            ns, ns2 = common_predecessors(to_directed(G), nodes=active_blocks)
         else:
-            ns = mined_nodes
-            ns2 = mined_nodes
+            ns = set()
+            ns2 = set()
         nx.set_node_attributes(G, name='color', values='#FF7006')
         nx.set_node_attributes(G, {n: {"color": "#888888"} for n in ns2})
         nx.set_node_attributes(G, {n: {"color": "#2a7de1"} for n in ns})
-        nx.set_node_attributes(G, {n: {"color": "black"} for n in mined_nodes})
+        nx.set_node_attributes(G, {n: {"color": "black"} for n in active_blocks})
         nx.set_edge_attributes(G, {e: {"color": G.nodes[e[1]]['color']} for e in G.edges()})
         
     node_colors = [G.nodes[node]['color'] for node in G.nodes]
@@ -160,9 +164,6 @@ def plot_graph(G: Union[nx.Graph,nx.DiGraph], strongest_edge_color='blue',
         
     ax.set_aspect('auto')
     plt.tight_layout()
-
-
-    plt.close
 
     if save_as is not None:
         plt.savefig(save_as)
