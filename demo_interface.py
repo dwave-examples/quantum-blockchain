@@ -195,16 +195,23 @@ def create_interface():
                         children=[
                             html.Div(id="run-status", children="Ready"),
                             html.Div(id="pause-status", children=""),  
-                            html.Div(id="miner-status", children=[
-                                                                  dcc.Interval(id="miner-status-table-update", interval=DISPLAY_REFRESH_RATE),
-                                                                  html.Table(id="miner-status-table", children = 
-                                                                                                                [
-                                                                                                                html.Thead(id="miner-table-head"),
-                                                                                                                html.Tbody(id="miner-table-body"),
-                                                                                                                ],
-                                                                            )
-                                                                  ],
-                                    ),   
+                            html.Div(
+                                id="miner-status",
+                                children=[
+                                    dcc.Interval(
+                                        id="miner-status-table-update",
+                                        interval=DISPLAY_REFRESH_RATE
+                                    ),
+                                    html.H4(id="miner-table-title"),
+                                    html.Table(
+                                        id="miner-status-table",
+                                        children=[
+                                            html.Thead(id="miner-table-header"),
+                                            html.Tbody(id="miner-table-body"),
+                                        ],
+                                    )
+                                ],
+                            ),   
                             dcc.Tabs(
                                 id="tabs",
                                 value="miner-tab",

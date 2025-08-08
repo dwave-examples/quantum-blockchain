@@ -49,26 +49,25 @@ custom CSS can be added below.
     background-color: var(--red-dark);
 }
 
+#miner-status-table {
+    margin: 0 auto 2rem;
+}
 
-#miner-table-head:first-child{  /*TODO figure out how to actually get this centered */
+#miner-table-title {
     text-align: center;
     font-weight: bold;
     font-size: large;
     width: 100%
 }
 
-th {
-    padding-left: 3rem;
-    padding-right: 3rem;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+#miner-status-table th {
+    padding: 1rem 3rem;
     border: 1px solid black;
+    text-align: center;
 }
 
-td {
-    padding-left: 3rem;
-    padding-right: 3rem;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+#miner-status-table td {
+    padding: 1rem 3rem;
     border: 1px solid black;
+    text-align: center;
 }

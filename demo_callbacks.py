@@ -77,12 +77,13 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
 #=======================================================================================
 
 @dash.callback(
-    Output("miner-table-head", "children"),
+    Output("miner-table-title", "children"),
+    Output("miner-table-header", "children"),
     Output("miner-table-body", "children"),
     inputs=[
         Input("miner-status-table-update", "n_intervals"),
     ],
-    prevent_initial_call = True
+    prevent_initial_call=True
 )
 def render_miner_status(n_intervals: int):
     """ Renders the status of the miners in the current trial. Each miner will be named
@@ -98,39 +99,37 @@ def render_miner_status(n_intervals: int):
     """
 
     if not os.path.exists(MINER_STATS_FILE):
-        table_header = DEFAULT_TABLE_HEADER
-        table_rows = [DEFAULT_TABLE_BODY]
+        return DEFAULT_TABLE_HEADER, dash.no_update, dash.no_update
 
+    with open(MINER_STATS_FILE, 'r') as f:
+        miner_dict = json.load(f)
+
+    block_number = miner_dict["Block"]
+    miner_status = miner_dict["Miners"]
+    if "Mined" in miner_status:
+        round_state = "Validating"
     else:
-        with open(MINER_STATS_FILE, 'r') as f:
-            miner_dict = json.load(f)
-
-        block_number = miner_dict["Block"]
-        miner_status = miner_dict["Miners"]
-        if "Mined" in miner_status:
-            round_state = "Validating"
-        else:
-            round_state = "Mining"
-        table_header = round_state + f" Block {block_number}"
+        round_state = "Mining"
+    table_title = round_state + f" Block {block_number}"
 
 
-        num_miners = len(miner_status)
-        miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
-        num_rows = max(math.ceil(num_miners / MAX_MINERS_PER_ROW), 1) 
-        miners_per_row = math.ceil(num_miners / num_rows) #e.g. 35 miners (16 max per row) will split 12/12/12...
-        row_bounds = [i for i in range(0, num_miners+num_rows, miners_per_row)] #with (initial) row bounds [0,12,24,36]...
-        row_bounds[-1] = min(row_bounds[-1], num_miners) #which is too many miners, so we correct it to [0,12,24,35]
+    num_miners = len(miner_status)
+    miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
+    num_rows = max(math.ceil(num_miners / MAX_MINERS_PER_ROW), 1) 
+    miners_per_row = math.ceil(num_miners / num_rows) #e.g. 35 miners (16 max per row) will split 12/12/12...
+    row_bounds = [i for i in range(0, num_miners+num_rows, miners_per_row)] #with (initial) row bounds [0,12,24,36]...
+    row_bounds[-1] = min(row_bounds[-1], num_miners) #which is too many miners, so we correct it to [0,12,24,35]
 
-        #TODO consider combining miner entries into single cells
-        miner_rows = [html.Tr([html.Th(miner_names[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
-        status_rows = [html.Tr([html.Td(miner_status[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
-        table_rows = []
+    #TODO consider combining miner entries into single cells
+    miner_rows = [html.Tr([html.Th(miner_names[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
+    status_rows = [html.Tr([html.Td(miner_status[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
+    table_rows = []
 
-        for i in range(num_rows):
-            table_rows.append(miner_rows[i])
-            table_rows.append(status_rows[i])
+    for i in range(num_rows):
+        table_rows.append(miner_rows[i])
+        table_rows.append(status_rows[i])
 
-    return table_header, table_rows
+    return table_title, miner_rows, status_rows
 
 
 #=======================================================================================
@@ -256,7 +255,7 @@ def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
         graph_file = ALT_GLOBAL_FILES[next] #Rename new file to next name in sequence
     elif found: #Otherwise, keep the old graph if it exists
         graph_file  = ALT_GLOBAL_FILES[current]
-    elif run_status == "Running...": #Or show a load screen is we're loading.
+    elif run_status == "Running..." and n_intervals is not None: #Or show a load screen is we're loading.
         filenum = (n_intervals//4)%4 
         graph_file = LOADING_SCREEN_FILES[filenum]
     else: #And if none of the above apply, intro screen covers everything else
