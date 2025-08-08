@@ -34,34 +34,19 @@ A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Q
 # Sliders, buttons and option entries #
 #######################################
 
-# an example slider
-DYNAMIC_PARAMS_PATH = os.path.join("static", "params")
+MIN_MINERS = 3 
 
-GRAPHS_PATH = os.path.join("static", "graphs")
+MAX_MINERS = 48
 
-TRIAL_OUTPUTS_PATH = os.path.join("src", "trials", "outputs")
+MAX_MINERS_PER_ROW = 16  
 
-PAUSE_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "pause.txt")
+DEFAULT_TABLE_HEADER = "Initializing..."
 
-STATIC_PARAMS_FILE = os.path.join("static", "defualt_params.json")
+DEFAULT_TABLE_BODY = ""
 
-MINER_STATS_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "miner_stats.json")
+GRAPH_WIDTH = 1000 #width of graph and load screen elements
 
-BASE_MINER_GRAPH_FILE = os.path.join(GRAPHS_PATH, "miner_graph.png")
-
-BASE_GLOBAL_GRAPH_FILE = os.path.join(GRAPHS_PATH, "global_graph.png")
-
-INTRO_SCREEN_FILE = os.path.join("static","pet1.jpg")
-
-LOADING_SCREEN_FILE = os.path.join("static", "pet2.jpg")
-
-EMBEDDINGS_DIRECTORY = os.path.join("src", "trials", "embeddings")
-
-MIN_MINERS = 3
-
-MAX_MINERS = 30
-
-RUN_STATUS = {"Ready": True, "Running": True, "Paused": False}
+DISPLAY_REFRESH_RATE = 100 #In milliseconds. How quickly graphs and status tables check for new outputs to display
 
 MINER_SLIDER = {
     "min": MIN_MINERS,

@@ -17,7 +17,7 @@ from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocol
 from src.trials.graph_generator import graph_gen_main
 from src.common.initialize_default_blockchain import initialize_blockchain
 from src.common.values import NUMBER_OF_LEADING_ZEROS, TRIAL_PARAMETERS_FILE, BLOCKCHAIN_FILE
-from demo_configs import BASE_GLOBAL_GRAPH_FILE, BASE_MINER_GRAPH_FILE, MINER_STATS_FILE
+from demo_constants import BASE_GLOBAL_GRAPH_FILE, BASE_MINER_GRAPH_FILE, MINER_STATS_FILE
 
 class TrialManager:
     """This class manages a trial of blockchain mining. The purpose of this

@@ -15,29 +15,34 @@
 from __future__ import annotations
 
 from typing import NamedTuple, Union
-import os, json, time
+import os, json, time, math
 from pathlib import Path
 
 import dash
-from dash import MATCH, ctx, set_props
+from dash import MATCH, ctx, html, dcc, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_interface import generate_miner_status_table
 from src.demo_enums import SolverType
 from src.trials.trial_manager import TrialManager
 from src.trials.trial_owners import TrialOwners
 from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocolQpu
 from src.common.values import TRIAL_PARAMETERS_FILE
-from demo_utils import directory_setup
-from demo_configs import(GRAPHS_PATH, 
-                         BASE_MINER_GRAPH_FILE, 
-                         BASE_GLOBAL_GRAPH_FILE,
-                         STATIC_PARAMS_FILE,
-                         PAUSE_FILE,
-                         EMBEDDINGS_DIRECTORY,
-                         INTRO_SCREEN_FILE,
-                         LOADING_SCREEN_FILE)
+from demo_utils import directory_setup, prep_directory
+from demo_configs import DEFAULT_TABLE_HEADER, DEFAULT_TABLE_BODY, MAX_MINERS_PER_ROW
+from demo_constants import (GRAPHS_PATH, 
+                            DYNAMIC_PARAMS_PATH, 
+                            STATIC_PARAMS_FILE, 
+                            BASE_GLOBAL_GRAPH_FILE,
+                            BASE_MINER_GRAPH_FILE,
+                            MINER_STATS_FILE,
+                            EMBEDDINGS_DIRECTORY)
+
+PAUSE_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "pause.txt")
+
+INTRO_SCREEN_FILE = os.path.join("static","intro_screen.png")
+
+LOADING_SCREEN_FILES = [os.path.join("static", f"load_screen{n}.png") for n in range(4)]
 
 #=======================================================================================
 
@@ -72,13 +77,18 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
 #=======================================================================================
 
 @dash.callback(
-    Output("miner-status", "children"),
+    Output("miner-table-head", "children"),
+    Output("miner-table-body", "children"),
     inputs=[
-        Input("miner-status-update", "n_intervals"),
+        Input("miner-status-table-update", "n_intervals"),
     ],
+    prevent_initial_call = True
 )
-def render_miner_status(n_intervals: int) -> list:
-    """Renders the status of the miners in the current trial
+def render_miner_status(n_intervals: int):
+    """ Renders the status of the miners in the current trial. Each miner will be named
+        "Miner n" where n is one more than their ID in TrialManager (because numbering 
+        starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
+        Validating, Valid" if they've started acting this round, or "..." if not.
 
     Args:
         n_intervals (unused)
@@ -86,7 +96,42 @@ def render_miner_status(n_intervals: int) -> list:
     Returns:
         str: miner status table
     """
-    return generate_miner_status_table()
+
+    if not os.path.exists(MINER_STATS_FILE):
+        table_header = DEFAULT_TABLE_HEADER
+        table_rows = [DEFAULT_TABLE_BODY]
+
+    else:
+        with open(MINER_STATS_FILE, 'r') as f:
+            miner_dict = json.load(f)
+
+        block_number = miner_dict["Block"]
+        miner_status = miner_dict["Miners"]
+        if "Mined" in miner_status:
+            round_state = "Validating"
+        else:
+            round_state = "Mining"
+        table_header = round_state + f" Block {block_number}"
+
+
+        num_miners = len(miner_status)
+        miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
+        num_rows = max(math.ceil(num_miners / MAX_MINERS_PER_ROW), 1) 
+        miners_per_row = math.ceil(num_miners / num_rows) #e.g. 35 miners (16 max per row) will split 12/12/12...
+        row_bounds = [i for i in range(0, num_miners+num_rows, miners_per_row)] #with (initial) row bounds [0,12,24,36]...
+        row_bounds[-1] = min(row_bounds[-1], num_miners) #which is too many miners, so we correct it to [0,12,24,35]
+
+        #TODO consider combining miner entries into single cells
+        miner_rows = [html.Tr([html.Th(miner_names[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
+        status_rows = [html.Tr([html.Td(miner_status[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
+        table_rows = []
+
+        for i in range(num_rows):
+            table_rows.append(miner_rows[i])
+            table_rows.append(status_rows[i])
+
+    return table_header, table_rows
+
 
 #=======================================================================================
 
@@ -97,20 +142,33 @@ def render_miner_status(n_intervals: int) -> list:
         Input("run-status", "children"),
         Input("tabs", "value"),
     ],
+    prevent_initial_call = True
 )
 def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
     """ Updates the display for the miner tab, shwoing the graph
         of the current chain state if it is available.
 
+        The file naming logic here is somewhat convoluted because it has to be:
+        the html.Img object seems to cache copies of the last several images it
+        has displayed. If you don't give it a new name, it will keep displaying
+        the older image. So we rotate through a sequence of filenames.
+
         Args:
             miner-graph-update: interval set to check if there is anything to update
             run-status: if run status alters, display should alter
-            tabs: should automatically render on switching tabs
+            tabs: should automatically render on switching tabs.
+
+            TODO: as long as we're fine with the space requirement of keeping all the
+            graph files for a run, this could be improved and simplified by just 
+            having the files generate with new names each time. It would also allow
+            for "replays" of a trial at the end. This will take just enough work that I
+            don't want to do it quite yet.
 
         Returns:
             graph-file
     """
 
+    #TODO change the logic here to save old graphs and allow for replays.
     num_alts = 25
 
     ALT_MINER_FILES = [os.path.join(GRAPHS_PATH, f"miner_graph{n}.png") for n in range(num_alts)]
@@ -127,20 +185,22 @@ def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
                 next_file = (i +1)%num_alts 
                 found = True
 
+    #Grab a new graph if it exists
     if os.path.exists(BASE_MINER_GRAPH_FILE):
         if os.path.exists(ALT_MINER_FILES[current_file]):
             old_graph_file = ALT_MINER_FILES[current_file]
         for file in ALT_MINER_FILES:
-            if os.path.exists(file):
+            if os.path.exists(file): #Remove any files older than the next-to-last
                 if file != old_graph_file:
                     os.remove(file)
         os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next_file])
-        graph_file = ALT_MINER_FILES[next_file]
-    elif found:
+        graph_file = ALT_MINER_FILES[next_file] #Rename new file to next name in sequence
+    elif found: #Otherwise, keep the old graph if it exists
         graph_file  = ALT_MINER_FILES[current_file]
-    elif run_status == "Running...":
-        graph_file = LOADING_SCREEN_FILE
-    else:
+    elif run_status == "Running...": #Or show a load screen is we're loading.
+        filenum = (int(n_intervals)//3)%4 
+        graph_file = LOADING_SCREEN_FILES[filenum]
+    else: #And if none of the above apply, intro screen covers everything else
         graph_file = INTRO_SCREEN_FILE
 
     if os.path.exists(graph_file):
@@ -157,11 +217,14 @@ def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
         Input("run-status", "children"),
         Input("tabs", "value"),
     ],
+    prevent_initial_call = True
 )
 def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
     """ Updates the display for the global tab, shwoing the graph
         of the current chain state if it is available.
 
+        See render_miner_graph for more detail (logic of both callbacks is the same)
+        
         Args:
             global-graph-update: interval set to check if there is anything to update
             run-status: if run status alters, display should alter
@@ -169,6 +232,7 @@ def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
         Returns:
             graph-file
     """
+
     num_alts = 25
 
     ALT_GLOBAL_FILES = [os.path.join(GRAPHS_PATH, f"global_graph{n}.png") for n in range(num_alts)]
@@ -183,21 +247,20 @@ def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
             next = (i +1)%num_alts
             found = True
 
-    if run_status == "Ready":
-        graph_file = INTRO_SCREEN_FILE
-    elif os.path.exists(BASE_GLOBAL_GRAPH_FILE):
+     #Grab a new graph if it exists
+    if os.path.exists(BASE_GLOBAL_GRAPH_FILE):
         for file in ALT_GLOBAL_FILES:
             if os.path.exists(file):
-                os.remove(file)
+                os.remove(file) #Remove any files older than the next-to-last
         os.rename(BASE_GLOBAL_GRAPH_FILE, ALT_GLOBAL_FILES[next])
-        graph_file = ALT_GLOBAL_FILES[next]
-    elif found:
+        graph_file = ALT_GLOBAL_FILES[next] #Rename new file to next name in sequence
+    elif found: #Otherwise, keep the old graph if it exists
         graph_file  = ALT_GLOBAL_FILES[current]
-    elif run_status == "Running...":
-        graph_file = LOADING_SCREEN_FILE
-    else:
+    elif run_status == "Running...": #Or show a load screen is we're loading.
+        filenum = (n_intervals//4)%4 
+        graph_file = LOADING_SCREEN_FILES[filenum]
+    else: #And if none of the above apply, intro screen covers everything else
         graph_file = INTRO_SCREEN_FILE
-
 
     return graph_file
 
@@ -209,14 +272,16 @@ def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
+    Output("pause-status", "children", allow_duplicate=True),
     inputs=[
         Input("reset-button", "n_clicks"),
     ],
     prevent_initial_call = True
 )
 def reset_simulation(reset_click: int):
-    os.remove(PAUSE_FILE)
-    return "Ready", "static/pet3.jpg", "static/pet4.jpg", "", "display-none", "display-none"
+    prep_directory(GRAPHS_PATH) #Clearing these now clears old trial display info and restores loading screens
+    prep_directory(DYNAMIC_PARAMS_PATH)
+    return "Ready", INTRO_SCREEN_FILE, INTRO_SCREEN_FILE, "", "display-none", "display-none", " "
 
 #========================================================================================
 
@@ -284,6 +349,10 @@ def run_simulation(
         State("miner-slider", "value"),
         State("blocks-input", "value"),
     ],
+    running=[
+        (Output("miner-slider", "disabled"), True, False),
+        (Output("blocks-input", "disabled"), True, False), 
+    ],
     cancel = [Input("reset-button", "n_clicks")],
     prevent_initial_call=True,
 )
@@ -326,6 +395,7 @@ def simulation(
         with open(STATIC_PARAMS_FILE, 'r') as f:
             trial_params = json.load(f)
 
+        #Trial initialization stuff. Takes a long time, so we only want to do it once per run.
         trial_owners = TrialOwners()
         owner_keys = [owner.private_key.export_key().decode('utf8') for owner in trial_owners]
         del trial_owners
@@ -346,10 +416,12 @@ def simulation(
 
         manager = TrialManager(trial_directory)
 
+        #End of trial initialization. Start of trial proper.
+
         while(manager.iteration_number <= num_blocks):
             if not os.path.exists(PAUSE_FILE):
                 manager.miner_step()
-            time.sleep(0.15)
+            time.sleep(0.15) #intent is to give other components a chance to update. But might not be necessary.
   
         
     return "Simulation Complete", "", "display-none", ""

@@ -28,14 +28,6 @@ custom CSS can be added below.
     height: 100%;
 }
 
-.solution-stats-table td:nth-child(2n) {
-    text-align: right;
-}
-
-.solution-stats-table td:nth-child(2n+1) {
-    border-right: none;
-}
-
 .input, .results {
     display: flex;
     justify-content: center;
@@ -46,3 +38,37 @@ custom CSS can be added below.
   /****************************/
  /*** CUSTOM CSS GOES HERE ***/
 /****************************/
+
+#reset-button,
+#pause-button {
+    background-color: var(--red-light);
+}
+
+#reset-button:hover,
+#pause-button:hover {
+    background-color: var(--red-dark);
+}
+
+
+#miner-table-head:first-child{  /*TODO figure out how to actually get this centered */
+    text-align: center;
+    font-weight: bold;
+    font-size: large;
+    width: 100%
+}
+
+th {
+    padding-left: 3rem;
+    padding-right: 3rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    border: 1px solid black;
+}
+
+td {
+    padding-left: 3rem;
+    padding-right: 3rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    border: 1px solid black;
+}

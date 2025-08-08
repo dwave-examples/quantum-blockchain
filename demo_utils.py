@@ -1,15 +1,16 @@
 import os, time
 from pathlib import Path
-from demo_configs import TRIAL_OUTPUTS_PATH, GRAPHS_PATH, DYNAMIC_PARAMS_PATH
+from demo_constants import TRIAL_OUTPUTS_PATH, GRAPHS_PATH, DYNAMIC_PARAMS_PATH
 
 def prep_directory(directory: str):
-    if os.path.exists(directory):
+    
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    else:
         p = Path(directory)
         for file in p.iterdir():
             if not os.path.isdir(file):
                 os.remove(file)
-    else:
-        os.makedirs(directory)
 
 def make_output_directory() -> str:
     CUR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -23,15 +24,3 @@ def directory_setup() -> str:
     out_dir = make_output_directory()
     return out_dir
 
-def pad_name(name: str, length: int) -> str:
-    left = False
-    new_name = name
-    while len(new_name) < length:
-        if left:
-            new_name = " " + new_name
-            left = False
-        else:
-            new_name = new_name + " "
-            left = True
-        
-    return new_name

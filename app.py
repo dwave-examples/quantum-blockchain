@@ -19,7 +19,8 @@ import argparse
 import dash
 import diskcache
 from dash import DiskcacheManager
-from demo_configs import APP_TITLE, THEME_COLOR, THEME_COLOR_SECONDARY, GRAPHS_PATH, DYNAMIC_PARAMS_PATH
+from demo_configs import APP_TITLE, THEME_COLOR, THEME_COLOR_SECONDARY
+from demo_constants import GRAPHS_PATH, DYNAMIC_PARAMS_PATH
 from demo_utils import prep_directory
 from demo_interface import create_interface
 

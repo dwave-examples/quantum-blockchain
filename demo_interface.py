@@ -18,15 +18,15 @@ from __future__ import annotations
 from dash import dcc, html
 import json, os
 
-from demo_utils import pad_name
 from demo_configs import (
     DESCRIPTION,
     MAIN_HEADER,
-    THEME_COLOR_SECONDARY,
     THUMBNAIL,
-    MINER_STATS_FILE,
-    MINER_SLIDER
+    MINER_SLIDER,
+    GRAPH_WIDTH,
+    DISPLAY_REFRESH_RATE
 )
+
 
 def slider(label: str, id: str, config: dict) -> html.Div:
     """Slider element for value selection.
@@ -147,44 +147,6 @@ def generate_run_buttons() -> html.Div:
         ],
     )
 
-
-def generate_miner_status_table() -> list[html.Tr]:
-    """Generates table rows 
-    """
-
-    if os.path.exists(MINER_STATS_FILE):
-        with open(MINER_STATS_FILE, 'r') as f:
-            miner_dict = json.load(f)
-
-        miner_status = miner_dict["Miners"]
-        block_number = miner_dict["Block"]
-        miner_names = [f"Miner {i}" for i in range(1, len(miner_status)+1)]
-        max_name = max([len(e) for e in miner_names])
-        round_state = "Mining"
-        max_state = max([len(e) for e in miner_status])
-        if max_state > len(round_state):
-            round_state = "Validating"
-        max_length = max(max_name, max_state)
-        for i in range(len(miner_names)):
-            miner_names[i] = pad_name(miner_names[i], max_length)
-            miner_status[i] = pad_name(miner_status[i], max_length)
-
-
-        table_header = [" " for item in miner_status]
-        start_index = (len(table_header)//2)
-        table_header[start_index] = round_state
-        table_header[start_index + 1] = f"Block {block_number}"
-        table_rows = (
-            table_header,
-            [name for name in miner_names],
-            [stat for stat in miner_status]
-        )
-
-    else:
-        table_rows = ([""])
-
-    return [html.Tr([html.Td(cell) for cell in row]) for row in table_rows]
-
 def create_interface():
     """Set the application HTML."""
     return html.Div(
@@ -232,9 +194,17 @@ def create_interface():
                         className="right-column",
                         children=[
                             html.Div(id="run-status", children="Ready"),
-                            html.Div(id="pause-status", children=""),
-                            dcc.Interval(id="miner-status-update", interval=101),  
-                            html.Div(id="miner-status"),   
+                            html.Div(id="pause-status", children=""),  
+                            html.Div(id="miner-status", children=[
+                                                                  dcc.Interval(id="miner-status-table-update", interval=DISPLAY_REFRESH_RATE),
+                                                                  html.Table(id="miner-status-table", children = 
+                                                                                                                [
+                                                                                                                html.Thead(id="miner-table-head"),
+                                                                                                                html.Tbody(id="miner-table-body"),
+                                                                                                                ],
+                                                                            )
+                                                                  ],
+                                    ),   
                             dcc.Tabs(
                                 id="tabs",
                                 value="miner-tab",
@@ -246,8 +216,8 @@ def create_interface():
                                         value="miner-tab",  # used for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="miner-graph-update", interval=102),
-                                            html.Img(id="miner-display", width=800),                                  
+                                            dcc.Interval(id="miner-graph-update", interval=DISPLAY_REFRESH_RATE),
+                                            html.Img(id="miner-display", width=GRAPH_WIDTH),                                  
                                         ],
                                     ),
                                     dcc.Tab(
@@ -256,8 +226,8 @@ def create_interface():
                                         value="global-tab",
                                         className="tab",
                                         children=[
-                                            dcc.Interval(id="global-graph-update", interval=103),
-                                            html.Img(id="global-display", width=800),
+                                            dcc.Interval(id="global-graph-update", interval=DISPLAY_REFRESH_RATE),
+                                            html.Img(id="global-display", width=GRAPH_WIDTH),
                                         ]
                                     ),
                                 ],
