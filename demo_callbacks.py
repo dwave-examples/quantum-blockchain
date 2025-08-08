@@ -196,8 +196,8 @@ def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
         graph_file = ALT_MINER_FILES[next_file] #Rename new file to next name in sequence
     elif found: #Otherwise, keep the old graph if it exists
         graph_file  = ALT_MINER_FILES[current_file]
-    elif run_status == "Running...": #Or show a load screen is we're loading.
-        filenum = (int(n_intervals)//3)%4 
+    elif run_status == "Running..." and n_intervals is not None: #Or show a load screen is we're loading.
+        filenum = (n_intervals//3)%4 
         graph_file = LOADING_SCREEN_FILES[filenum]
     else: #And if none of the above apply, intro screen covers everything else
         graph_file = INTRO_SCREEN_FILE
