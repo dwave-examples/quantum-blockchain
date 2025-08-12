@@ -29,7 +29,7 @@ from src.trials.trial_owners import TrialOwners
 from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocolQpu
 from src.common.values import TRIAL_PARAMETERS_FILE
 from demo_utils import directory_setup, prep_directory
-from demo_configs import DEFAULT_TABLE_HEADER, DEFAULT_TABLE_BODY, MAX_MINERS_PER_ROW
+from demo_configs import DEFAULT_TABLE_HEADER, DEFAULT_TABLE_BODY, MAX_MINER_ROWS, MAX_MINER_COLUMNS
 from demo_constants import (GRAPHS_PATH, 
                             DYNAMIC_PARAMS_PATH, 
                             STATIC_PARAMS_FILE, 
@@ -80,7 +80,7 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
     Output("miner-table-head", "children"),
     Output("miner-table-body", "children"),
     inputs=[
-        Input("miner-status-table-update", "n_intervals"),
+        Input("display-update", "n_intervals"),
     ],
     prevent_initial_call = True
 )
@@ -113,22 +113,20 @@ def render_miner_status(n_intervals: int):
             round_state = "Mining"
         table_header = round_state + f" Block {block_number}"
 
-
         num_miners = len(miner_status)
         miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
-        num_rows = max(math.ceil(num_miners / MAX_MINERS_PER_ROW), 1) 
-        miners_per_row = math.ceil(num_miners / num_rows) #e.g. 35 miners (16 max per row) will split 12/12/12...
-        row_bounds = [i for i in range(0, num_miners+num_rows, miners_per_row)] #with (initial) row bounds [0,12,24,36]...
-        row_bounds[-1] = min(row_bounds[-1], num_miners) #which is too many miners, so we correct it to [0,12,24,35]
+        columns = min(math.ceil(num_miners / MAX_MINER_ROWS), MAX_MINER_COLUMNS)
 
-        #TODO consider combining miner entries into single cells
-        miner_rows = [html.Tr([html.Th(miner_names[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
-        status_rows = [html.Tr([html.Td(miner_status[j]) for j in range(row_bounds[i], row_bounds[i+1])]) for i in range(num_rows)]
         table_rows = []
-
-        for i in range(num_rows):
-            table_rows.append(miner_rows[i])
-            table_rows.append(status_rows[i])
+        new_row = []
+        for i in range(0, num_miners):
+            new_row.append(html.Th(miner_names[i]))
+            new_row.append(html.Td(miner_status[i]))
+            if len(new_row) >= 2*columns:
+                table_rows.append(html.Tr(new_row))
+                new_row = []
+        if len(new_row) > 0:
+            table_rows.append(html.Tr(new_row))
 
     return table_header, table_rows
 
@@ -136,15 +134,18 @@ def render_miner_status(n_intervals: int):
 #=======================================================================================
 
 @dash.callback(
-    Output("miner-display", "src"),
+    Output("intro-text", "className"),
+    Output("loading-text", "className"),
+    Output("global-graph", "className"),
+    Output("miner-graph", "className"),
+    Output("miner-graph", "src"),
     inputs=[
-        Input("miner-graph-update", "n_intervals"),
+        Input("display-update", "n_intervals"),
         Input("run-status", "children"),
-        Input("tabs", "value"),
     ],
     prevent_initial_call = True
 )
-def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
+def render_miner_graph(n_intervals: int, run_status: str):
     """ Updates the display for the miner tab, shwoing the graph
         of the current chain state if it is available.
 
@@ -167,7 +168,7 @@ def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
         Returns:
             graph-file
     """
-
+    #TODO add a block number store to allow for better logic
     #TODO change the logic here to save old graphs and allow for replays.
     num_alts = 25
 
@@ -203,23 +204,28 @@ def render_miner_graph(n_intervals: int, run_status: str, tab_val: str):
     else: #And if none of the above apply, intro screen covers everything else
         graph_file = INTRO_SCREEN_FILE
 
-    if os.path.exists(graph_file):
-        return graph_file
-    else:
-        return old_graph_file
+    #if os.path.exists(graph_file):
+     #   return graph_file
+    #else:
+     #   return old_graph_file
+    
+    return "display-none", "display-none", "display-none", "", graph_file
 
 #========================================================================================
 
 @dash.callback(
-    Output("global-display", "src"),
+    Output("intro-text", "className"),
+    Output("loading-text", "className"),
+    Output("miner-graph", "className"),
+    Output("global-graph", "className"),
+    Output("global-graph", "src"),
     inputs=[
-        Input("global-graph-update", "n_intervals"),
+        Input("display-update", "n_intervals"),
         Input("run-status", "children"),
-        Input("tabs", "value"),
     ],
     prevent_initial_call = True
 )
-def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
+def render_global_graph(n_intervals: int, run_status: str):
     """ Updates the display for the global tab, shwoing the graph
         of the current chain state if it is available.
 
@@ -262,34 +268,33 @@ def render_global_graph(n_intervals: int, run_status: str, tab_val: str) -> str:
     else: #And if none of the above apply, intro screen covers everything else
         graph_file = INTRO_SCREEN_FILE
 
-    return graph_file
+    return "display-none", "display-none", "display-none", "", graph_file
 
 #========================================================================================
 @dash.callback(
-    Output("run-status", "children", allow_duplicate=True),
-    Output("miner-display", "src", allow_duplicate=True),
-    Output("global-display", "src", allow_duplicate=True),
+    Output("miner-graph", "src", allow_duplicate=True),
+    Output("global-graph", "src", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
-    Output("pause-status", "children", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
     inputs=[
         Input("reset-button", "n_clicks"),
     ],
     prevent_initial_call = True
 )
 def reset_simulation(reset_click: int):
-    prep_directory(GRAPHS_PATH) #Clearing these now clears old trial display info and restores loading screens
+    prep_directory(GRAPHS_PATH) 
     prep_directory(DYNAMIC_PARAMS_PATH)
-    return "Ready", INTRO_SCREEN_FILE, INTRO_SCREEN_FILE, "", "display-none", "display-none", " "
+    return "display-none", "display-none", "", "display-none", "display-none", {"Running":False, "Paused": False}
 
 #========================================================================================
 
 @dash.callback(
-    Output("pause-status", "children", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
     ],
@@ -298,15 +303,15 @@ def reset_simulation(reset_click: int):
 def pause_simulation(pause_click: int):
     with open(PAUSE_FILE, "w") as f:
         f.write("")
-    return "Paused", "", "", "display-none"
+    return "", "", "display-none", {"Running":True, "Paused": True}
 
 #========================================================================================
 
 @dash.callback(
-    Output("pause-status", "children", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
     ],
@@ -314,15 +319,16 @@ def pause_simulation(pause_click: int):
 )
 def resume_simulation(pause_click: int):
     os.remove(PAUSE_FILE)
-    return " ", "display-none", "display-none", ""
+    return "display-none", "display-none", "", {"Running":True, "Paused": False}
 
 #========================================================================================
 
 @dash.callback(
-    # The Outputs below must align with `RunOptimizationReturn`.
-    Output("run-status", "children", allow_duplicate=True),
+    Output("intro-text", "className", allow_duplicate=True),
+    Output("loading-text", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
     ],
@@ -331,21 +337,18 @@ def resume_simulation(pause_click: int):
 def run_simulation(
     run_click: int,
 ):
-    return "Running...", "", "display-none"
+    return "display-none", "", "", "display-none", {"Running":True, "Paused": False}
 
 #========================================================================================
 
 @dash.callback(
-    # The Outputs below must align with `RunOptimizationReturn`.
-    Output("run-status", "children", allow_duplicate=True),
+
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     background=True,
     inputs=[
-        # The first string in the Input/State elements below must match an id in demo_interface.py
-        # Remove or alter the following id's to match any changes made to demo_interface.py
-        Input("run-status", "children"),
+        Input("run-status", "data"),
         State("miner-slider", "value"),
         State("blocks-input", "value"),
     ],
@@ -359,7 +362,7 @@ def run_simulation(
 def simulation(
     # The parameters below must match the `Input` and `State` variables found
     # in the `inputs` list above.
-    run_status: str,
+    run_status: dict,
     miner_slider_val: int,
     block_input_val: int,
 ):
@@ -386,7 +389,7 @@ def simulation(
     # Setting `Input` as exclusively `run-button` and setting `prevent_initial_call=True`
     # also accomplishes this.
 
-    if run_status != "Running..." or ctx.triggered_id != "run-status":
+    if run_status["Running"] != True or ctx.triggered_id != "run-status":
         raise PreventUpdate
     else:
         num_blocks = block_input_val
@@ -424,4 +427,4 @@ def simulation(
             time.sleep(0.15) #intent is to give other components a chance to update. But might not be necessary.
   
         
-    return "Simulation Complete", "", "display-none", ""
+    return "display-none", "display-none", ""

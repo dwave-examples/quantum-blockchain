@@ -303,7 +303,7 @@ class TrialManager:
             dag_file_name = f"dag_{miner.id}.json"
             miner.blockchain.tree.write_to_file_json(os.path.join(self.miner_dag_dir, dag_file_name))
 
-        graph_gen_main(self.miner_dag_dir, save_as=BASE_MINER_GRAPH_FILE, miner=0)
+        graph_gen_main(self.miner_dag_dir, save_as=BASE_MINER_GRAPH_FILE, miner_id=0)
         graph_gen_main(self.miner_dag_dir, save_as=BASE_GLOBAL_GRAPH_FILE)
 
 

@@ -49,6 +49,24 @@ custom CSS can be added below.
     background-color: var(--red-dark);
 }
 
+#main-display{
+    display: flex;
+    flex-direction: row;
+}
+
+#main-display > img{
+    width: 72%;
+    margin: 0.5%;
+}
+
+#main-display > table{
+    width: 20%;
+    margin: 0.5%;
+}
+
+#main-display > .display-none{
+    display: none;
+}
 
 #miner-table-head:first-child{  /*TODO figure out how to actually get this centered */
     text-align: center;
@@ -58,17 +76,17 @@ custom CSS can be added below.
 }
 
 th {
-    padding-left: 3rem;
-    padding-right: 3rem;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
     border: 1px solid black;
 }
 
 td {
-    padding-left: 3rem;
-    padding-right: 3rem;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
     border: 1px solid black;
 }

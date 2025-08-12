@@ -29,6 +29,9 @@ MAIN_HEADER = "Quantum Blockchain"
 DESCRIPTION = """\
 A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Quantum Annealer
 """
+INTRO_TEXT = "Select Number of Miners and Blocks and Press \"Begin Simulation\""
+INTRO_SUBTEXT = "Results will display here while simulation is running."
+LOADING_TEXT = "Generating Graphs"
 
 #######################################
 # Sliders, buttons and option entries #
@@ -36,9 +39,11 @@ A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Q
 
 MIN_MINERS = 3 
 
-MAX_MINERS = 48
+MAX_MINERS = 44
 
-MAX_MINERS_PER_ROW = 16  
+MAX_MINER_ROWS = 28
+
+MAX_MINER_COLUMNS = 2
 
 DEFAULT_TABLE_HEADER = "Initializing..."
 

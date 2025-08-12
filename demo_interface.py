@@ -23,8 +23,10 @@ from demo_configs import (
     MAIN_HEADER,
     THUMBNAIL,
     MINER_SLIDER,
-    GRAPH_WIDTH,
-    DISPLAY_REFRESH_RATE
+    DISPLAY_REFRESH_RATE,
+    INTRO_TEXT,
+    INTRO_SUBTEXT,
+    LOADING_TEXT
 )
 
 
@@ -153,7 +155,7 @@ def create_interface():
         id="app-container",
         children=[
             # Below are any temporary storage items, e.g., for sharing data between callbacks.
-            dcc.Store(id="run-in-progress", data=False),  # Indicates whether run is in progress
+            dcc.Store(id="run-status", data={"Running": False, "Paused": False}),  # Indicates whether run is in progress and whether the run is paused
             # Header brand banner
             html.Div(className="banner", children=[html.Img(src=THUMBNAIL)]),
             # Settings and results columns
@@ -195,8 +197,12 @@ def create_interface():
                         children=[
                             html.Div(id="run-status", children="Ready"),
                             html.Div(id="pause-status", children=""),  
-                            html.Div(id="miner-status", children=[
-                                                                  dcc.Interval(id="miner-status-table-update", interval=DISPLAY_REFRESH_RATE),
+                            html.Div(id="main-display", children=[
+                                                                  dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
+                                                                  html.H1(children=[INTRO_TEXT, html.H3(INTRO_SUBTEXT)], id="intro-text", ),
+                                                                  html.H1(LOADING_TEXT, id="loading-text", className="display-none"),
+                                                                  html.Img(id="miner-graph",className="display-none"),
+                                                                  html.Img(id="global-graph", className="display-none"),  
                                                                   html.Table(id="miner-status-table", children = 
                                                                                                                 [
                                                                                                                 html.Thead(id="miner-table-head"),
@@ -205,33 +211,7 @@ def create_interface():
                                                                             )
                                                                   ],
                                     ),   
-                            dcc.Tabs(
-                                id="tabs",
-                                value="miner-tab",
-                                mobile_breakpoint=0,
-                                children=[
-                                    dcc.Tab(
-                                        label="Miner View",
-                                        id="miner-tab",
-                                        value="miner-tab",  # used for switching tabs programatically
-                                        className="tab",
-                                        children=[
-                                            dcc.Interval(id="miner-graph-update", interval=DISPLAY_REFRESH_RATE),
-                                            html.Img(id="miner-display", width=GRAPH_WIDTH),                                  
-                                        ],
-                                    ),
-                                    dcc.Tab(
-                                        label="Global View",
-                                        id="global-tab",
-                                        value="global-tab",
-                                        className="tab",
-                                        children=[
-                                            dcc.Interval(id="global-graph-update", interval=DISPLAY_REFRESH_RATE),
-                                            html.Img(id="global-display", width=GRAPH_WIDTH),
-                                        ]
-                                    ),
-                                ],
-                            )
+                            
                         ],
                     ),
                 ],

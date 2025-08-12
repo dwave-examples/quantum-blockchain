@@ -12,11 +12,10 @@ import networkx as nx
 
 def graph_gen_main(
     directory: str,
+    save_as: str,
     edge_list: Optional[list] = None,
     node_list: Optional[list] = None,
-    save_as: str =None,
-    use_spiral: bool =True,
-    miner: int = None,
+    miner_id: int = None,
     cutoff: int = None
 ):
     """Wraps plotting.plot_graph for purposes of spiral plotting.
@@ -41,8 +40,8 @@ def graph_gen_main(
             dag_list = load_dags(directory, file_prefix, cutoff)
         else:
             dag_list = load_dags(directory, file_prefix)
-        if miner is not None:
-            working_dag = dag_list[miner]
+        if miner_id is not None:
+            working_dag = dag_list[miner_id]
             active_blocks = {working_dag.trunk[-1].hash}
         else:
             composite_dag, active_blocks = combine_dags(dag_list)
@@ -84,7 +83,7 @@ def graph_gen_main(
     # It's amazing plot_graph runs at all! I'll try to fix it later (once we want
     # to draw chains with multiple miners (later).
     
-    plt = plotting.plot_graph(G, save_as=save_as, show=(save_as is None), use_spiral=True, labels=node_labels, active_blocks=active_blocks)
+    plt = plotting.plot_graph(G, save_as=save_as, labels=node_labels, active_blocks=active_blocks)
    
     return plt
 
