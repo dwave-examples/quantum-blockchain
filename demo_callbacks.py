@@ -28,21 +28,57 @@ from src.trials.trial_manager import TrialManager
 from src.trials.trial_owners import TrialOwners
 from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocolQpu
 from src.common.values import TRIAL_PARAMETERS_FILE
-from demo_utils import directory_setup, prep_directory
+from demo_utils import prep_directories, make_output_directory
 from demo_configs import DEFAULT_TABLE_HEADER, DEFAULT_TABLE_BODY, MAX_MINER_ROWS, MAX_MINER_COLUMNS
-from demo_constants import (GRAPHS_PATH, 
-                            DYNAMIC_PARAMS_PATH, 
-                            STATIC_PARAMS_FILE, 
+from demo_constants import (
+                            GLOBAL_GRAPHS_PATH,
                             BASE_GLOBAL_GRAPH_FILE,
+                            MINER_GRAPHS_PATH, 
                             BASE_MINER_GRAPH_FILE,
+                            MINER_STATS_PATH, 
                             MINER_STATS_FILE,
-                            EMBEDDINGS_DIRECTORY)
+                            PAUSE_FILE,
+                            STATIC_PARAMS_FILE, 
+                            EMBEDDINGS_DIRECTORY,
+                          )
 
-PAUSE_FILE = os.path.join(DYNAMIC_PARAMS_PATH, "pause.txt")
 
-INTRO_SCREEN_FILE = os.path.join("static","intro_screen.png")
+def render_miner_status(block_number: int, miner_status: list):
+    """ Renders the status of the miners in the current trial. Each miner will be named
+        "Miner n" where n is one more than their ID in TrialManager (because numbering 
+        starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
+        Validating, Valid" if they've started acting this round, or "..." if not.
 
-LOADING_SCREEN_FILES = [os.path.join("static", f"load_screen{n}.png") for n in range(4)]
+    Args:
+        n_intervals (unused)
+
+    Returns:
+        str: miner status table
+    """
+
+
+    if "Mined" in miner_status:
+        round_state = "Validating"
+    else:
+        round_state = "Mining"
+    table_header = html.Th(round_state + f" Block {block_number}")
+
+    num_miners = len(miner_status)
+    miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
+    columns = min(math.ceil(num_miners / MAX_MINER_ROWS), MAX_MINER_COLUMNS)
+
+    table_rows = []
+    new_row = []
+    for i in range(0, num_miners):
+        new_row.append(html.Th(miner_names[i]))
+        new_row.append(html.Td(miner_status[i]))
+        if len(new_row) >= 2*columns:
+            table_rows.append(html.Tr(new_row))
+            new_row = []
+    if len(new_row) > 0:
+        table_rows.append(html.Tr(new_row))
+
+    return table_header, table_rows
 
 #=======================================================================================
 
@@ -72,80 +108,23 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
         return " ".join(classes)
     return to_collapse_class + " collapsed" if to_collapse_class else "collapsed"
 
-
-
 #=======================================================================================
 
 @dash.callback(
-    Output("miner-table-head", "children"),
-    Output("miner-table-body", "children"),
+    Output("intro-text", "className", allow_duplicate=True),
+    Output("loading-text", "className", allow_duplicate=True),
+    Output("global-graph", "className", allow_duplicate=True),
+    Output("miner-graph", "className", allow_duplicate=True),
+    Output("global-graph", "src", allow_duplicate=True),
+    Output("miner-graph", "src", allow_duplicate=True),
     inputs=[
         Input("display-update", "n_intervals"),
+        Input("view-select", "value"),
+        Input("run-status", "data"),
     ],
     prevent_initial_call = True
 )
-def render_miner_status(n_intervals: int):
-    """ Renders the status of the miners in the current trial. Each miner will be named
-        "Miner n" where n is one more than their ID in TrialManager (because numbering 
-        starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
-        Validating, Valid" if they've started acting this round, or "..." if not.
-
-    Args:
-        n_intervals (unused)
-
-    Returns:
-        str: miner status table
-    """
-
-    if not os.path.exists(MINER_STATS_FILE):
-        table_header = DEFAULT_TABLE_HEADER
-        table_rows = [DEFAULT_TABLE_BODY]
-
-    else:
-        with open(MINER_STATS_FILE, 'r') as f:
-            miner_dict = json.load(f)
-
-        block_number = miner_dict["Block"]
-        miner_status = miner_dict["Miners"]
-        if "Mined" in miner_status:
-            round_state = "Validating"
-        else:
-            round_state = "Mining"
-        table_header = round_state + f" Block {block_number}"
-
-        num_miners = len(miner_status)
-        miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
-        columns = min(math.ceil(num_miners / MAX_MINER_ROWS), MAX_MINER_COLUMNS)
-
-        table_rows = []
-        new_row = []
-        for i in range(0, num_miners):
-            new_row.append(html.Th(miner_names[i]))
-            new_row.append(html.Td(miner_status[i]))
-            if len(new_row) >= 2*columns:
-                table_rows.append(html.Tr(new_row))
-                new_row = []
-        if len(new_row) > 0:
-            table_rows.append(html.Tr(new_row))
-
-    return table_header, table_rows
-
-
-#=======================================================================================
-
-@dash.callback(
-    Output("intro-text", "className"),
-    Output("loading-text", "className"),
-    Output("global-graph", "className"),
-    Output("miner-graph", "className"),
-    Output("miner-graph", "src"),
-    inputs=[
-        Input("display-update", "n_intervals"),
-        Input("run-status", "children"),
-    ],
-    prevent_initial_call = True
-)
-def render_miner_graph(n_intervals: int, run_status: str):
+def render_graphs(n_intervals: int, view_select: str, run_status: dict):
     """ Updates the display for the miner tab, shwoing the graph
         of the current chain state if it is available.
 
@@ -168,112 +147,57 @@ def render_miner_graph(n_intervals: int, run_status: str):
         Returns:
             graph-file
     """
+
     #TODO add a block number store to allow for better logic
-    #TODO change the logic here to save old graphs and allow for replays.
-    num_alts = 25
 
-    ALT_MINER_FILES = [os.path.join(GRAPHS_PATH, f"miner_graph{n}.png") for n in range(num_alts)]
-
-    current_file = 0
-    next_file = 1
-    found = False
-    old_graph_file = "static/pet8.jpg"
-
-    for i in range(num_alts):
-        if os.path.exists(ALT_MINER_FILES[i]):
-            if not os.path.exists(ALT_MINER_FILES[(i+1)%num_alts]):
-                current_file = i
-                next_file = (i +1)%num_alts 
-                found = True
-
-    #Grab a new graph if it exists
-    if os.path.exists(BASE_MINER_GRAPH_FILE):
-        if os.path.exists(ALT_MINER_FILES[current_file]):
-            old_graph_file = ALT_MINER_FILES[current_file]
-        for file in ALT_MINER_FILES:
-            if os.path.exists(file): #Remove any files older than the next-to-last
-                if file != old_graph_file:
-                    os.remove(file)
-        os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next_file])
-        graph_file = ALT_MINER_FILES[next_file] #Rename new file to next name in sequence
-    elif found: #Otherwise, keep the old graph if it exists
-        graph_file  = ALT_MINER_FILES[current_file]
-    elif run_status == "Running...": #Or show a load screen is we're loading.
-        filenum = (int(n_intervals)//3)%4 
-        graph_file = LOADING_SCREEN_FILES[filenum]
-    else: #And if none of the above apply, intro screen covers everything else
-        graph_file = INTRO_SCREEN_FILE
-
-    #if os.path.exists(graph_file):
-     #   return graph_file
-    #else:
-     #   return old_graph_file
+    if not (os.listdir(GLOBAL_GRAPHS_PATH) or os.listdir(MINER_GRAPHS_PATH)):
+        raise PreventUpdate
     
-    return "display-none", "display-none", "display-none", "", graph_file
+    if run_status["Paused"] == True:
+        raise PreventUpdate
+    
+    graph_displays = ["display-none", "display-none"]
+    graph_files = ["",""]
+    max_files = 200
 
-#========================================================================================
-
-@dash.callback(
-    Output("intro-text", "className"),
-    Output("loading-text", "className"),
-    Output("miner-graph", "className"),
-    Output("global-graph", "className"),
-    Output("global-graph", "src"),
-    inputs=[
-        Input("display-update", "n_intervals"),
-        Input("run-status", "children"),
-    ],
-    prevent_initial_call = True
-)
-def render_global_graph(n_intervals: int, run_status: str):
-    """ Updates the display for the global tab, shwoing the graph
-        of the current chain state if it is available.
-
-        See render_miner_graph for more detail (logic of both callbacks is the same)
+    if view_select == "Global View" or view_select == "Comparison":
+        if not os.path.exists(BASE_GLOBAL_GRAPH_FILE):
+            raise PreventUpdate
         
-        Args:
-            global-graph-update: interval set to check if there is anything to update
-            run-status: if run status alters, display should alter
-            tabs: should automatically render on switching tabs
-        Returns:
-            graph-file
-    """
+        else:
+            graph_displays[0] = ""
+            ALT_GLOBAL_FILES = [os.path.join(GLOBAL_GRAPHS_PATH, f"global_graph{n}.png") for n in range(max_files)]
+            next_file = 0
+            for filenum in range(max_files):
+                if os.path.exists(ALT_GLOBAL_FILES[filenum]):
+                    next_file = filenum + 1
+            os.rename(BASE_GLOBAL_GRAPH_FILE, ALT_GLOBAL_FILES[next_file])
+            graph_files[0] = ALT_GLOBAL_FILES[next_file]
 
-    num_alts = 25
+    if view_select == "Miner View" or view_select == "Comparison":
+        if not os.path.exists(BASE_MINER_GRAPH_FILE):
+            raise PreventUpdate
+        
+        else:
+            graph_displays[1] = ""
+            ALT_MINER_FILES = [os.path.join(MINER_GRAPHS_PATH, f"miner_graph{n}.png") for n in range(max_files)]
+            next_file = 0
+            for filenum in range(max_files):
+                if os.path.exists(ALT_MINER_FILES[filenum]):
+                    next_file = filenum + 1
+            os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next_file])
+            graph_files[1] = ALT_MINER_FILES[next_file]
 
-    ALT_GLOBAL_FILES = [os.path.join(GRAPHS_PATH, f"global_graph{n}.png") for n in range(num_alts)]
+    
+    return "display-none", "display-none", graph_displays[0], graph_displays[1], graph_files[0], graph_files[1]
 
-    current = 0
-    next = 1
-    found = False
-
-    for i in range(num_alts):
-        if os.path.exists(ALT_GLOBAL_FILES[i]):
-            current = i
-            next = (i +1)%num_alts
-            found = True
-
-     #Grab a new graph if it exists
-    if os.path.exists(BASE_GLOBAL_GRAPH_FILE):
-        for file in ALT_GLOBAL_FILES:
-            if os.path.exists(file):
-                os.remove(file) #Remove any files older than the next-to-last
-        os.rename(BASE_GLOBAL_GRAPH_FILE, ALT_GLOBAL_FILES[next])
-        graph_file = ALT_GLOBAL_FILES[next] #Rename new file to next name in sequence
-    elif found: #Otherwise, keep the old graph if it exists
-        graph_file  = ALT_GLOBAL_FILES[current]
-    elif run_status == "Running...": #Or show a load screen is we're loading.
-        filenum = (n_intervals//4)%4 
-        graph_file = LOADING_SCREEN_FILES[filenum]
-    else: #And if none of the above apply, intro screen covers everything else
-        graph_file = INTRO_SCREEN_FILE
-
-    return "display-none", "display-none", "display-none", "", graph_file
-
+    
 #========================================================================================
 @dash.callback(
-    Output("miner-graph", "src", allow_duplicate=True),
-    Output("global-graph", "src", allow_duplicate=True),
+    Output("intro-text", "className", allow_duplicate=True),
+    Output("loading-text", "className", allow_duplicate=True),
+    Output("miner-graph", "className", allow_duplicate=True),
+    Output("global-graph", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
@@ -284,9 +208,17 @@ def render_global_graph(n_intervals: int, run_status: str):
     prevent_initial_call = True
 )
 def reset_simulation(reset_click: int):
-    prep_directory(GRAPHS_PATH) 
-    prep_directory(DYNAMIC_PARAMS_PATH)
-    return "display-none", "display-none", "", "display-none", "display-none", {"Running":False, "Paused": False}
+    prep_directories()
+    return (
+            "", #Intro text
+            "display-none", #Loading text
+            "display-none", #Miner Graph
+            "display-none", #Global Graph
+            "",             #Run Button
+            "display-none", #Reset Button
+            "display-none", #Resume Button
+            {"Running":False, "Paused": False}
+            )
 
 #========================================================================================
 
@@ -301,8 +233,11 @@ def reset_simulation(reset_click: int):
     prevent_initial_call = True
 )
 def pause_simulation(pause_click: int):
-    with open(PAUSE_FILE, "w") as f:
-        f.write("")
+
+    if not os.path.exists(PAUSE_FILE):
+        with open(PAUSE_FILE, "w") as f:
+            f.write(" ")
+
     return "", "", "display-none", {"Running":True, "Paused": True}
 
 #========================================================================================
@@ -318,7 +253,8 @@ def pause_simulation(pause_click: int):
     prevent_initial_call = True
 )
 def resume_simulation(pause_click: int):
-    os.remove(PAUSE_FILE)
+    if os.path.exists(PAUSE_FILE):
+        os.remove(PAUSE_FILE)
     return "display-none", "display-none", "", {"Running":True, "Paused": False}
 
 #========================================================================================
@@ -337,6 +273,8 @@ def resume_simulation(pause_click: int):
 def run_simulation(
     run_click: int,
 ):
+    if os.path.exists(PAUSE_FILE):
+        os.remove(PAUSE_FILE)
     return "display-none", "", "", "display-none", {"Running":True, "Paused": False}
 
 #========================================================================================
@@ -345,7 +283,6 @@ def run_simulation(
 
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("run-button", "className", allow_duplicate=True),
     background=True,
     inputs=[
         Input("run-status", "data"),
@@ -356,12 +293,15 @@ def run_simulation(
         (Output("miner-slider", "disabled"), True, False),
         (Output("blocks-input", "disabled"), True, False), 
     ],
+    progress=[
+        Output("miner-table-head", "children"), 
+        Output("miner-table-body", "children"),
+    ],
     cancel = [Input("reset-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def simulation(
-    # The parameters below must match the `Input` and `State` variables found
-    # in the `inputs` list above.
+    table_update,
     run_status: dict,
     miner_slider_val: int,
     block_input_val: int,
@@ -389,12 +329,13 @@ def simulation(
     # Setting `Input` as exclusively `run-button` and setting `prevent_initial_call=True`
     # also accomplishes this.
 
-    if run_status["Running"] != True or ctx.triggered_id != "run-status":
+    if run_status["Running"] == False or ctx.triggered_id != "run-status":
         raise PreventUpdate
     else:
         num_blocks = block_input_val
         num_miners = miner_slider_val
-        trial_directory = directory_setup()
+        prep_directories()
+        trial_directory = make_output_directory()
         with open(STATIC_PARAMS_FILE, 'r') as f:
             trial_params = json.load(f)
 
@@ -423,8 +364,9 @@ def simulation(
 
         while(manager.iteration_number <= num_blocks):
             if not os.path.exists(PAUSE_FILE):
-                manager.miner_step()
+               blocknum, miner_stats = manager.miner_step()
+               table_update(render_miner_status(blocknum, miner_stats))
             time.sleep(0.15) #intent is to give other components a chance to update. But might not be necessary.
   
         
-    return "display-none", "display-none", ""
+    return "", "display-none"

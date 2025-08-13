@@ -87,14 +87,3 @@ def graph_gen_main(
    
     return plt
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-D", "--directory", type=str, help="Output directory", default=None
-    )
-    args = parser.parse_args()
-
-
-    dags_directory = os.path.join(CUR_DIR, "output", args.directory, "miner_dags")
-
-    graph_gen_main(dags_directory)

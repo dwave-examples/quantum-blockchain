@@ -98,6 +98,21 @@ def num_blocks_input() -> html.Div:
         ],
     )
 
+def generate_view_select():
+    view_opts = ["Global View", "Miner View", "Comparison"]
+    return html.Div(
+        className="dropdown-wrapper",
+        children=[
+            html.Label("Select View"),
+            dcc.Dropdown(
+                id="view-select",
+                options=view_opts,
+                value=view_opts[0],
+                clearable=False,
+                searchable=False,
+            ),
+        ],
+    )
 
 def generate_options(options_list: list) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
@@ -177,6 +192,7 @@ def create_interface():
                                             html.P(DESCRIPTION),
                                             generate_settings_form(),
                                             generate_run_buttons(),
+                                            generate_view_select(),
                                         ],
                                     )
                                 ],
@@ -195,20 +211,15 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
-                            html.Div(id="run-status", children="Ready"),
-                            html.Div(id="pause-status", children=""),  
                             html.Div(id="main-display", children=[
                                                                   dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
-                                                                  html.H1(children=[INTRO_TEXT, html.H3(INTRO_SUBTEXT)], id="intro-text", ),
-                                                                  html.H1(LOADING_TEXT, id="loading-text", className="display-none"),
+                                                                  html.H1(children=[INTRO_TEXT, html.H3(INTRO_SUBTEXT)], id="intro-text",),
+                                                                  html.H1(LOADING_TEXT, id="loading-text", className="display-none",),
                                                                   html.Img(id="miner-graph",className="display-none"),
-                                                                  html.Img(id="global-graph", className="display-none"),  
-                                                                  html.Table(id="miner-status-table", children = 
-                                                                                                                [
-                                                                                                                html.Thead(id="miner-table-head"),
-                                                                                                                html.Tbody(id="miner-table-body"),
-                                                                                                                ],
-                                                                            )
+                                                                  html.Img(id="global-graph", className="display-none"),
+                                                                  html.Table(id="miner-status-table", children=[
+                                                                                                        html.Thead(id="miner-table-head"), 
+                                                                                                        html.Tbody(id="miner-table-body")]),
                                                                   ],
                                     ),   
                             

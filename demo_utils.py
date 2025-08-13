@@ -1,6 +1,6 @@
 import os, time
 from pathlib import Path
-from demo_constants import TRIAL_OUTPUTS_PATH, GRAPHS_PATH, DYNAMIC_PARAMS_PATH
+from demo_constants import TRIAL_OUTPUTS_PATH, RUNNING_DIRECTORY_LIST
 
 def prep_directory(directory: str):
     
@@ -18,9 +18,7 @@ def make_output_directory() -> str:
     os.makedirs(output_directory)
     return output_directory
 
-def directory_setup() -> str:
-    prep_directory(GRAPHS_PATH)
-    prep_directory(DYNAMIC_PARAMS_PATH)
-    out_dir = make_output_directory()
-    return out_dir
+def prep_directories() -> None:
+    for directory in RUNNING_DIRECTORY_LIST:
+        prep_directory(directory)
 

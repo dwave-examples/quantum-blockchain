@@ -221,7 +221,7 @@ class TrialManager:
             
         return miner_result, num_failures
 
-    def miner_step(self) -> None:
+    def miner_step(self):
         start_time = time.time()
         mining = False
         active_miner_id = random.sample(sorted(self.waiting_miners), 1)[0]
@@ -251,6 +251,8 @@ class TrialManager:
         else:
             self.timing["Validation_Time"][-1] += total_time
 
+        miner_stats = copy.deepcopy(self.miner_stats_list)
+
         if not self.waiting_miners:
             self.record_iteration_timing()
             self.record_iteration_summary()
@@ -258,6 +260,7 @@ class TrialManager:
             self.reset_miners()
             self.iteration_number += 1
             
+        return self.iteration_number, miner_stats
 
     def iterate(self, stop_iter = None) -> None:
         """Iterates through the trial for a specified number of blocks.

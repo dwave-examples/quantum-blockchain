@@ -54,6 +54,19 @@ custom CSS can be added below.
     flex-direction: row;
 }
 
+#main-display > H1{
+    width: 85%;
+    margin-top: 20%;
+    padding-left: 10rem;
+    justify-content: center;
+}
+
+#main-display > H1 > H3{
+    padding-top: 1rem;
+    margin-left: 20%;
+    font-style: italic;
+}
+
 #main-display > img{
     width: 72%;
     margin: 0.5%;

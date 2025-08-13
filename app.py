@@ -20,8 +20,7 @@ import dash
 import diskcache
 from dash import DiskcacheManager
 from demo_configs import APP_TITLE, THEME_COLOR, THEME_COLOR_SECONDARY
-from demo_constants import GRAPHS_PATH, DYNAMIC_PARAMS_PATH
-from demo_utils import prep_directory
+from demo_utils import prep_directories
 from demo_interface import create_interface
 
 # Essential for initializing callbacks. Do not remove.
@@ -85,8 +84,7 @@ if __name__ == "__main__":
     # Imports the Dash HTML code and sets it in the app.
     # Creates the visual layout and app (see `demo_interface.py`)
 
-    prep_directory(GRAPHS_PATH)
-    prep_directory(DYNAMIC_PARAMS_PATH)
+    prep_directories()
     app.layout = create_interface()
 
     # Run the server
