@@ -1,0 +1,1 @@
+{"solver": "Advantage_system4.1", "model_size": 4, "ensemble": "PMJ", "randomize_solver": false, "randomize_embedding": false, "embedding_directory": "src/trials/embeddings", "annealing_time": 0.005, "validate_transactions": true}

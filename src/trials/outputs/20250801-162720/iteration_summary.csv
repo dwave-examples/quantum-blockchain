@@ -1,0 +1,4 @@
+Iteration,Time,# of Active Paths,Longest Path Length,Miner Path Length,Leading Zeros,Additional Validation,Number of Miners
+0,15.835355043411255,1,2,1,0,64,6
+1,14.590315818786621,2,3,2,0,64,6
+2,15.059190273284912,2,3,2,0,64,6

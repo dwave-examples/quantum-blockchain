@@ -1,0 +1,67 @@
+\documentclass[aspectratio=169,forpublic,12pt,final]{beamer}
+% Options:
+% [final] Final version.  Removes CONFIDENTIAL DRAFT marking.  Default false.
+% [forpublic] Non-confidential?  Uses copyright footer.  Default false.
+% [confidential] Confidential?  Uses confidential footer.  Default true.
+% [aspectratio=169] or [aspectratio=43]: Widescreen (16:9) or normal size (4:3)?
+%      NOTE: Compile twice if you change the aspect ratio, otherwise things won't look right.
+
+
+\usepackage{braket,verbatim}
+\usepackage{caption}
+
+\usetheme{dwave}
+
+
+\title{Choose Number of Miners and Blocks and Press "Run Simulation"}
+\subtitle{Results will display here when the simulation runs.}
+
+
+
+%Allows you to change the text width of a single frame.  This is useful for wide slides
+%that don't have wide content.  Example:
+%\Narrower[3cm]{ Some content, maybe the whole slide (not counting the title) }
+%\Narrower{ Default narrowing is 4cm }
+\newcommand\Narrower[2][4cm]{%
+\makebox[\linewidth][c]{%
+  \begin{minipage}{\dimexpr\textwidth-#1\relax}
+  \raggedright#2
+  \end{minipage}%
+  }%
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\begin{document}
+\maketitlering
+\setwhitebackground{1}
+\setadvantagebackground{0}
+
+\begin{frame}\frametitle{Exploring a Quantum Blockchain Architecture}
+	
+	\begin{columns}
+		\begin{column}{7cm}
+			\begin{itemize}\itemsep2mm%more item spacing
+				\item We introduce a blockchain architecture that uses quantum computation resistant to classical simulation, enhancing security and efficiency of traditional blockchain computation.
+				\item We deployed the architecture across four cloud-based annealing quantum computers geographically distributed within North America.
+			\end{itemize}
+		\end{column}
+		\begin{column}{9cm}
+
+		\end{column}
+	\end{columns}	
+\end{frame}
+
+
+
+
+  
+\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

@@ -5,3 +5,6 @@ assets/__generated_theme.css
 *.png
 *.jpg
 *.txt
+demo_callbacks2.py
+demo_interface2.py
+sleep_test.py

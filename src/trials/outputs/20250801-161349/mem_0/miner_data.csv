@@ -1,0 +1,3 @@
+Block Number,Block Hash,Validation,Chip ID,Problem ID,Strongest Block Hash,Chain Length
+1,453e1fab06d42c6b31cc17427e21ce489b0be4d57ce6e6e1578e47fc7d788e72,miner,Advantage_system4.1,4b5a9e5e-9693-4cd7-ab28-a3d61f649662,b092563015cd0248c47079b1df4ca841fc281577baa07a2970013536e616d348,1
+2,1bff94c3812244a30f0fc7345b2c1174a8743a2381863ca4459f405214e17d9f,miner,Advantage_system4.1,8ae5b47a-e1ab-4b91-a363-20ee06979f1f,453e1fab06d42c6b31cc17427e21ce489b0be4d57ce6e6e1578e47fc7d788e72,2
