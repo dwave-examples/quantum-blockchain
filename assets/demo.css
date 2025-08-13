@@ -49,6 +49,9 @@ custom CSS can be added below.
     background-color: var(--red-dark);
 }
 
+#miner-status-table {
+    margin: 0 auto 2rem;
+}
 #main-display{
     display: flex;
     flex-direction: row;
@@ -81,19 +84,22 @@ custom CSS can be added below.
     display: none;
 }
 
-#miner-table-head:first-child{  /*TODO figure out how to actually get this centered */
+#miner-table-title {
     text-align: center;
     font-weight: bold;
     font-size: large;
     width: 100%
 }
 
+#miner-status-table th {
+    padding: 1rem 3rem;
 th {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     padding-top: 0.15rem;
     padding-bottom: 0.15rem;
     border: 1px solid black;
+    text-align: center;
 }
 
 td {
@@ -102,4 +108,5 @@ td {
     padding-top: 0.15rem;
     padding-bottom: 0.15rem;
     border: 1px solid black;
+    text-align: center;
 }

@@ -122,7 +122,7 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
         Input("view-select", "value"),
         Input("run-status", "data"),
     ],
-    prevent_initial_call = True
+    prevent_initial_call=True
 )
 def render_graphs(n_intervals: int, view_select: str, run_status: dict):
     """ Updates the display for the miner tab, shwoing the graph
