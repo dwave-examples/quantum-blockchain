@@ -9,6 +9,16 @@ from collections import namedtuple
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 BlockNode = namedtuple("BlockNode", ["hash","prev_hash","block_score","total_score", "block_number", "block_height"])
 
+class ScoreTreeBranch:
+
+    def __init__(self, base_block: BlockNode = None):
+        self.node_list = []
+        if base_block is not None:
+            if isinstance(base_block, BlockNode):
+                self.node_list.append(base_block)
+                self.base_hash = base_block.hash
+                self.predecessor = None
+
 class BlockScoreTree:
 
     """ Class for tracking structure and score of a blockchain. Each block is represented by a 4-tuple
@@ -349,6 +359,23 @@ class BlockScoreTree:
         else:
             return None
         
+    def get_branch_predecessor(self, branch: list[BlockNode]) -> BlockNode:
+        pred_hash = branch[0].prev_hash
+        return self.get_block(pred_hash)
+    
+    def get_all_branch_predecessors(self, branch: list[BlockNode]) -> list[BlockNode]:
+        pred_list = []
+        current_branch = branch
+        while current_branch != self.trunk:
+            next_pred = self.get_branch_predecessor(current_branch)
+            if next_pred == None:
+                return None
+            else:
+                pred_list.append(next_pred)
+                current_branch = self.get_branch(next_pred.hash)
+
+        return pred_list
+
 
     def get_trunk_join_index(self,branch: list[BlockNode]) -> int:
         """ Finds the index where a branch or one of its parent branches joins the trunk, or
@@ -410,7 +437,45 @@ class BlockScoreTree:
             path_hash_list.append(current_block_hash)
             current_block_hash = self.get_block(current_block_hash).prev_hash
 
-        return path_hash_list     
+        return path_hash_list
+    
+    def calculate_soundness(self):
+        """ For each block in the tree, calculates how difficult it would be to move that block
+            to or from the trunk--i.e. the minimum number of blocks that would be needed to do that.
+            """
+        
+        sound_list = [None for i in range(0, len(self.block_loc_dict)+1)]
+        branch_sounds = {}
+        for branch in self.branches:
+            join_idx = self.get_trunk_join_index(branch)
+            if join_idx != -1 and join_idx is not None:
+                best_sound, best_idx = None, None
+                for idx, block in enumerate(branch):
+                    block_sound = block.total_score - self.high_score
+                    sound_list[block.block_number] = block_sound
+                    if best_sound is None or block_sound > best_sound:
+                        best_sound = block_sound
+                        best_idx = idx
+
+                if best_idx is not None:
+                    for i in range(best_idx):
+                        sound_list[branch[i].block_number] = best_sound
+                    if join_idx not in branch_sounds or branch_sounds[join_idx] < best_sound:
+                        branch_sounds.update({join_idx: best_sound})
+
+        best_branch_sound = -self.high_score #Initialized to worst achievable value (or very nearly)
+        for idx, block in enumerate(self.trunk):
+            block_sound = self.high_score - block.total_score
+            if block_sound > -best_branch_sound:
+                block_sound = -best_branch_sound
+
+            sound_list[block.block_number] = block_sound
+            if idx in branch_sounds:
+                best_branch_sound = max(best_branch_sound, branch_sounds[idx])
+
+        return sound_list
+
+                
 
     def write_to_file(self,filename: str, truncate: bool = True):
         short_hash_len = self.short_hash_len
