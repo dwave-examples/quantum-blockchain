@@ -71,7 +71,7 @@ def combine_dags(dag_list: list[BlockScoreTree]):
                      
     return composite_dag, mining_nodes
 
-def assign_branch(branch_dict, branch_arrangement, max_depth, root_depth, errors_filename, init_direct: int, alternate: bool = True):
+def assign_branch(branch_dict, branch_arrangement, max_depth, root_depth, errors_filename, parent_root_depth = 0):
     """ 
     Arg requirements:
         Needs a correctly formatted dict. In particular, must have:
@@ -80,38 +80,48 @@ def assign_branch(branch_dict, branch_arrangement, max_depth, root_depth, errors
 
     lower = branch_dict["root"]
     upper = branch_dict["map"][-1] + 1
-    if init_direct != 1 and init_direct != -1:
-        raise Exception("Invalid direction. Must be 1 or -1")
-    else:
-        direction = init_direct
+
+    if root_depth == 0: #if we start from the trunk, we just alternate on either side. Only trick is determining starting direction.
+        upper_weight = sum([2 in row[lower:upper] for row in branch_arrangement[1:max_depth+1] ]) #Check which direction has the least stuff in the way...
+        lower_weight = sum([2 in row[lower:upper] for row in branch_arrangement[max_depth+1:] ]) #...and go in that direction...
+        direction = 2*int(upper_weight < lower_weight) - 1                                       #...breaking ties towards the inside.
+        depths = [-direction*i//2 if i%2 else direction*(i+1)//2 for i in range(1, 2*max_depth+1)] #Counts up depths with alternating sign
+
+    else: #starting from a branch is more complicated than starting from the trunk
+        direction = 2*int(root_depth>0)-1
+        out_lim = direction*(max_depth+1)
+        depths = [i for i in range(root_depth, out_lim, direction)] #if we only go outward, it's easy
+
+        if len(branch_dict["children"])==0: #but if we go inward, we have different amounts of space in different directions
+            in_step = -direction
+            inner_depths = [i for i in range(root_depth + in_step, parent_root_depth, in_step)] #available depths in the inward direction: can't cross parent branch.
+            new_depths = [] #yes, we have sunk that low
+            for items in zip(inner_depths, depths):
+                new_depths.extend(items)
+            if len(depths) > len(inner_depths):
+                new_depths.extend(depths[len(inner_depths)+1:])
+            elif len(inner_depths) > len(depths):
+                new_depths.extend(inner_depths[len(depths)+1:])
+            depths = new_depths   
+
     assigned = False
     last_depth = None
-    for depth in range(1, max_depth+1):
-        for dummy in range(2):    
-            depth_assignment = root_depth + depth*direction
-            last_depth = depth_assignment
-            if 1 not in branch_arrangement[depth_assignment][lower:upper] and 2 not in branch_arrangement[depth_assignment][lower:upper]:
-                assigned = True
-                for i in range(lower+1,upper):
-                    branch_arrangement[depth_assignment][i] = 1
-                for i in range(depth_assignment-direction, root_depth, -1*direction):
-                    branch_arrangement[i][lower] = 2
-                branch_dict.update({"depth": depth_assignment})
-                branch_dict.update({"root_depth": root_depth})
-                break #If we find the assignment, stop immediately.
-            elif alternate:  #Will reverse the direction for the 2nd iteration of the inner for-loop
-                direction *= -1 #And then reverse it back at the end.
-                if depth_assignment == 0: #Need to avoid crossing center line when assigning interior branches
-                    alternate = False
-            else: #If we're not alternating, one iteration of inner loop is all we want.
-                break
 
-        if assigned:
+    for depth in depths: 
+        last_depth = depth
+        if 1 not in branch_arrangement[depth][lower:upper] and 2 not in branch_arrangement[depth][lower:upper]:
+            assigned = True
+            for i in range(lower+1,upper): 
+                branch_arrangement[depth][i] = 1 #Mark spaces containing a branch with a "1"
+            for i in range(root_depth, depth, 2*int(depth < root_depth)-1): 
+                branch_arrangement[i][lower] = 2 #And connections from branch-to-trunk with a 2
+            branch_dict.update({"depth": depth})
+            branch_dict.update({"root_depth": root_depth})
             break
 
     if not assigned:
         with open(errors_filename, 'a') as f:
-            f.write(f"Map: {branch_dict["map"]}...Root {branch_dict["root"]}...Root Depth: {root_depth}...Start Dir {init_direct}...Cur Dir {direction}...Cur Depth{last_depth}")
+            f.write(f"Map: {branch_dict["map"]}...Root {branch_dict["root"]}...Root Depth: {root_depth}...Start Dir {direction}...Max Depth {max_depth}...Cur Depth {last_depth}")
             children = [child for child in branch_dict["children"]]
             chln = 0
             while True:
@@ -126,16 +136,8 @@ def assign_branch(branch_dict, branch_arrangement, max_depth, root_depth, errors
         return direction
 
     for child in branch_dict["children"]:
-        if len(child["children"]) > 0: #A child can always be placed to the outside of its parent.
-            direct = direction #It may not have a valid placement to the inside (i.e. between parent and trun)
-            alt = False #This is easy to check for a lone child, but difficult if the child has further children.
-        else: 
-            direct  = -1*direction
-            alt = True
-        assign_branch(branch_dict=child, branch_arrangement=branch_arrangement, max_depth=max_depth-abs(root_depth), 
-                      root_depth=depth_assignment, errors_filename=errors_filename, init_direct=direct, alternate=alt)
-        
-    return direction
+        assign_branch(branch_dict=child, branch_arrangement=branch_arrangement, max_depth=max_depth, 
+                      root_depth=branch_dict["depth"], errors_filename=errors_filename, parent_root_depth=root_depth)
 
 
 def generate_graph_data(tree: BlockScoreTree, errors_filename, data_filename=None, map_filename=None):
@@ -207,10 +209,9 @@ def generate_graph_data(tree: BlockScoreTree, errors_filename, data_filename=Non
 
     branch_arrangement = [[int(j==0) for i in range(num_nodes+1)] for j in range(2*max_depth + 1)]
     
-    direct = 1
     for branch in primary_branches:
-        direct = -1 * assign_branch(branch_dict=branch, branch_arrangement=branch_arrangement,
-                                max_depth=max_depth, root_depth=0, errors_filename=errors_filename, init_direct=direct)
+        assign_branch(branch_dict=branch, branch_arrangement=branch_arrangement,
+                                max_depth=max_depth, root_depth=0, errors_filename=errors_filename)
 
     if data_filename:
         with open(data_filename, 'w') as f:

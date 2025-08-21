@@ -70,11 +70,7 @@ class SpiralPlotter:
         x_0 = self.center[0] + r_0*math.cos(theta_0)
         y_0 = self.center[1] + r_0*math.sin(theta_0)
         branch.x_edges.append(x_0)
-        #branch.x_edges.append(point_ij[0])
-        #branch.x_edges.append(None)
         branch.y_edges.append(y_0)
-        #branch.y_edges.append(point_ij[1])
-        #branch.y_edges.append(None)
 
         for i in range(start_index, stop_index):
             for j in range(self.segs_per_point):
@@ -95,15 +91,6 @@ class SpiralPlotter:
                     if i == branch.map[-1]:
                         break #Do not draw remaining edges after the last node
 
-                #if len(points) >= 2: #Draw segments of the spiral limb
-                 #   branch.x_edges.append(points[-2][0])
-                  #  branch.x_edges.append(points[-1][0])
-                   # branch.x_edges.append(None)
-                    #branch.y_edges.append(points[-2][1])
-                    #branch.y_edges.append(points[-1][1])
-                    #branch.y_edges.append(None)
-                #elif i==start_index and j==0 and branch.depth != 0: #Draw segment connecting branch to parent
-
 
 
 
@@ -117,8 +104,8 @@ class SpiralPlotter:
         color_seq = px.colors.diverging.RdYlBu_r
         trunk_colors = [color_seq[i] if i < len(color_seq) else color_seq[-1] for i in range(len(self.trunk.x_points))]
 
-        trunk_edge_trace = go.Scatter(x=self.trunk.x_edges, y=self.trunk.y_edges, mode="lines")
-        trunk_node_trace = go.Scatter(x=self.trunk.x_points, y=self.trunk.y_points, mode="markers", marker={"size": self.trunk.size_chart, "color": self.trunk.map, "colorscale": "plasma", "opacity":1})
+        trunk_edge_trace = go.Scatter(x=self.trunk.x_edges, y=self.trunk.y_edges, mode="lines+markers", marker={"size":0, "opacity":0})
+        trunk_node_trace = go.Scatter(x=self.trunk.x_points, y=self.trunk.y_points, mode="markers", marker={"size": self.trunk.size_chart, "color": self.trunk.soundness_list, "colorscale": "plasma_r", "opacity":1})
         plot_data = [trunk_edge_trace, trunk_node_trace]
 
         for branch in self.branches:
