@@ -120,7 +120,7 @@ def assign_branch(branch_dict, branch_arrangement, max_depth, root_depth, errors
             break
 
     if not assigned:
-        with open(errors_filename, 'a') as f:
+        with open(errors_filename, 'w') as f:
             f.write(f"Map: {branch_dict["map"]}...Root {branch_dict["root"]}...Root Depth: {root_depth}...Start Dir {direction}...Max Depth {max_depth}...Cur Depth {last_depth}")
             children = [child for child in branch_dict["children"]]
             chln = 0
@@ -155,23 +155,19 @@ def generate_graph_data(tree: BlockScoreTree, errors_filename, data_filename=Non
 
     """
 
-    num_nodes = len(tree.block_loc_dict)
+    num_nodes = len(tree.hash_to_branch_lookup)
     trunk_map = [node.block_number for node in tree.trunk]
-    branches = [branch for branch in tree.branches if branch != tree.trunk]
-    branches.sort(key= lambda x: num_nodes - tree.get_branch_predecessor(x).block_number)
+    branches = [branch for branch in tree.branches if branch.root is not None]
+    branches.sort(key= lambda x: num_nodes - x.root.block_number)
     branch_data = []
-    branch_soundnesses = tree.calculate_soundness()
-    trunk_soundness = [branch_soundnesses[i] for i in trunk_map]
-    trunk_dict = {"map": trunk_map, "depth": 0, "root": 0, "root_depth": 0, "soundness": trunk_soundness}
+    trunk_dict = {"map": trunk_map, "depth": 0, "root": 0, "root_depth": 0, "soundness": tree.trunk.get_soundness_map(tree.high_score, trunk=True)}
 
     for branch in branches:
-        branch_dict = {"root": tree.get_branch_predecessor(branch).block_number}
-        branch_map = []
-        for node in branch:
-            branch_map.append(node.block_number)
+        branch_dict = {"root": branch.root.block_number}
+        branch_map = [node.block_number for node in branch]
         branch_dict.update({"map": branch_map})
         branch_dict.update({"children": []})
-        branch_dict.update({"soundness": [branch_soundnesses[i] for i in branch_map]})
+        branch_dict.update({"soundness": branch.get_soundness_map(tree.high_score)})
         branch_data.append(branch_dict)
 
     primary_branches = []
@@ -215,7 +211,7 @@ def generate_graph_data(tree: BlockScoreTree, errors_filename, data_filename=Non
 
     if data_filename:
         with open(data_filename, 'w') as f:
-            out_data = ""
+            out_data = json.dumps(trunk_dict) + "\n"
             for datum in branch_data:
                 out_data += json.dumps(datum) + "\n"
             f.write(out_data)
