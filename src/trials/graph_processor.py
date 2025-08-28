@@ -63,7 +63,7 @@ def combine_dags(dag_list: list[BlockScoreTree]):
                     mining_nodes.add(block.hash)
 
             composite_dag.add_block(block_hash=block.hash, prev_block_hash=block.prev_hash, 
-                                    block_score=times_in_trunk, canonical=bool(times_in_trunk > 0), block_number=block.block_number)
+                                    block_score=times_in_trunk, block_number=block.block_number)
 
     for branch in composite_dag.branches:
         if branch[-1].total_score > composite_dag.trunk[-1].total_score:

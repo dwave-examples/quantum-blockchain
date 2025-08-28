@@ -62,6 +62,11 @@ class ScoreTreeBranch:
     def __len__(self):
         return len(self.node_list)
     
+    def __contains__(self, item):
+        if isinstance(item, str): #Supporting membership checking by both hash and object, as hashes should be unique identifiers and
+            return item in self.hash_to_index_lookup #both fairly natural ways to ask the question "does this branch contain this block?"
+        elif isinstance(item, BlockNode):
+            return item.hash in self.hash_to_index_lookup
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #=====================================================================================================
@@ -114,7 +119,7 @@ class ScoreTreeBranch:
                 pred_branch: a branch that is the predecessor of the current branch (that is
                 it contains a block whose hash matches the branch's root hash)."""
         
-        if self.root_hash in pred_branch.hash_to_index_lookup:
+        if self.root_hash in pred_branch:
             self.predecessor = pred_branch
             self.update_depth()
 
