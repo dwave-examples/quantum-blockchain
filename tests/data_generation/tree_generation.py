@@ -1,0 +1,158 @@
+import random
+import math
+import sys, os
+
+sys.path.append(os.path.join("..",".."))
+
+from src.common.block_score_tree import BlockNode, BlockScoreTree
+
+def generate_simple_tree_dicts(num_blocks: int=256, num_primary_branches: int=8, max_depth: int = 3):
+    trunk_length = num_blocks//2
+    blocks_remaining = num_blocks - trunk_length
+    primary_branch_blocks = blocks_remaining//2
+    primary_branch_length = primary_branch_blocks//num_primary_branches
+    tree_data = [{"length":trunk_length}]
+    for i in range(max_depth):
+        for j in range(1,num_primary_branches+1):
+            length = primary_branch_length//(2**i)
+            if length == 0 or blocks_remaining < length:
+                break
+            parent = i * num_primary_branches + max(i,1)*j
+            root = random.randint(1,2*length-1)
+            tree_data.append({"parent":parent, "root":root, "length": length})
+            blocks_remaining -= length
+
+    return tree_data
+
+def generate_binary_layered_tree_dicts(prim_branches: int =4, num_layers: int =5):
+
+    tree_data = []
+    prim_branches = 4
+    num_layers = 5
+    primary_branch_length = 2**num_layers
+    tree_data.append({"length":2*primary_branch_length})
+    for j in range(prim_branches):
+        root = random.randint(0,2*primary_branch_length-1)
+        tree_data.append({"parent":0,"root":root, "length": primary_branch_length})
+
+    for i in range(1,num_layers):
+        length = primary_branch_length//(2**i)
+        for j in range(prim_branches*(2**(i-1)) - prim_branches + 1, prim_branches*(2**i) - prim_branches + 1):
+            parent = j
+            for k in range(2):
+                root = random.randint(0, 2*length-1)
+                tree_data.append({"parent":parent,"root":root, "length": length})
+
+    return tree_data
+
+def append_scores(tree_dict, low_score_prob: float = 0.3, high_score: float=1.0, low_score: float=-1.0):
+    for dict in tree_dict[1:]:
+        scores = []
+        for i in range(dict["length"]):
+            score_roll = random.randint(1,1000)
+            if score_roll <= int(low_score_prob*1000):
+                score = low_score
+            else:
+                score = high_score
+            scores.append(score)
+        dict.update({"score":scores})
+
+    return tree_dict
+
+def dummy_hash(num: int):
+    cap_block  = [i for i in range(65,91)]
+    digit_block = [i for i in range(48,58)]
+    lower_block = [i for i in range(97,123)]
+    return chr(cap_block[num%26]) + chr(digit_block[((num+1)//26)%10]) + chr(lower_block[((num+2)//260)%26])
+
+def generate_tree_from_dicts(tree_dicts):
+    """ Input format: each branch should be indicated by a dict of the form {"parent":a, "root": b, "length": c} where a indicates the number of the parent
+        branch, b is the index at which it branches from the parent, and c is the branch's length"""
+    
+    for i in range(len(tree_dicts)):
+        tree_dicts[i].update({"branch number":i})
+
+    tree = BlockScoreTree()
+    num_blocks = 1
+    genesis_hash = dummy_hash(num_blocks)
+    tree.add_block(genesis_hash, None, 1)
+    trunk_dict = tree_dicts[0]
+    trunk_dict.update({"branch": tree.trunk})
+    active_branches = [trunk_dict]
+    waiting_branches = tree_dicts[1:]
+    num_active = 1
+
+    while num_active > 0:
+        next_branch_data = random.choice(active_branches)
+        if "branch" in next_branch_data:
+            prev_hash = next_branch_data["branch"].tip.hash
+        else:
+            prev_hash = next_branch_data.pop("root hash")
+        num_blocks += 1
+        new_hash = dummy_hash(num_blocks)
+        block_score = 1
+        if "scores" in next_branch_data:
+            if "branch" in next_branch_data:
+                if len(next_branch_data["scores"]) > len(next_branch_data["branch"]):
+                    block_score = next_branch_data["scores"][len(next_branch_data["branch"])]
+            else:
+                block_score = next_branch_data["scores"][0]
+        tree.add_block(new_hash, prev_hash, block_score)
+        extended_branch = tree.hash_to_branch_lookup[new_hash]
+        next_branch_data.update({"branch":extended_branch})
+
+        for branch_dict in waiting_branches:
+            if branch_dict["parent"] == next_branch_data["branch number"]:
+                if len(extended_branch) > branch_dict["root"]+1:
+                    branch_dict.update({"root hash": prev_hash})
+                    active_branches.append(branch_dict)
+                    waiting_branches.remove(branch_dict)
+                    num_active += 1
+
+        if len(extended_branch) >= next_branch_data["length"]:
+            active_branches.remove(next_branch_data)
+            num_active -= 1
+            
+    return tree   
+
+def generate_random_tree(num_nodes: int, branch_probability: float = 0.1, branch_range: int = 2, branch_end_prob = 0.25, earliest_branch: int = 1):
+    
+    tree = BlockScoreTree()
+
+    prev_hash = None
+    active_branches = [tree.trunk]
+    for i in range(num_nodes):
+        node_hash = dummy_hash(i)
+        active_branch_roll = random.randint(0, len(active_branches)-1)
+        active_branch = active_branches[active_branch_roll]
+        unbranched = True
+        if len(active_branch) > earliest_branch:
+            branch_roll = random.randint(1,100)
+            if branch_roll < branch_probability*100:
+                unbranched = False
+        if not unbranched: #Find where to start the new branch
+            pred_idx = -len(active_branch)
+            while (len(active_branch) + pred_idx < earliest_branch):
+                branch_loc_roll = random.randint(1, 2**10 -1)
+                pred_idx = -math.ceil(branch_range*(10 - math.log2(branch_loc_roll)))
+        else:
+            pred_idx = -1
+
+        if len(active_branch) > 0:
+            prev_hash = active_branch[pred_idx].hash
+        else:
+            prev_hash = None
+
+        tree.add_block(block_hash=node_hash, prev_block_hash=prev_hash, block_score=1) #TODO re-examine branching
+
+        if not unbranched:
+            new_branch = tree.branches[-1]
+            active_branches.append(new_branch)
+
+        if active_branch_roll > 0:
+            branch_end_roll = random.randint(1,100)
+            if branch_end_roll < branch_end_prob*100:
+                active_branches.pop(active_branch_roll)
+
+    return tree
+        

@@ -203,25 +203,6 @@ class Miner:
     def get_block(self, block_hash):
         return self.blockchain.get_block(block_hash)
 
-    def is_good_block(self, block_score) -> bool:
-        """ Determines whether a block is valid based on its score so methods don't
-            have to pass around cumbersome validation vectors or bools along with the score. 
-            This is mostly future proofing for alternate scoring functions: it works with
-            our simple default or any other scoring function that associates a postive (negative)
-            score with positive (negative) chainwork. If we ever break that assumption, we'll
-            need to update several functions including this one.
-
-            Args:
-                block_score: the score of a block
-            Returns:
-                bool representing whether the block is valid or not
-            """
-
-        if block_score > 0: #Accept any block with positive score. They're good blocks, Brent.
-            return True
-        else:
-            return False
-
     def add_block_to_chain(self, block: Block, block_score) -> list[tuple[str,float]]:
         """ Adds a block to the blockchain memory stored in self.blockchain, which also 
             adds its info to the score tree. Updates blockchain beliefs based on the logic of
@@ -246,12 +227,12 @@ class Miner:
         blocks_demoted = []
         transactions_demoted = set()
 
-        self.blockchain.add_block(block, block_score, canonical = self.is_good_block(block_score))
+        self.blockchain.add_block(block, block_score)
         self.blockchain.store_block_in_file(block)
 
         if self.blockchain.tree.is_in_trunk(block.hash):
             blocks_promoted.append(block)
-        elif self.is_good_block(block_score): #Only need to update on blocks that are good and not already in trunk
+        elif block_score > 0: #Only need to update on blocks that are good and not already in trunk
             blocks_promoted, blocks_demoted = self.update_blockchain_beliefs()
 
         for block in blocks_promoted: #All txns in block except coinbase

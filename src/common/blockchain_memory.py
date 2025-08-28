@@ -49,14 +49,14 @@ class BlockchainMemory:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-    def add_block(self, block: Block, score: float=1, canonical: bool = True):
+    def add_block(self, block: Block, score: float=1):
 
         """ Adds a block and associated score to the chain, including storing it in the self.blocks dict,
             adding a representation of it to the blockchain tree and adding its transactions to 
             self.transaction_block_lookup."""
 
         self.blocks.update({block.hash:block})
-        self.tree.add_block(block.hash, block.previous_block_hash, score, canonical)
+        self.tree.add_block(block.hash, block.previous_block_hash, score)
         #Consider moving up to miner.
         for txn in block.transactions: 
             if txn.transaction_hash in self._transaction_block_lookup:

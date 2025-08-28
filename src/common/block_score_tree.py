@@ -1,363 +1,6 @@
-import copy
 import json
-from collections import namedtuple
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#=====================================================================================================
-#                             SECTION: Initialization and Special Methods                            |
-#=====================================================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-BlockNode = namedtuple("BlockNode", ["hash","prev_hash","block_score","total_score", "block_number", "block_height"])
-
-class ScoreTreeBranch:
-
-    def __init__(self, base_block: BlockNode = None):
-        self.node_list = []
-        self.hash_to_index_lookup = {}
-        self.children = [] #Children and predecessor will be dynamically linked for easy access
-        self.predecessor = None
-        self.depth = 0
-        self.back_scores = []
-        if base_block is not None:
-            self.initialize_first_block(base_block)
-
-    def initialize_first_block(self, base_block):
-        if not isinstance(base_block, BlockNode):
-            raise Exception("Attempted to add something other than a BlockNode")
-        elif len(self.node_list) > 0:
-            raise Exception("Attempted to initialize non-empty branch.")
-        
-        self.node_list.append(base_block)
-        self.hash_to_index_lookup.update({base_block.hash:0})
-        self.root_hash = base_block.prev_hash
-        self.back_scores.append((base_block.total_score,0)) #These are important for calculating block soundess. See docstring of update_back_scores for more detail.
-
-    @property
-    def tip(self):
-        return self.node_list[-1]
-    
-    @property
-    def tip_idx(self):
-        return len(self.node_list) - 1
-    
-    @property
-    def base(self):
-        return self.node_list[0]
-    
-    @property
-    def root(self):
-        if self.predecessor is not None:
-            return self.predecessor.get_block(self.root_hash)
-        else:
-            return None
-        
-    @property
-    def best_score(self):
-        return self.back_scores[0][0]
-        
-    def __getitem__(self,index):
-        return self.node_list[index]
-    
-    def __iter__(self):
-        return iter(self.node_list)
-    
-    def __len__(self):
-        return len(self.node_list)
-    
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#=====================================================================================================
-#                             SECTION: Branch Construction                                          |
-#=====================================================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def append_block(self, new_block: BlockNode):
-        if not isinstance(new_block, BlockNode):
-            raise Exception("Attempted to add something other than a BlockNode")
- 
-        if len(self.node_list) == 0:
-            self.initialize_first_block(new_block)
-            return True #TODO consider
-        elif new_block.prev_hash == self.tip.hash:
-            self.node_list.append(new_block)
-            self.hash_to_index_lookup.update({new_block.hash:self.tip_idx})
-            self.update_back_scores(new_block.total_score, self.tip_idx)              
-
-        else:
-            return False #TODO figure out what to do in this case
-        
-    def update_depth(self):
-        """ Updates the branch depth to one more than that of its predecessor. Called
-            recursively on all children to ensure the update propogates properly."""
-        if self.predecessor is not None:
-            self.depth = self.predecessor.depth + 1
-        else:
-            self.depth = 0
-        for child in self.children:
-            child.update_depth()
-
-    def set_predecessor(self, pred_branch: 'ScoreTreeBranch'):
-        """ Sets the passed branch as the predecessor of the current branch
-            (provided that is a legal assignment). Will not set the other end 
-             of the relationship: this is intended to be called by link-to-child,
-             rather than on its own. 
-             
-             Args:
-                pred_branch: a branch that is the predecessor of the current branch (that is
-                it contains a block whose hash matches the branch's root hash)."""
-        
-        if self.root_hash in pred_branch.hash_to_index_lookup:
-            self.predecessor = pred_branch
-            self.update_depth()
-
-            
-    def link_child_branch(self, child_branch: 'ScoreTreeBranch'): #TODO see if trunk needs to be a special case
-        """ Links a ScoreTreeBranch to this branch as a child. The child then calls set_predecessor on
-            this branch to complete the linkage. """
-        if child_branch.root_hash in self.hash_to_index_lookup:
-            self.children.append(child_branch)
-            child_branch.set_predecessor(self)
-            self.update_back_scores(child_branch.best_score, self.hash_to_index_lookup[child_branch.root_hash])
-        else:
-            return None 
-
-    def update_back_scores(self, new_score, new_index):
-        """ This function manages the self.back_scores list maintained by each branch. These scores
-            are the key component of calculating the soundess of each block (how "stable" its place in
-            the blockchain is). For its soundness, each block will use the better of its own total score,
-            and that of any successor block in the tree--that is, any block later in its branch, or in
-            any children higher on its branch. Thus high scores propagate backwards through branches:
-            in the common case where the tip holds the highest score, all blocks in its branch will
-            use its total score as their back score (as will any preceding block in parent branches).
-            
-            Back data is maintained as a list of tuples of the form (back_score, index), indicating that the 
-            block at self.node_list[index] and every block prior to are assigned back_score. This means that
-            for branches where the tip has the highest score (the most common case), only one entry will need
-            to be maintained. The list is always mainained in strictly decreasing score order and strictly
-            increasing index order, so when an existing entry has lower index and lower score than an new
-            entry, it will be removed."""
-
-        if len(self.back_scores) == 0:
-            self.back_scores.append((new_score, new_index))
-            if self.predecessor is not None:
-                root_idx = self.predecessor.hash_to_index_lookup[self.root_hash]
-                self.predecessor.update_back_scores(self.best_score, root_idx)
-                
-
-        insert = False
-        if new_index > self.back_scores[-1][1]:
-            insertion_point = len(self.back_scores)
-            insert = True
-        else:
-            for idx, entry in enumerate(self.back_scores):
-                if new_index <= entry[1]:
-                    insertion_point = idx
-                    if new_score > entry[0]:
-                        insert = True
-                        if new_index == entry[1]:
-                            insertion_point += 1 #Inserting ahead of same-indexed entries ensures they get removed in the next step
-                    break
-        
-        if insert:
-            assert insertion_point >= 0, "Oops"
-            self.back_scores.insert(insertion_point, (new_score, new_index))
-            current_idx = insertion_point
-            while current_idx > 0:
-                if self.back_scores[current_idx-1][0] <= new_score:
-                    self.back_scores.pop(current_idx-1)
-                    current_idx -= 1
-                else:
-                    break
-
-            if self.predecessor is not None:
-                root_idx = self.predecessor.hash_to_index_lookup[self.root_hash]
-                self.predecessor.update_back_scores(self.best_score, root_idx)
-        
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#=====================================================================================================
-#                             SECTION: Getters and Data Access                                       |
-#=====================================================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def get_block(self, block_hash: str) -> BlockNode:
-        if block_hash in self.hash_to_index_lookup:
-            return self.node_list[self.hash_to_index_lookup[block_hash]]
-        else:
-            return None
-        
-    def get_soundness_map(self, high_score, trunk = False):
-        """ Block soundness measures how secure a block's place in the blockchain is:
-            specifically, what is the minimum number of blocks that would be needed to move
-            that block into or out of the trunk. For a block at the tip of a branch (including the trunk),
-            this is simply the difference in scores between the tip of that branch and the highest-scoring block in any
-            other branch. That is, for a branch it will always be branch_tip_score - trunk_high_score. For the
-            trunk it will be trunk_high_score - max_branch_score where the latter is the best score of any block not in
-            the trunk. 
-            
-            For blocks that are not in a branch tip, the situation is more complicated. Trunk blocks can only be displaced
-            by branches rooted in blocks lower in the trunk. Non-trunk blocks can only be joined to the trunk by the extension
-            of their own branch, or the extension of successor branches rooted higher in their branch than they are. For branch
-            blocks this means that they "inherit" the best soundness of any successor blocks, while trunk blocks inherit the worst
-            soundness of predecessor blocks"""
-        
-        map= []
-        if trunk:
-            branch_join_indices = {}
-            for child in self.children: #Easier to list which blocks have children once than check the whole list each time
-                if child.root_hash in branch_join_indices:
-                    branch_join_indices[child.root_hash].append(child)
-                else:
-                    branch_join_indices.update({child.root_hash:[child]})
-            previous_worst = high_score #Start with the highest possible score: we can only go down from there
-            for block in self.node_list:
-                soundness = high_score - block.total_score
-                if block.hash in branch_join_indices: #Only need to check branches starting from this block--earlier branches will
-                    for child in branch_join_indices[block.hash]: #already be covered by previous_worst
-                        soundness = min(soundness, high_score - child.best_score)
-                if previous_worst < soundness:
-                    soundness = previous_worst
-                else:
-                    previous_worst = soundness
-
-                map.append(soundness)
-
-        else:
-            for idx in range(len(self.node_list)):
-                block_score = None 
-                for score, score_idx in reversed(self.back_scores):
-                    if idx <= score_idx:
-                        block_score = score
-                assert block_score is not None, f"No back score found in branch {self.base.block_number} at index {idx}. Scores are {self.back_scores}"
-                map.append(block_score - high_score)
-
-        assert len(map) == len(self.node_list), f"Branch {self.base.block_number} missing {len(self.node_list) - len(map)} scores!"
-        return map
-
-        
-    def get_leaves(self) -> list['ScoreTreeBranch']: #TODO consider removing
-        """ Returns a list of all leaves (branches with no children) that are
-            successor branches of self. Will recursively traverse linked branch 
-            structure until all leaves are found. If called by a branch with no 
-            children, will return self, thus every call returns a list of at least
-            one leaf."""
-        
-        leaves = []
-        if len(self.children) == 0:
-            leaves.append(self)
-        else:
-            for child in self.children:
-                child_leaves = child.get_leaves()
-                leaves += child_leaves
-
-        return leaves
-    
-    def get_descendants_by_depth(self) -> list[list['ScoreTreeBranch']]:
-        """ """
-        
-        descendants = [[self]]
-        for child in self.children:
-            if len(descendants) == 1:
-                descendants.append([])
-            descendants[1].append(child)
-            later_descendants = child.get_descendants_by_depth()
-            while len(descendants) < len(later_descendants)+1:
-                descendants.append([]) #Add enough entries in desendants to hold all the output
-            for i in range(1, len(later_descendants)): #0th entry will just be child again, so ignore it
-                descendants[i+1] += later_descendants[i]
-
-        return descendants
-    
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#=====================================================================================================
-#                             SECTION: Branch Restructuring                                          |
-#=====================================================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def pop(self) -> tuple[BlockNode, list['ScoreTreeBranch']]:
-        """ Removes a single block from the tip of the branch, updating all data and properties as necessary.
-            Blocks should never be altered or removed by any means other than the pop function: if a more
-            extensive change is necessary, it should be done by means of repeated calls of pop() and
-            append_block(), as in is done in the other methods in this section.
-            
-            Args:
-                None
-            Returns:
-                removed_block (BlockNode): block removed from branch tip
-                removed_children: list of all child branches with root at the
-                                removed block (there will usually be zero or one
-                                but in theory could be arbitrarily many)"""
-        
-        if len(self) < 1:
-            raise Exception("Cannot pop last block in branch")
-        else:
-            removed_block = self.node_list.pop()
-            self.back_scores.pop() #last node always has an entry in back_scores()
-            self.hash_to_index_lookup.pop(removed_block.hash)
-            removed_children = []
-            for child in self.children:
-                if child.root_hash == removed_block.hash:
-                    removed_children.append(child)
-                    self.children.remove(child)
-            self.update_back_scores(self.tip.total_score, len(self.node_list)-1)
-                
-            return removed_block, removed_children
-
-        
-    def concatenate_branch(self, new_branch_section: 'ScoreTreeBranch'): 
-        """ Concatenates a new branch section to the tip of the current branch.
-        
-            Args:
-                new_branch_section (ScoreTreeBranch): a ScoreTreeBranch object. The
-                root hash of the object must match this branch's tip hash or the operation
-                will fail and throw an exception."""
-        
-        if new_branch_section.root_hash == self.tip.hash:
-            for block in new_branch_section:
-                self.append_block(block)
-            for child in new_branch_section.children:
-                self.link_child_branch(child)
-        else:
-            raise Exception("Cannot concatenate a branch whose root doesn't match this branches tip.")
-
-
-    def cut_branch_section(self, cut_idx: int) -> 'ScoreTreeBranch':
-        """ Removes all blocks from a specified index or hash forward (including the block with the matching hash or index). 
-            Returns a branch containing the removed blocks, with any child branches that belong to it already linked.   
-            
-            Args:
-                cut_idx (int): index of the first block in the cut. Will be ignored in favor of cut_hash if a non-default value of cut-hash is passed.
-                cut_hash (str): hash value of the first block in the cut. Will take precedence over cut_index if it is passed
-                
-            Returns:
-                new_branch (ScoreTreeBranch): a branch containing all the blocks from the cut index forward, linked to any children rooted
-                            in those blocks."""
-        
-        if cut_idx < 0:
-            cut_idx = len(self) + cut_idx #Convert negative indices to positive so they don't mess up other calculations.
-
-        if cut_idx > self.tip_idx or cut_idx < 1:
-            raise Exception(f"Error, invalid cut index of {f} provided. Cut index cannot be 0 and must be within branch bounds.")
-        
-        moving_blocks = []
-        moving_children = []
-        num_removals = len(self) - cut_idx
-        for i in range(num_removals):
-            block, children = self.pop()
-            moving_blocks.append(block)
-            moving_children += children
-        
-        new_branch = ScoreTreeBranch()
-        while len(moving_blocks) > 0:
-            next_block = moving_blocks.pop(0)
-            new_branch.append_block(next_block)
-
-        while len(moving_children) > 0:
-            next_child = moving_children.pop(0)
-            new_branch.link_child_branch(next_child)
-
-        return new_branch
-    
-
+from src.common.score_tree_branch import ScoreTreeBranch, BlockNode
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #=====================================================================================================
@@ -448,8 +91,11 @@ class BlockScoreTree:
 #=====================================================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def score_predicate(self, block_score): #TODO add argument to constructor allowing this to be changed
+        return bool (block_score > 0)
 
-    def add_block(self, block_hash: str, prev_block_hash: str, block_score: float, canonical = True, block_number: int = -1):
+
+    def add_block(self, block_hash: str, prev_block_hash: str, block_score: float, block_number: int = -1):
 
         """ Adds an entry for a block based on its hash, its previous block hash and its score.
             The function determines the proper place in the overall sturcture to insert the block
@@ -480,21 +126,15 @@ class BlockScoreTree:
         if block_number < 0:
             block_number = len(self.hash_to_branch_lookup) + 1 
 
-        #A block whose predecessor isn't in the tree is added at the root
+        #A block whose predecessor isn't in the tree is added as the first block of the trunk, if the trunk is empty
         if prev_block_hash not in self.hash_to_branch_lookup:
-            new_block = BlockNode(hash=block_hash, prev_hash=prev_block_hash, block_score=block_score, 
+            if len(self.trunk)==0:
+                new_block = BlockNode(hash=block_hash, prev_hash=prev_block_hash, block_score=block_score, 
                                   total_score=block_score, block_number=block_number, block_height=0) #TODO check if height should start at 0
-
-            #If trunk is empty, new block the first of the trunk
-            if canonical and len(self.trunk) == 0:
                 self.trunk.append_block(new_block)
                 self.hash_to_branch_lookup.update({block_hash:self.trunk})
-
-            #Otherwise it forms a disconnected branch (technically a new tree)
             else:
-                new_branch = ScoreTreeBranch(new_block)
-                self.branches.append(new_branch)
-                self.hash_to_branch_lookup.update({block_hash:new_branch})
+                raise Exception("Block has no predecessor in the tree!")
 
         #A block whose predecessor is found is added to the tree in the proper spot
         else:          
@@ -502,6 +142,9 @@ class BlockScoreTree:
             prev_block = pred_branch.get_block(prev_block_hash)
             new_block = BlockNode(hash=block_hash, prev_hash=prev_block_hash, block_score=block_score, total_score=block_score + prev_block.total_score, 
                                   block_number=block_number, block_height=prev_block.block_height+1)
+            
+            canonical = (pred_branch != self.trunk) or self.score_predicate(block_score) #If the block isn't going in the trunk, score is unimportant.
+                                                                                        #If it is, we need to check that its score meets our criterion
             
             if prev_block == pred_branch.tip and canonical: #Block goes on branch tip
                 pred_branch.append_block(new_block)
@@ -517,38 +160,35 @@ class BlockScoreTree:
             self.high_score = new_block.total_score
             self.strongest_block_hash = new_block.hash 
 
-    def add_block_as_node(self, block: BlockNode, canonical: bool = True):
+    def add_block_as_node(self, block: BlockNode):
 
         if block.hash in self.hash_to_branch_lookup: 
             raise Exception("Duplicate Block!")
 
-        #A block whose predecessor isn't in the tree is added at the root
+        #A block whose predecessor isn't in the tree is added as the first block of the trunk if the trunk is empty
         if block.prev_hash not in self.hash_to_branch_lookup:
-
-            #If trunk is empty, new block the first of the trunk
-            if len(self.trunk) == 0 and canonical:
+            if len(self.trunk) == 0:
                 self.trunk.append_block(block)
                 self.hash_to_branch_lookup.update({block.hash:self.trunk})
-
-            #Otherwise it forms a disconnected branch (technically a new tree)
             else:
-                new_branch = ScoreTreeBranch(block)
-                self.branches.append(new_branch)
-                self.hash_to_branch_lookup.update({block.hash:new_branch})
+                raise Exception("Block has no predecessor in the tree!")
 
         #A block whose predecessor is found is added to the tree in the proper spot
         else:          
             pred_branch = self.hash_to_branch_lookup[block.prev_hash]
             prev_block = pred_branch.get_block(block.prev_hash)
 
+            canonical = (pred_branch != self.trunk) or self.score_predicate(block.block_score) #If the block isn't going in the trunk, score is unimportant.
+                                                                                        #If it is, we need to check that its score meets our criterion
+
             if prev_block == pred_branch.tip and canonical: #Block goes on branch tip
-                pred_branch.append(block)
+                pred_branch.append_block(block)
                 self.hash_to_branch_lookup.update({block.hash:pred_branch})
             else: #Block goes in new branch
                 new_branch = ScoreTreeBranch(block)
                 self.branches.append(new_branch)
                 self.hash_to_branch_lookup.update({block.hash: new_branch})
-                pred_branch.link_child_branch(new_branch) #TODO double-check all the linkage code, make sure this is adequate
+                pred_branch.link_child_branch(new_branch) 
             
 
         if block.total_score > self.high_score:
@@ -607,10 +247,13 @@ class BlockScoreTree:
 
         """
 
-        #TODO check all this again!
+
         if better_branch.depth > 0 and better_branch.predecessor is not None:
             base_branch = better_branch.predecessor
-            join_loc = base_branch.hash_to_index_lookup[better_branch.root_hash] + 1
+            orig_len = len(base_branch)
+            prom_len = len(better_branch)
+            total_len = orig_len + prom_len
+            join_loc = base_branch.hash_to_index_lookup[better_branch.root_hash] + 1 #Leave the root block in place, remove the next block
             for block in better_branch:
                 self.hash_to_branch_lookup.update({block.hash:base_branch})
             base_branch.children.remove(better_branch)
@@ -621,13 +264,16 @@ class BlockScoreTree:
                 for block in demoted_section:
                     self.hash_to_branch_lookup.update({block.hash: demoted_section})
                 base_branch.link_child_branch(demoted_section)
+                dem_len = len(demoted_section)
+            else:
+                dem_len = 0
             base_branch.concatenate_branch(better_branch)
+            assert len(base_branch) + dem_len == total_len, f"Lost some blocks! Demoted: {dem_len}, promoted: {prom_len}, Orig: {orig_len}, Final {len(base_branch)}"
             return base_branch
         elif better_branch == self.trunk: #If we try to promote the trunk, nothing happens
             return better_branch
-        else: #If we have a depth 0 branch that isn't the trunk, it now becomes the trunk
-            self.trunk = better_branch
-            return better_branch
+        else: 
+            raise Exception("Branch has depth 0 but is not the trunk!")
 
     
     def refactor_branches(self):
@@ -683,16 +329,14 @@ class BlockScoreTree:
 
 
     def get_trunk_join_index(self,branch: ScoreTreeBranch) -> int:
-        """ Finds the index where a branch or one of its parent branches joins the trunk, or
-            determines that the branch is disconnected. 
+        """ Finds the index where a branch or one of its parent branches joins the trunk.
             
             Args:
                 branch: a branch
 
             Returns:
                 index: the index of the block in the trunk where the branch or a parent branch
-                        joins the trunk. Returns None if the branch is the trunk or -1 if the
-                        branch is disconnected."""
+                        joins the trunk. Returns None if the branch is the trunk."""
 
         current_branch = branch
         root_hash = None
@@ -700,9 +344,9 @@ class BlockScoreTree:
             root_hash = current_branch.root_hash 
             current_branch = current_branch.predecessor
 
-        if(current_branch != self.trunk): #Did we bottom out at the trunk? If not, we're on a disconnected branch
-            index = -1          
-        elif root_hash is None: #If we never set our root hash, we must have started at the trunk
+        assert current_branch == self.trunk, "No path found from branch to trunk."
+        ""          
+        if root_hash is None: #If we never set our root hash, we must have started at the trunk
             index = None
         else:
             index = self.trunk.hash_to_index_lookup[root_hash]
@@ -800,14 +444,14 @@ class BlockScoreTree:
             for i in range(cutoff):
                 node = node_list[i]
                 if node.block_number <= cutoff:
-                    new_tree.add_block(node.hash, node.prev_hash, node.block_score, bool(node.block_score>0))
+                    new_tree.add_block(node.hash, node.prev_hash, node.block_score)
                     if new_tree.high_score > new_tree.trunk.tip.total_score:
                         new_tree.promote_to_trunk(new_tree.hash_to_branch_lookup[node.hash])
         else:
-            for branch in new_branch_list:
+            for branch in new_branch_list: #TODO double-check
                 for element in branch:
                     if element == branch[0] and branch != new_branch_list[0]:
-                        new_tree.add_block_as_node(element, False)
+                        new_tree.add_block_as_node(element)
                     else:
                         new_tree.add_block_as_node(element)
             for branch in new_tree.branches:  #TODO check if this is disarable and necessary
