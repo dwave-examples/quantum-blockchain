@@ -52,40 +52,25 @@ custom CSS can be added below.
 #miner-status-table {
     margin: 0 auto 2rem;
 }
-#main-display{
-    display: flex;
-    flex-direction: row;
-}
 
-#main-display > H1{
-    width: 85%;
-    margin-top: 20%;
-    padding-left: 10rem;
+#intro-text,
+#loading-text {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     justify-content: center;
 }
 
-#main-display > H1 > H3{
-    padding-top: 1rem;
-    margin-left: 20%;
+#intro-text p,
+#loading-text,
+#miner-table-head {
     font-style: italic;
 }
 
-#main-display > img{
-    width: 72%;
+#miner-status-table {
+    width: 100%;
     margin: 0.5%;
-}
-
-#main-display > table{
-    width: 20%;
-    margin: 0.5%;
-}
-
-#main-display > .display-none{
-    display: none;
-}
-
-.vis-hidden{
-    visibility: hidden;
 }
 
 #miner-table-title {
@@ -95,20 +80,35 @@ custom CSS can be added below.
     width: 100%
 }
 
-#miner-status-table th {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    padding-top: 0.15rem;
-    padding-bottom: 0.15rem;
-    border: 1px solid black;
-    text-align: center;
+#miner-status-table th,
+#miner-status-table td {
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--grey-medium);
+    width: 50%;
 }
 
-td {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    padding-top: 0.15rem;
-    padding-bottom: 0.15rem;
-    border: 1px solid black;
-    text-align: center;
+#miner-status-table thead {
+    background-color: var(--theme-secondary);
+}
+
+#miner-status-table th {
+    font-weight: 600;
+    color: white;
+}
+
+.right-column {
+    padding: 0;
+}
+
+#graph-wrapper {
+    display: flex;
+}
+
+#graph-wrapper > div {
+    padding: 2rem;
+}
+
+#graph-wrapper > div:last-child {
+    flex: 1;
+    padding-left: 0;
 }

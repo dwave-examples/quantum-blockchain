@@ -173,6 +173,8 @@ def create_interface():
         children=[
             # Below are any temporary storage items, e.g., for sharing data between callbacks.
             dcc.Store(id="run-status", data={"Running": False, "Paused": False}),  # Indicates whether run is in progress and whether the run is paused
+            dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
+            dcc.Store(id="miner-graph-data", data=[""]),
             # Header brand banner
             html.Div(className="banner", children=[html.Img(src=THUMBNAIL)]),
             # Settings and results columns
@@ -213,18 +215,42 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
-                            html.Div(id="main-display", children=[
-                                                                  dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
-                                                                  html.H1(children=[INTRO_TEXT, html.H3(INTRO_SUBTEXT)], id="intro-text",),
-                                                                  html.H1(LOADING_TEXT, id="loading-text", className="display-none",),
-                                                                  dcc.Store(id="miner-graph-data", data=[""]),
-                                                                  dcc.Graph(id="miner-graph-display", config={"displayModeBar":False}, className="vis-hidden"),
-                                                                  html.Table(id="miner-status-table", children=[
-                                                                                                       html.Thead(id="miner-table-head"), 
-                                                                                                       html.Tbody(id="miner-table-body")]),
-                                                                  ],
-                                    ),   
-                            
+                            html.Div(
+                                children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
+                                id="intro-text",
+                            ),
+                            html.H3(
+                                LOADING_TEXT,
+                                id="loading-text",
+                                className="display-none",
+                            ),
+                            html.Div(
+                                className="display-none",
+                                id="graph-wrapper",
+                                children=[
+                                    dcc.Graph(
+                                        id="miner-graph-display",
+                                        config={"displayModeBar": False},
+                                    ),
+                                    html.Div([
+                                        html.H4(id="miner-table-head"),
+                                        html.Table(
+                                            id="miner-status-table",
+                                            children=[
+                                                html.Thead(
+                                                    html.Tr(
+                                                        [
+                                                            html.Th("Miner"),
+                                                            html.Th("Status"),
+                                                        ]
+                                                    )
+                                                ),
+                                                html.Tbody(id="miner-table-body"),
+                                            ]
+                                        ),
+                                    ]),
+                                ]
+                            )
                         ],
                     ),
                 ],

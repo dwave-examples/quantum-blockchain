@@ -30,9 +30,9 @@ MAIN_HEADER = "Quantum Blockchain"
 DESCRIPTION = """\
 A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Quantum Annealer
 """
-INTRO_TEXT = "Select Number of Miners and Blocks and Press \"Begin Simulation\""
+INTRO_TEXT = "Select a number of miners and blocks and press \"Begin Simulation\"."
 INTRO_SUBTEXT = "Results will display here while simulation is running."
-LOADING_TEXT = "Generating Graphs"
+LOADING_TEXT = "Generating graphs..."
 
 #######################################
 # Sliders, buttons and option entries #
