@@ -15,6 +15,7 @@
 """This file stores input parameters for the app."""
 
 import os
+import plotly.express as px
 
 # THEME_COLOR is used for the button, text, and banner and should be dark
 # and pass accessibility checks with white: https://webaim.org/resources/contrastchecker/
@@ -59,3 +60,6 @@ MINER_SLIDER = {
     "step": 1,
     "value": 7
 }
+
+TRUNK_COLOR_SCALE = px.colors.sequential.Bluered
+BRANCH_COLOR_SCALE = px.colors.sequential.Aggrnyl
