@@ -2,7 +2,7 @@ import os, sys, argparse
 import plotly.graph_objects as go
 
 from src.trials.graph_processor import generate_graph_data
-from src.plotting.spiral_plotter import SpiralPlotter
+from spiral_plotter import SpiralPlotter
 from tests.data_generation.tree_generation import generate_random_tree
 from src.common.block_score_tree import BlockScoreTree
 
