@@ -230,7 +230,7 @@ class Miner:
         self.blockchain.add_block(block, block_score)
         self.blockchain.store_block_in_file(block)
 
-        if self.blockchain.tree.is_in_trunk(block.hash):
+        if block.hash in self.blockchain.tree.trunk:
             blocks_promoted.append(block)
         elif block_score > 0: #Only need to update on blocks that are good and not already in trunk
             blocks_promoted, blocks_demoted = self.update_blockchain_beliefs()
@@ -271,9 +271,9 @@ class Miner:
 
         #TODO implement better naming/data encapsulation for BlockScoreTree so this code becomes clearer.
         if self.blockchain.tree.high_score != self.blockchain.tree.trunk[-1][3]:
-            best_branch = self.blockchain.tree.get_branch(self.blockchain.tree.strongest_block_hash)
+            best_branch = self.blockchain.tree.hash_to_branch_lookup[self.blockchain.tree.strongest_block_hash]
             if best_branch == self.blockchain.tree.trunk: #Corner case: branch tip is tied with trunk tip, but strongest hash points to branch
-                self.blockchain.tree.strongest_block_hash = self.blockchain.tree.trunk[-1][0] #Update hash but don't change tree
+                self.blockchain.tree.strongest_block_hash = self.blockchain.tree.trunk.tip.hash #Update hash but don't change tree
                 return [],[]
 
             #Return all transactions from blocks no longer considered canonical
@@ -346,7 +346,7 @@ class Miner:
         valid = tentative_result.valid #check behavior
 
         #For now, only validate transactions for blocks that will become part of the main chain
-        if valid and self.blockchain.tree.is_in_trunk(new_block.previous_block_hash):
+        if valid and new_block.previous_block_hash in self.blockchain.tree.trunk:
             valid = self.validate_transactions(new_block)
 
         num_failures = 0

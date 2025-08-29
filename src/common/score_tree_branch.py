@@ -12,8 +12,8 @@ class ScoreTreeBranch:
     def __init__(self, base_block: BlockNode = None):
         self.node_list = []
         self.hash_to_index_lookup = {}
-        self.children = [] #Children and predecessor will be dynamically linked for easy access
-        self.predecessor = None
+        self.children = [] #Children and parent will be dynamically linked for easy access
+        self.parent = None
         self.depth = 0
         self.back_scores = []
         if base_block is not None:
@@ -44,8 +44,8 @@ class ScoreTreeBranch:
     
     @property
     def root(self):
-        if self.predecessor is not None:
-            return self.predecessor.get_block(self.root_hash)
+        if self.parent is not None:
+            return self.parent.get_block(self.root_hash)
         else:
             return None
         
@@ -98,38 +98,38 @@ class ScoreTreeBranch:
             raise Exception(f"Invalid block. Root hash {new_block.prev_hash} cannot connect to tip hash {self.tip.hash}")
         
     def update_depth(self):
-        """ Updates the branch depth to one more than that of its predecessor. Called recursively on all 
+        """ Updates the branch depth to one more than that of its parent. Called recursively on all 
             children to ensure the update propogates properly."""
         
-        if self.predecessor is not None:
-            self.depth = self.predecessor.depth + 1
+        if self.parent is not None:
+            self.depth = self.parent.depth + 1
         else:
             self.depth = 0
         for child in self.children:
             child.update_depth()
 
-    def set_predecessor(self, pred_branch: 'ScoreTreeBranch'):
+    def set_parent(self, parent_branch: 'ScoreTreeBranch'):
 
-        """ Sets the passed branch as the predecessor of the current branch
+        """ Sets the passed branch as the parent of the current branch
             (provided that is a legal assignment). Will not set the other end 
              of the relationship: this is intended to be called by link-to-child,
              rather than on its own. 
              
              Args:
-                pred_branch: a branch that is the predecessor of the current branch (that is
+                parent_branch: a branch that is the parent of the current branch (that is
                 it contains a block whose hash matches the branch's root hash)."""
         
-        if self.root_hash in pred_branch:
-            self.predecessor = pred_branch
+        if self.root_hash in parent_branch:
+            self.parent = parent_branch
             self.update_depth()
 
             
     def link_child_branch(self, child_branch: 'ScoreTreeBranch'): 
-        """ Links a ScoreTreeBranch to this branch as a child. The child then calls set_predecessor on
+        """ Links a ScoreTreeBranch to this branch as a child. The child then calls set_parent on
             this branch to complete the linkage. """
         if child_branch.root_hash in self.hash_to_index_lookup:
             self.children.append(child_branch)
-            child_branch.set_predecessor(self)
+            child_branch.set_parent(self)
             self.update_back_scores(child_branch.best_score, self.hash_to_index_lookup[child_branch.root_hash])
         else:
             raise Exception("Attempted to link branch that was not a child.")
@@ -152,9 +152,9 @@ class ScoreTreeBranch:
 
         if len(self.back_scores) == 0:
             self.back_scores.append((new_score, new_index))
-            if self.predecessor is not None:
-                root_idx = self.predecessor.hash_to_index_lookup[self.root_hash]
-                self.predecessor.update_back_scores(self.best_score, root_idx)
+            if self.parent is not None:
+                root_idx = self.parent.hash_to_index_lookup[self.root_hash]
+                self.parent.update_back_scores(self.best_score, root_idx)
                 
 
         insert = False
@@ -182,9 +182,9 @@ class ScoreTreeBranch:
                 else:
                     break
 
-            if self.predecessor is not None:
-                root_idx = self.predecessor.hash_to_index_lookup[self.root_hash]
-                self.predecessor.update_back_scores(self.best_score, root_idx)
+            if self.parent is not None:
+                root_idx = self.parent.hash_to_index_lookup[self.root_hash]
+                self.parent.update_back_scores(self.best_score, root_idx)
         
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -212,7 +212,7 @@ class ScoreTreeBranch:
             by branches rooted in blocks lower in the trunk. Non-trunk blocks can only be joined to the trunk by the extension
             of their own branch, or the extension of successor branches rooted higher in their branch than they are. For branch
             blocks this means that they "inherit" the best soundness of any successor blocks, while trunk blocks inherit the worst
-            soundness of predecessor blocks"""
+            soundness of parent blocks"""
         
         map= []
         if trunk:

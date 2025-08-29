@@ -84,6 +84,10 @@ custom CSS can be added below.
     display: none;
 }
 
+.vis-hidden{
+    visibility: hidden;
+}
+
 #miner-table-title {
     text-align: center;
     font-weight: bold;
@@ -92,8 +96,6 @@ custom CSS can be added below.
 }
 
 #miner-status-table th {
-    padding: 1rem 3rem;
-th {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     padding-top: 0.15rem;

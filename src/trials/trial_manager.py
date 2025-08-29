@@ -15,6 +15,7 @@ from src.common.miner_params import MinerParams
 from src.common.miner import Miner
 from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocolQpu
 from src.trials.graph_generator import graph_gen_main
+from src.trials.graph_processor import generate_graph_data
 from src.common.initialize_default_blockchain import initialize_blockchain
 from src.common.values import NUMBER_OF_LEADING_ZEROS, TRIAL_PARAMETERS_FILE, BLOCKCHAIN_FILE
 from demo_constants import BASE_GLOBAL_GRAPH_FILE, BASE_MINER_GRAPH_FILE, MINER_STATS_FILE
@@ -256,11 +257,12 @@ class TrialManager:
         if not self.waiting_miners:
             self.record_iteration_timing()
             self.record_iteration_summary()
-            self.write_output()
+            #self.write_output()
             self.reset_miners()
             self.iteration_number += 1
             
-        return self.iteration_number, miner_stats
+        errors_filename = os.path.join(active_miner.subdir, "graph_gen_errors.txt")
+        return generate_graph_data(self.miners[0].blockchain.tree, errors_filename), self.iteration_number, miner_stats
 
     def iterate(self, stop_iter = None) -> None:
         """Iterates through the trial for a specified number of blocks.

@@ -58,7 +58,7 @@ def combine_dags(dag_list: list[BlockScoreTree]):
             times_in_trunk = 0 
             for i in range(len(dag_list)):
                 dag = dag_list[i]
-                times_in_trunk += int(dag.is_in_trunk(block.hash))
+                times_in_trunk += int(block.hash in dag.trunk)
                 if dag.trunk[-1].hash == block.hash: 
                     mining_nodes.add(block.hash)
 
@@ -66,7 +66,7 @@ def combine_dags(dag_list: list[BlockScoreTree]):
                                     block_score=times_in_trunk, block_number=block.block_number)
 
     for branch in composite_dag.branches:
-        if branch[-1].total_score > composite_dag.trunk[-1].total_score:
+        if branch[-1].total_score > composite_dag.trunk.tip.total_score:
             composite_dag.promote_to_trunk(branch)
                      
     return composite_dag, mining_nodes
@@ -125,7 +125,7 @@ def assign_branch(branch_dict, branch_arrangement, max_depth, root_depth, errors
             children = [child for child in branch_dict["children"]]
             chln = 0
             while True:
-                if len(children) > 0 and chln < 99: #should not have too many children. Limit loop just in case.
+                if len(children) > 0 and chln < 500: #should not have too many children. Limit loop just in case.
                     n_child = children.pop(0)
                     chln += 1
                     f.write(f"Child {chln} ...Map: {n_child["map"]}...Root {n_child["root"]}")
@@ -201,7 +201,7 @@ def generate_graph_data(tree: BlockScoreTree, errors_filename, data_filename=Non
 
 
     num_branches = len(branch_data)
-    max_depth = math.ceil(num_branches/2)
+    max_depth = max(num_branches, 5)
 
     branch_arrangement = [[int(j==0) for i in range(num_nodes+1)] for j in range(2*max_depth + 1)]
     
@@ -226,7 +226,9 @@ def generate_graph_data(tree: BlockScoreTree, errors_filename, data_filename=Non
         assert -max_depth <= branch_dict["depth"] <= max_depth, f"Branch with root {branch_dict["root"]} improperly assigned depth {branch_dict["depth"]}"
         branch_dict.pop("children")
 
-    return trunk_dict, branch_data
+    tree_data = [trunk_dict] + branch_data
+
+    return tree_data
 
 
 

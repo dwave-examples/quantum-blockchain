@@ -90,13 +90,13 @@ class BlockchainMemory:
             print("Error, block not found!")
             return
         
-        branch = self.tree.get_branch(block_hash)
+        branch = self.tree.hash_to_branch_lookup[block_hash]
 
-        if branch[-1][0] != block_hash:
+        if branch.tip.hash != block_hash:
             print("Error, can only remove branch tips!")
             return
 
-        self.tree.pop_block(branch)
+        branch.pop()
         for txn in self.get_block(block_hash).transactions: 
             self._transaction_block_lookup[txn.transaction_hash].remove(block_hash)
         self.blocks.pop(block_hash)

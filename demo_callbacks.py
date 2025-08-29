@@ -22,7 +22,10 @@ import dash
 from dash import MATCH, ctx, html, dcc, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
+import plotly.graph_objects as go
+import plotly.express as px
 
+from spiral_plotter import SpiralPlotter
 from src.demo_enums import SolverType
 from src.trials.trial_manager import TrialManager
 from src.trials.trial_owners import TrialOwners
@@ -41,7 +44,6 @@ from demo_constants import (
                             STATIC_PARAMS_FILE, 
                             EMBEDDINGS_DIRECTORY,
                           )
-
 
 def render_miner_status(block_number: int, miner_status: list):
     """ Renders the status of the miners in the current trial. Each miner will be named
@@ -82,6 +84,12 @@ def render_miner_status(block_number: int, miner_status: list):
 
 #=======================================================================================
 
+def update_miner_graph_data(graph_data, blocknum, miner_status):
+    table_header, table_rows = render_miner_status(blocknum, miner_status)
+    return graph_data, table_header, table_rows
+
+#=======================================================================================
+
 @dash.callback(
     Output({"type": "to-collapse-class", "index": MATCH}, "className"),
     inputs=[
@@ -113,18 +121,15 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
 @dash.callback(
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
-    Output("global-graph", "className", allow_duplicate=True),
-    Output("miner-graph", "className", allow_duplicate=True),
-    Output("global-graph", "src", allow_duplicate=True),
-    Output("miner-graph", "src", allow_duplicate=True),
+    Output("miner-graph-display", "figure", allow_duplicate=True),
+    Output("miner-graph-display", "className", allow_duplicate=True),
     inputs=[
-        Input("display-update", "n_intervals"),
-        Input("view-select", "value"),
-        Input("run-status", "data"),
+        Input("miner-graph-data", "data"),
+        State("run-status", "data"),
     ],
     prevent_initial_call=True
 )
-def render_graphs(n_intervals: int, view_select: str, run_status: dict):
+def render_graphs(graph_data_json: str, run_status: dict):
     """ Updates the display for the miner tab, shwoing the graph
         of the current chain state if it is available.
 
@@ -149,55 +154,46 @@ def render_graphs(n_intervals: int, view_select: str, run_status: dict):
     """
 
     #TODO add a block number store to allow for better logic
+    graph_data = json.loads(graph_data_json)
 
-    if not (os.listdir(GLOBAL_GRAPHS_PATH) or os.listdir(MINER_GRAPHS_PATH)):
-        raise PreventUpdate
-    
-    if run_status["Paused"] == True:
-        raise PreventUpdate
-    
-    graph_displays = ["display-none", "display-none"]
-    graph_files = ["",""]
-    max_files = 200
+    if run_status["Running"] and not run_status["Paused"]:
+        num_blocks = graph_data[0]
+        tree_data = graph_data[1]
 
-    if view_select == "Global View" or view_select == "Comparison":
-        if not os.path.exists(BASE_GLOBAL_GRAPH_FILE):
-            raise PreventUpdate
-        
-        else:
-            graph_displays[0] = ""
-            ALT_GLOBAL_FILES = [os.path.join(GLOBAL_GRAPHS_PATH, f"global_graph{n}.png") for n in range(max_files)]
-            next_file = 0
-            for filenum in range(max_files):
-                if os.path.exists(ALT_GLOBAL_FILES[filenum]):
-                    next_file = filenum + 1
-            os.rename(BASE_GLOBAL_GRAPH_FILE, ALT_GLOBAL_FILES[next_file])
-            graph_files[0] = ALT_GLOBAL_FILES[next_file]
+        plotter = SpiralPlotter()
+        plotter.import_plotting_data(tree_data=tree_data, num_nodes=num_blocks)
+        plot_data = plotter.plot_spiral()
+        fig = go.Figure(plot_data)
 
-    if view_select == "Miner View" or view_select == "Comparison":
-        if not os.path.exists(BASE_MINER_GRAPH_FILE):
-            raise PreventUpdate
-        
-        else:
-            graph_displays[1] = ""
-            ALT_MINER_FILES = [os.path.join(MINER_GRAPHS_PATH, f"miner_graph{n}.png") for n in range(max_files)]
-            next_file = 0
-            for filenum in range(max_files):
-                if os.path.exists(ALT_MINER_FILES[filenum]):
-                    next_file = filenum + 1
-            os.rename(BASE_MINER_GRAPH_FILE, ALT_MINER_FILES[next_file])
-            graph_files[1] = ALT_MINER_FILES[next_file]
+        fig.update_layout( #TODO move to configs
+            autosize=False,
+            width=700,
+            height=700,
+            showlegend = False,
+            xaxis = dict(showticklabels=False),
+            yaxis = dict(showticklabels=False),
+            margin=dict(
+                l=0,
+                r=0,
+                b=0,
+                t=0,
+                pad=4
+            ),
+        paper_bgcolor="White",
+        plot_bgcolor="White",
+        )
 
-    
-    return "display-none", "display-none", graph_displays[0], graph_displays[1], graph_files[0], graph_files[1]
+    else:
+        fig = None
 
-    
+    return "display-none", "display-none", fig, ""
+
+
 #========================================================================================
 @dash.callback(
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
-    Output("miner-graph", "className", allow_duplicate=True),
-    Output("global-graph", "className", allow_duplicate=True),
+    Output("miner-graph-display", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
@@ -212,8 +208,7 @@ def reset_simulation(reset_click: int):
     return (
             "", #Intro text
             "display-none", #Loading text
-            "display-none", #Miner Graph
-            "display-none", #Global Graph
+            "vis-hidden", #Miner Graph
             "",             #Run Button
             "display-none", #Reset Button
             "display-none", #Resume Button
@@ -238,7 +233,7 @@ def pause_simulation(pause_click: int):
         with open(PAUSE_FILE, "w") as f:
             f.write(" ")
 
-    return "", "", "display-none", {"Running":True, "Paused": True}
+    return "", "", "vis-hidden", {"Running":True, "Paused": True}
 
 #========================================================================================
 
@@ -294,14 +289,16 @@ def run_simulation(
         (Output("blocks-input", "disabled"), True, False), 
     ],
     progress=[
+        Output("miner-graph-data", "data"),
         Output("miner-table-head", "children"), 
         Output("miner-table-body", "children"),
+        
     ],
     cancel = [Input("reset-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def simulation(
-    table_update,
+    display_data_update,
     run_status: dict,
     miner_slider_val: int,
     block_input_val: int,
@@ -364,8 +361,10 @@ def simulation(
 
         while(manager.iteration_number <= num_blocks):
             if not os.path.exists(PAUSE_FILE):
-               blocknum, miner_stats = manager.miner_step()
-               table_update(render_miner_status(blocknum, miner_stats))
+               tree_data, blocknum, miner_stats = manager.miner_step()
+               graph_data = [blocknum, tree_data]
+               graph_data_json = json.dumps(graph_data)
+               display_data_update(update_miner_graph_data(graph_data_json, blocknum, miner_stats))
             time.sleep(0.15) #intent is to give other components a chance to update. But might not be necessary.
   
         

@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from dash import dcc, html
 import json, os
+import plotly.graph_objects as go
+import plotly.express as px
 
 from demo_configs import (
     DESCRIPTION,
@@ -215,11 +217,11 @@ def create_interface():
                                                                   dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
                                                                   html.H1(children=[INTRO_TEXT, html.H3(INTRO_SUBTEXT)], id="intro-text",),
                                                                   html.H1(LOADING_TEXT, id="loading-text", className="display-none",),
-                                                                  html.Img(id="miner-graph",className="display-none"),
-                                                                  html.Img(id="global-graph", className="display-none"),
+                                                                  dcc.Store(id="miner-graph-data", data=[""]),
+                                                                  dcc.Graph(id="miner-graph-display", config={"displayModeBar":False}, className="vis-hidden"),
                                                                   html.Table(id="miner-status-table", children=[
-                                                                                                        html.Thead(id="miner-table-head"), 
-                                                                                                        html.Tbody(id="miner-table-body")]),
+                                                                                                       html.Thead(id="miner-table-head"), 
+                                                                                                       html.Tbody(id="miner-table-body")]),
                                                                   ],
                                     ),   
                             

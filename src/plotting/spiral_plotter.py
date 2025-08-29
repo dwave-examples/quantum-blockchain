@@ -51,12 +51,13 @@ class SpiralPlotter:
         step_size = (self.max_pnt_size - self.min_pnt_size)/max(self.num_nodes-1,1)
         return [self.min_pnt_size + i*step_size for i in range(self.num_nodes)]
 
-    def import_plotting_data(self, trunk_dict, branch_data, num_nodes):
+    def import_plotting_data(self, tree_data, num_nodes):
         self.num_nodes = num_nodes
         self.points_per_rev = min(self.max_point_per_rev, max(self.min_points_per_rev, self.num_nodes+1))
         self.angles = [2*math.pi*i/self.points_per_rev for i in range(1, self.points_per_rev + 1)]
         self.num_revs = (self.num_nodes+1)/self.points_per_rev
         self.loop_spacing = 0.99*(self.fig_width/(2*self.num_revs)) #Farthest edge should stop just short of the edge of the figure
+        trunk_dict = tree_data.pop(0)
         self.trunk = GraphBranch(trunk_dict)
         self.full_node_map = [i for i in range(1,num_nodes+1)]
         self.master_size_chart = self.create_master_size_chart()
@@ -64,7 +65,7 @@ class SpiralPlotter:
         self.trunk_sound_max= max(self.trunk.soundness_list)
         self.trunk_sound_min = min(self.trunk.soundness_list)
         self.branches = []
-        for entry in branch_data:
+        for entry in tree_data:
             new_branch = GraphBranch(entry)
             new_branch.create_size_chart(self.master_size_chart, self.branch_pnt_scaling)
             self.branches.append(new_branch)
