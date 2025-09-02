@@ -14,36 +14,27 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple, Union
 import os, json, time, math
-from pathlib import Path
 
 import dash
-from dash import MATCH, ctx, html, dcc, set_props
+from dash import MATCH, ctx, html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import plotly.express as px
 
 from spiral_plotter import SpiralPlotter
-from src.demo_enums import SolverType
 from src.trials.trial_manager import TrialManager
 from src.trials.trial_owners import TrialOwners
 from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocolQpu
 from src.common.values import TRIAL_PARAMETERS_FILE
 from demo_utils import prep_directories, make_output_directory
-from demo_configs import DEFAULT_TABLE_HEADER, DEFAULT_TABLE_BODY, MAX_MINER_ROWS, MAX_MINER_COLUMNS
+from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
 from demo_constants import (
-                            GLOBAL_GRAPHS_PATH,
-                            BASE_GLOBAL_GRAPH_FILE,
-                            MINER_GRAPHS_PATH, 
-                            BASE_MINER_GRAPH_FILE,
-                            MINER_STATS_PATH, 
-                            MINER_STATS_FILE,
-                            PAUSE_FILE,
-                            STATIC_PARAMS_FILE, 
-                            EMBEDDINGS_DIRECTORY,
-                          )
+    PAUSE_FILE,
+    STATIC_PARAMS_FILE, 
+    EMBEDDINGS_DIRECTORY,
+)
 
 def render_miner_status(block_number: int, miner_status: list):
     """ Renders the status of the miners in the current trial. Each miner will be named
@@ -63,7 +54,7 @@ def render_miner_status(block_number: int, miner_status: list):
         round_state = "Validating"
     else:
         round_state = "Mining"
-    table_header = html.Th(round_state + f" Block {block_number}")
+    table_header = round_state + f" Block {block_number}"
 
     num_miners = len(miner_status)
     miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
@@ -72,7 +63,7 @@ def render_miner_status(block_number: int, miner_status: list):
     table_rows = []
     new_row = []
     for i in range(0, num_miners):
-        new_row.append(html.Th(miner_names[i]))
+        new_row.append(html.Td(miner_names[i]))
         new_row.append(html.Td(miner_status[i]))
         if len(new_row) >= 2*columns:
             table_rows.append(html.Tr(new_row))
@@ -122,7 +113,7 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
     Output("miner-graph-display", "figure", allow_duplicate=True),
-    Output("miner-graph-display", "className", allow_duplicate=True),
+    Output("graph-wrapper", "className", allow_duplicate=True),
     inputs=[
         Input("miner-graph-data", "data"),
         State("run-status", "data"),
@@ -193,7 +184,7 @@ def render_graphs(graph_data_json: str, run_status: dict):
 @dash.callback(
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
-    Output("miner-graph-display", "className", allow_duplicate=True),
+    Output("graph-wrapper", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
@@ -205,15 +196,16 @@ def render_graphs(graph_data_json: str, run_status: dict):
 )
 def reset_simulation(reset_click: int):
     prep_directories()
+
     return (
-            "", #Intro text
-            "display-none", #Loading text
-            "vis-hidden", #Miner Graph
-            "",             #Run Button
-            "display-none", #Reset Button
-            "display-none", #Resume Button
-            {"Running":False, "Paused": False}
-            )
+        "", #Intro text
+        "display-none", #Loading text
+        "display-none", #Miner Graph
+        "",             #Run Button
+        "display-none", #Reset Button
+        "display-none", #Resume Button
+        {"Running": False, "Paused": False}
+    )
 
 #========================================================================================
 
@@ -233,7 +225,7 @@ def pause_simulation(pause_click: int):
         with open(PAUSE_FILE, "w") as f:
             f.write(" ")
 
-    return "", "", "vis-hidden", {"Running":True, "Paused": True}
+    return "", "", "display-none", {"Running":True, "Paused": True}
 
 #========================================================================================
 
