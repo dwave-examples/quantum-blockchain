@@ -14,11 +14,9 @@ from src.common.owner import Owner
 from src.common.miner_params import MinerParams
 from src.common.miner import Miner
 from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocolQpu
-from src.trials.graph_generator import graph_gen_main
 from src.trials.graph_processor import generate_graph_data
 from src.common.initialize_default_blockchain import initialize_blockchain
 from src.common.values import NUMBER_OF_LEADING_ZEROS, TRIAL_PARAMETERS_FILE, BLOCKCHAIN_FILE
-from demo_constants import BASE_GLOBAL_GRAPH_FILE, BASE_MINER_GRAPH_FILE, MINER_STATS_FILE
 
 class TrialManager:
     """This class manages a trial of blockchain mining. The purpose of this
@@ -80,6 +78,7 @@ class TrialManager:
         self.max_mining_attempts = 1000
         self.waiting_miners = {i for i in range(self.num_miners)}
         self.chain_rep_file_suffix = "blockchain_picture.txt"
+        self.miner_trees = ["" for i in range(self.num_miners)]
 
         #Intialize Output folders/structures
         self.output_dfs = []
@@ -131,11 +130,6 @@ class TrialManager:
             miner_status = prefix[int(mining)] + suffix[int(finished)]
 
         self.miner_stats_list[miner.id] = miner_status
-
-        stats_dict = {"Block": self.iteration_number, "Miners": self.miner_stats_list}
-        with open(MINER_STATS_FILE, 'w') as f:
-            json.dump(stats_dict, f)
-
 
     def record_iteration_timing(self):
         iter_total_time = self.timing["Mining_Time"][-1] + self.timing["Validation_Time"][-1]
@@ -254,15 +248,16 @@ class TrialManager:
 
         miner_stats = copy.deepcopy(self.miner_stats_list)
 
+        errors_filename = os.path.join(active_miner.subdir, "graph_gen_errors.txt")
+        miner_graph_data = generate_graph_data(active_miner.blockchain.tree, errors_filename)
         if not self.waiting_miners:
             self.record_iteration_timing()
             self.record_iteration_summary()
-            #self.write_output()
             self.reset_miners()
             self.iteration_number += 1
-            
-        errors_filename = os.path.join(active_miner.subdir, "graph_gen_errors.txt")
-        return generate_graph_data(self.miners[0].blockchain.tree, errors_filename), self.iteration_number, miner_stats
+
+
+        return miner_graph_data, int(active_miner.id), self.iteration_number, miner_stats
 
     def iterate(self, stop_iter = None) -> None:
         """Iterates through the trial for a specified number of blocks.
@@ -308,7 +303,5 @@ class TrialManager:
             dag_file_name = f"dag_{miner.id}.json"
             miner.blockchain.tree.write_to_file_json(os.path.join(self.miner_dag_dir, dag_file_name))
 
-        graph_gen_main(self.miner_dag_dir, save_as=BASE_MINER_GRAPH_FILE, miner_id=0)
-        graph_gen_main(self.miner_dag_dir, save_as=BASE_GLOBAL_GRAPH_FILE)
 
 

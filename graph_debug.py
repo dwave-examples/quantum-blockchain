@@ -46,6 +46,7 @@ def main(num_nodes: int, repeat_last: bool):
     plotter.import_plotting_data(tree_data, num_nodes)
     plot_data = plotter.plot_spiral()
     fig = go.Figure(plot_data)
+    fig.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

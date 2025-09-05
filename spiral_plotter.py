@@ -33,7 +33,7 @@ class SpiralPlotter:
         self.branch_pnt_scaling = 0.65
         self.max_point_per_rev = 32  #Largest number of points plotted in a single revolution
         self.min_points_per_rev = 8  #Smallest allowable point spacing (so that graphs with very few points are spread out over a wider arc)
-        self.segs_per_point = 4  #How many segements are used to built each section of spiral between points: more segments = smoother curve
+        self.segs_per_rev = 128 #How many segements are used to build one full revolution of the spiral: more segments = smoother curve
         self.trunk_color_scale = TRUNK_COLOR_SCALE
         self.trunk_color_ints = []
         for color_string in self.trunk_color_scale:
@@ -51,13 +51,14 @@ class SpiralPlotter:
 
     def create_master_size_chart(self):
         step_size = (self.max_pnt_size - self.min_pnt_size)/max(self.num_nodes-1,1)
-        return [self.min_pnt_size + i*step_size for i in range(self.num_nodes)]
+        return [self.min_pnt_size + i*step_size for i in range(self.num_nodes + 1)]
 
     def import_plotting_data(self, tree_data, num_nodes):
         self.num_nodes = num_nodes
         self.points_per_rev = min(self.max_point_per_rev, max(self.min_points_per_rev, self.num_nodes+1))
         self.angles = [2*math.pi*i/self.points_per_rev for i in range(1, self.points_per_rev + 1)]
         self.num_revs = (self.num_nodes+1)/self.points_per_rev
+        self.segs_per_point = math.ceil(self.segs_per_rev/self.points_per_rev)
         self.loop_spacing = 0.99*(self.fig_width/(2*self.num_revs)) #Farthest edge should stop just short of the edge of the figure
         trunk_dict = tree_data.pop(0)
         self.trunk = GraphBranch(trunk_dict)
@@ -89,24 +90,27 @@ class SpiralPlotter:
 
     def generate_spiral_section(self, branch, trunk = True):
         
-        start_index = branch.root + 1
         stop_index = branch.map[-1] + 1
+        if trunk:
+            start_index = branch.root
+            sounds = [branch.soundness_list[0]]
+            branch.x_points.append(self.center[0])
+            branch.y_points.append(self.center[1])
+        else:
+            start_index = branch.root + 1
+            r_0 = self.loop_spacing*(branch.root)/self.points_per_rev
+            adjustment = min(self.loop_spacing, r_0)*branch.root_depth*self.branch_spacing
+            r_0 += adjustment
+            theta_0 = self.angles[branch.root%self.points_per_rev]
+            x_0 = self.center[0] + r_0*math.cos(theta_0)
+            y_0 = self.center[1] + r_0*math.sin(theta_0)
+            branch.x_edges.append(x_0)
+            branch.y_edges.append(y_0)
+            branch.edge_colors.append(self.soundness_to_color(branch.soundness_list[0], trunk=trunk))
+            stem_dist = branch.map[0] - start_index
+            stem_segs = stem_dist*self.segs_per_point
+            sounds = [branch.soundness_list[0] for i in range(stem_segs)]
 
-        #TODO just explicitly retrieve previous point's coordinates and use it.
-        r_0 = self.loop_spacing*(branch.root)/self.points_per_rev
-        adjustment = min(self.loop_spacing, r_0)*branch.root_depth*self.branch_spacing
-        r_0 += adjustment
-        theta_0 = self.angles[branch.root%self.points_per_rev]
-        x_0 = self.center[0] + r_0*math.cos(theta_0)
-        y_0 = self.center[1] + r_0*math.sin(theta_0)
-        branch.x_edges.append(x_0)
-        branch.y_edges.append(y_0)
-
-        branch.edge_colors.append(self.soundness_to_color(branch.soundness_list[0], trunk=trunk))
-
-        stem_dist = branch.map[0] - start_index
-        stem_segs = stem_dist*self.segs_per_point
-        sounds = [branch.soundness_list[0] for i in range(stem_segs)]
         first_idx = start_index
         for k in range(1,len(branch.map)):
             second_idx = branch.map[k]
@@ -115,6 +119,7 @@ class SpiralPlotter:
             frac_sounds = [(j*branch.soundness_list[k-1] + (steps-j)*branch.soundness_list[k])/steps for j in range(steps)]
             sounds += frac_sounds
             first_idx = second_idx
+
         sounds.append(branch.soundness_list[-1])
         snd_iter = iter(sounds)
 

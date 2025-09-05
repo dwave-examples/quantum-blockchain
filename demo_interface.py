@@ -100,8 +100,10 @@ def num_blocks_input() -> html.Div:
         ],
     )
 
-def generate_view_select():
-    view_opts = ["Global View", "Miner View", "Comparison"]
+def generate_view_select(num_miners):
+    global_opt = ["Global View"]
+    miner_opts = [f"Miner {i+1}" for i in range(num_miners)]
+    view_opts = global_opt + miner_opts
     return html.Div(
         className="dropdown-wrapper",
         children=[
@@ -109,7 +111,7 @@ def generate_view_select():
             dcc.Dropdown(
                 id="view-select",
                 options=view_opts,
-                value=view_opts[0],
+                value=view_opts[1],
                 clearable=False,
                 searchable=False,
             ),
@@ -174,7 +176,9 @@ def create_interface():
             # Below are any temporary storage items, e.g., for sharing data between callbacks.
             dcc.Store(id="run-status", data={"Running": False, "Paused": False}),  # Indicates whether run is in progress and whether the run is paused
             dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
-            dcc.Store(id="miner-graph-data", data=[""]),
+            dcc.Store(id="block-number-data", data=0),
+            dcc.Store(id="graph-data", data=[]),    #Stores graph data for all miners
+            dcc.Store(id="graph-data-temp", data=[]), #Allows partial updates to be passed through to graph-data
             # Header brand banner
             html.Div(className="banner", children=[html.Img(src=THUMBNAIL)]),
             # Settings and results columns
@@ -196,7 +200,7 @@ def create_interface():
                                             html.P(DESCRIPTION),
                                             generate_settings_form(),
                                             generate_run_buttons(),
-                                            generate_view_select(),
+                                            html.Div(id="view-select-wrapper"),
                                         ],
                                     )
                                 ],
@@ -232,7 +236,7 @@ def create_interface():
                                         id="miner-graph-display",
                                         config={"displayModeBar": False},
                                     ),
-                                    html.Div([
+                                    html.Div([ #TODO move outside of graph wrapper so miner table will update before first graph is ready.
                                         html.H4(id="miner-table-head"),
                                         html.Table(
                                             id="miner-status-table",

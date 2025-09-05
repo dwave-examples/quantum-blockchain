@@ -17,7 +17,7 @@ from __future__ import annotations
 import os, json, time, math
 
 import dash
-from dash import MATCH, ctx, html
+from dash import MATCH, ctx, html, Patch, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
@@ -28,6 +28,7 @@ from src.trials.trial_manager import TrialManager
 from src.trials.trial_owners import TrialOwners
 from src.quantum.protocols.proof_of_work_protocol_qpu import ProofOfWorkProtocolQpu
 from src.common.values import TRIAL_PARAMETERS_FILE
+from demo_interface import generate_view_select
 from demo_utils import prep_directories, make_output_directory
 from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
 from demo_constants import (
@@ -75,9 +76,11 @@ def render_miner_status(block_number: int, miner_status: list):
 
 #=======================================================================================
 
-def update_miner_graph_data(graph_data, blocknum, miner_status):
+def update_simulation_data(miner_graph_data, blocknum, miner_status):
+    """ Pass-through function used by simulation() callback to pass progress data
+        to various componenets mid-run. """
     table_header, table_rows = render_miner_status(blocknum, miner_status)
-    return graph_data, table_header, table_rows
+    return miner_graph_data, table_header, table_rows
 
 #=======================================================================================
 
@@ -107,6 +110,25 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
         return " ".join(classes)
     return to_collapse_class + " collapsed" if to_collapse_class else "collapsed"
 
+
+#=======================================================================================
+
+@dash.callback(
+    Output("graph-data", "data", allow_duplicate=True),
+    Input("graph-data-temp", "data"),
+    prevent_initial_call=True,
+)
+def move_graph_data(graph_data_in: list):
+    """ Takes the graph data for a single miner passed into the temp store by the
+        update_simulation_data functon and Patches it into the store with the graph
+        data for all of the miners. Must be done this way because Patch won't work
+        properly if returned direction from update_simulation."""
+    to_update = Patch()
+    miner_id = graph_data_in[0]
+    graph_data_out = graph_data_in[1:]
+    to_update.update({f"Miner {miner_id + 1}":graph_data_out})
+    return to_update
+
 #=======================================================================================
 
 @dash.callback(
@@ -115,12 +137,14 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
     Output("miner-graph-display", "figure", allow_duplicate=True),
     Output("graph-wrapper", "className", allow_duplicate=True),
     inputs=[
-        Input("miner-graph-data", "data"),
+        Input("block-number-data", "data"),
+        Input("view-select", "value"),
         State("run-status", "data"),
+        State ("graph-data", "data")
     ],
     prevent_initial_call=True
 )
-def render_graphs(graph_data_json: str, run_status: dict):
+def render_graphs(num_blocks: int, selected_view: str, run_status: dict, all_graph_data: dict):
     """ Updates the display for the miner tab, shwoing the graph
         of the current chain state if it is available.
 
@@ -134,29 +158,21 @@ def render_graphs(graph_data_json: str, run_status: dict):
             run-status: if run status alters, display should alter
             tabs: should automatically render on switching tabs.
 
-            TODO: as long as we're fine with the space requirement of keeping all the
-            graph files for a run, this could be improved and simplified by just 
-            having the files generate with new names each time. It would also allow
-            for "replays" of a trial at the end. This will take just enough work that I
-            don't want to do it quite yet.
-
         Returns:
             graph-file
     """
 
-    #TODO add a block number store to allow for better logic
-    graph_data = json.loads(graph_data_json)
+    graph_data = all_graph_data[selected_view]
 
-    if run_status["Running"] and not run_status["Paused"]:
-        num_blocks = graph_data[0]
-        tree_data = graph_data[1]
-
+    if not run_status["Running"] or num_blocks < 2:
+        return "display-none", "", None, "display-none"
+    else:
         plotter = SpiralPlotter()
-        plotter.import_plotting_data(tree_data=tree_data, num_nodes=num_blocks)
+        plotter.import_plotting_data(tree_data=graph_data, num_nodes=num_blocks)
         plot_data = plotter.plot_spiral()
         fig = go.Figure(plot_data)
 
-        fig.update_layout( #TODO move to configs
+        fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
             autosize=False,
             width=700,
             height=700,
@@ -173,9 +189,6 @@ def render_graphs(graph_data_json: str, run_status: dict):
         paper_bgcolor="White",
         plot_bgcolor="White",
         )
-
-    else:
-        fig = None
 
     return "display-none", "display-none", fig, ""
 
@@ -252,17 +265,20 @@ def resume_simulation(pause_click: int):
     Output("pause-button", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("run-status", "data", allow_duplicate=True),
+    Output("view-select-wrapper", "children"),
+    Output("graph-data", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
+        State("miner-slider", "value"),
     ],
     prevent_initial_call=True,
 )
-def run_simulation(
-    run_click: int,
-):
+def run_simulation(run_click: int, num_miners: int):
     if os.path.exists(PAUSE_FILE):
         os.remove(PAUSE_FILE)
-    return "display-none", "", "", "display-none", {"Running":True, "Paused": False}
+    miner_data = {f"Miner {i+1}":[] for i in range(num_miners)}
+    miner_data.update({"Global View": []})
+    return "display-none", "", "", "display-none", {"Running":True, "Paused": False}, generate_view_select(num_miners), miner_data
 
 #========================================================================================
 
@@ -281,7 +297,7 @@ def run_simulation(
         (Output("blocks-input", "disabled"), True, False), 
     ],
     progress=[
-        Output("miner-graph-data", "data"),
+        Output("graph-data-temp", "data"),
         Output("miner-table-head", "children"), 
         Output("miner-table-body", "children"),
         
@@ -353,10 +369,10 @@ def simulation(
 
         while(manager.iteration_number <= num_blocks):
             if not os.path.exists(PAUSE_FILE):
-               tree_data, blocknum, miner_stats = manager.miner_step()
-               graph_data = [blocknum, tree_data]
-               graph_data_json = json.dumps(graph_data)
-               display_data_update(update_miner_graph_data(graph_data_json, blocknum, miner_stats))
+               graph_data, min_id, blocknum, miner_stats = manager.miner_step()
+               graph_data_out = [min_id] + graph_data
+               display_data_update(update_simulation_data(graph_data_out, blocknum, miner_stats))
+               set_props(component_id="block-number-data", props={"data":blocknum})
             time.sleep(0.15) #intent is to give other components a chance to update. But might not be necessary.
   
         
