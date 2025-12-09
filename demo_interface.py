@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 from dash import dcc, html
+import dash_mantine_components as dmc
 
 from demo_configs import (
     CHECKLIST,
@@ -25,10 +26,11 @@ from demo_configs import (
     RADIO,
     SLIDER,
     SOLVER_TIME,
-    THEME_COLOR_SECONDARY,
     THUMBNAIL,
 )
 from src.demo_enums import SolverType
+
+THEME_COLOR = "#2d4376"
 
 
 def slider(label: str, id: str, config: dict) -> html.Div:
@@ -42,19 +44,18 @@ def slider(label: str, id: str, config: dict) -> html.Div:
     return html.Div(
         className="slider-wrapper",
         children=[
-            html.Label(label),
-            dcc.Slider(
+            html.Label(label, htmlFor=id),
+            dmc.Slider(
                 id=id,
                 className="slider",
                 **config,
-                marks={
-                    config["min"]: str(config["min"]),
-                    config["max"]: str(config["max"]),
-                },
-                tooltip={
-                    "placement": "bottom",
-                    "always_visible": True,
-                },
+                marks=[
+                    {"value": config["min"], "label": f"{config["min"]}"},
+                    {"value": config["max"], "label": f"{config["max"]}"},
+                ],
+                labelAlwaysOn=True,
+                thumbLabel=f"{label} slider",
+                color=THEME_COLOR,
             ),
         ],
     )
@@ -71,13 +72,12 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
     return html.Div(
         className="dropdown-wrapper",
         children=[
-            html.Label(label),
-            dcc.Dropdown(
+            html.Label(label, htmlFor=id),
+            dmc.Select(
                 id=id,
-                options=options,
+                data=options,
                 value=options[0]["value"],
-                clearable=False,
-                searchable=False,
+                allowDeselect=False,
             ),
         ],
     )
@@ -96,7 +96,7 @@ def checklist(label: str, id: str, options: list, values: list, inline: bool = T
     return html.Div(
         className="checklist-wrapper",
         children=[
-            html.Label(label),
+            html.Label(label, htmlFor=id),
             dcc.Checklist(
                 id=id,
                 className=f"checklist{' checklist--inline' if inline else ''}",
@@ -121,7 +121,7 @@ def radio(label: str, id: str, options: list, value: int, inline: bool = True) -
     return html.Div(
         className="radio-wrapper",
         children=[
-            html.Label(label),
+            html.Label(label, htmlFor=id),
             dcc.RadioItems(
                 id=id,
                 className=f"radio{' radio--inline' if inline else ''}",
@@ -144,12 +144,12 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    dropdown_options = generate_options(DROPDOWN)
+    dropdown_options = [{"label": label, "value": f"{i}"} for i, label in enumerate(DROPDOWN)]
     checklist_options = generate_options(CHECKLIST)
     radio_options = generate_options(RADIO)
 
     solver_options = [
-        {"label": solver_type.label, "value": solver_type.value} for solver_type in SolverType
+        {"label": solver_type.label, "value": f"{solver_type.value}"} for solver_type in SolverType
     ]
 
     return html.Div(
@@ -182,8 +182,8 @@ def generate_settings_form() -> html.Div:
                 "solver-type-select",
                 sorted(solver_options, key=lambda op: op["value"]),
             ),
-            html.Label("Solver Time Limit (seconds)"),
-            dcc.Input(
+            html.Label("Solver Time Limit (seconds)", htmlFor="solver-time-limit"),
+            dmc.NumberInput(
                 id="solver-time-limit",
                 type="number",
                 **SOLVER_TIME,
@@ -208,23 +208,33 @@ def generate_run_buttons() -> html.Div:
     )
 
 
-def generate_problem_details_table_rows(solver: str, time_limit: int) -> list[html.Tr]:
-    """Generates table rows for the problem details table.
+def generate_table(table_data: dict[str, list]) -> html.Table:
+    """Generates a table containing table_data.
 
     Args:
-        solver: The solver used for optimization.
-        time_limit: The solver time limit.
+        table_data: A dictionary of table header keys and table column values.
 
     Returns:
-        list[html.Tr]: List of rows for the problem details table.
+        html.Table: An HTML table containing table_data.
     """
+    table_columns = table_data.values()
+    num_rows = len(next(iter(table_columns)))
 
-    table_rows = (
-        ("Solver:", solver, "Time Limit:", f"{time_limit}s"),
-        ### Add more table rows here. Each tuple is a row in the table.
+    return html.Table(
+        className="problem-details-table",
+        children=[
+            html.Thead(html.Tr([html.Th(table_header) for table_header in table_data.keys()])),
+            html.Tbody(
+                [
+                    html.Tr(
+                        [
+                            html.Td(column[i]) for column in table_columns
+                        ]
+                    ) for i in range(num_rows)
+                ]
+            ),
+        ],
     )
-
-    return [html.Tr([html.Td(cell) for cell in row]) for row in table_rows]
 
 
 def problem_details(index: int) -> html.Div:
@@ -249,35 +259,11 @@ def problem_details(index: int) -> html.Div:
                     html.H5("Problem Details"),
                     html.Div(className="collapse-arrow"),
                 ],
+                **{"aria-expanded": "true"},
             ),
             html.Div(
                 className="details-to-collapse",
-                children=[
-                    html.Table(
-                        className="solution-stats-table",
-                        children=[
-                            # Problem details table header (optional)
-                            html.Thead(
-                                [
-                                    html.Tr(
-                                        [
-                                            html.Th(
-                                                colSpan=2,
-                                                children=["Problem Specifics"],
-                                            ),
-                                            html.Th(
-                                                colSpan=2,
-                                                children=["Run Time"],
-                                            ),
-                                        ]
-                                    )
-                                ]
-                            ),
-                            # A Dash callback function will generate content in Tbody
-                            html.Tbody(id="problem-details"),
-                        ],
-                    ),
-                ],
+                id="problem-details",
             ),
         ],
     )
@@ -288,13 +274,20 @@ def create_interface():
     return html.Div(
         id="app-container",
         children=[
+            html.A(  # Skip link for accessibility
+                "Skip to main content",
+                href="#main-content",
+                id="skip-to-main",
+                className="skip-link",
+            ),
             # Below are any temporary storage items, e.g., for sharing data between callbacks.
             dcc.Store(id="run-in-progress", data=False),  # Indicates whether run is in progress
             # Header brand banner
-            html.Div(className="banner", children=[html.Img(src=THUMBNAIL)]),
+            html.Header(className="banner", children=[html.Img(src=THUMBNAIL, alt="D-Wave logo")]),
             # Settings and results columns
-            html.Div(
+            html.Main(
                 className="columns-main",
+                id="main-content",
                 children=[
                     # Left column
                     html.Div(
@@ -320,7 +313,9 @@ def create_interface():
                                 html.Button(
                                     id={"type": "collapse-trigger", "index": 0},
                                     className="left-column-collapse",
+                                    title="Collapse sidebar",
                                     children=[html.Div(className="collapse-arrow")],
+                                    **{"aria-expanded": "true"},
                                 ),
                             ),
                         ],
@@ -337,16 +332,21 @@ def create_interface():
                                     dcc.Tab(
                                         label="Input",
                                         id="input-tab",
-                                        value="input-tab",  # used for switching tabs programatically
+                                        value="input-tab",  # for switching tabs programatically
                                         className="tab",
                                         children=[
-                                            dcc.Loading(
-                                                parent_className="input",
-                                                type="circle",
-                                                color=THEME_COLOR_SECONDARY,
-                                                # A Dash callback (in app.py) will generate content in the Div below
-                                                children=html.Div(id="input"),
-                                            ),
+                                            html.Div(
+                                                className="tab-content-wrapper",
+                                                children=[
+                                                    dcc.Loading(
+                                                        parent_className="input",
+                                                        type="circle",
+                                                        color=THEME_COLOR,
+                                                        # A Dash callback (in app.py) will generate content in the Div below
+                                                        children=html.Div(id="input"),
+                                                    ),
+                                                ]
+                                            )
                                         ],
                                     ),
                                     dcc.Tab(
@@ -356,12 +356,12 @@ def create_interface():
                                         disabled=True,
                                         children=[
                                             html.Div(
-                                                className="tab-content-results",
+                                                className="tab-content-wrapper",
                                                 children=[
                                                     dcc.Loading(
                                                         parent_className="results",
                                                         type="circle",
-                                                        color=THEME_COLOR_SECONDARY,
+                                                        color=THEME_COLOR,
                                                         # A Dash callback (in app.py) will generate content in the Div below
                                                         children=html.Div(id="results"),
                                                     ),
