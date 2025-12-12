@@ -14,39 +14,52 @@
 
 """This file stores input parameters for the app."""
 
+import os
+import plotly.express as px
+
+# THEME_COLOR is used for the button, text, and banner and should be dark
+# and pass accessibility checks with white: https://webaim.org/resources/contrastchecker/
+# THEME_COLOR_SECONDARY can be light or dark and is used for sliders, loading icon, and tabs
+THEME_COLOR = "#074C91"  # D-Wave dark blue default #074C91
+THEME_COLOR_SECONDARY = "#2A7DE1"  # D-Wave blue default #2A7DE1
+
 THUMBNAIL = "static/dwave_logo.svg"
 
-APP_TITLE = "Demo Name"
-MAIN_HEADER = "Demo Name"
+APP_TITLE = "Quantum Blockchain"
+MAIN_HEADER = "Quantum Blockchain"
 DESCRIPTION = """\
-This is a Dash template for new examples. It includes some basic settings, tabs, and styling.
+A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Quantum Annealer
 """
+INTRO_TEXT = "Select a number of miners and blocks and press \"Begin Simulation\"."
+INTRO_SUBTEXT = "Results will display here while simulation is running."
+LOADING_TEXT = "Generating graphs..."
 
 #######################################
 # Sliders, buttons and option entries #
 #######################################
 
-# an example slider
-SLIDER = {
-    "min": 1,
-    "max": 10,
+MIN_MINERS = 3 
+
+MAX_MINERS = 44
+
+MAX_MINER_ROWS = 28
+
+MAX_MINER_COLUMNS = 2
+
+DEFAULT_TABLE_HEADER = "Initializing..."
+
+DEFAULT_TABLE_BODY = ""
+
+GRAPH_WIDTH = 1000 #width of graph and load screen elements
+
+DISPLAY_REFRESH_RATE = 100 #In milliseconds. How quickly graphs and status tables check for new outputs to display
+
+MINER_SLIDER = {
+    "min": MIN_MINERS,
+    "max": MAX_MINERS,
     "step": 1,
-    "value": 5,
+    "value": 7
 }
 
-# an example dropdown
-DROPDOWN = ["Option 1", "Option 2"]
-
-# an example checklist
-CHECKLIST = ["Option 1", "Option 2"]
-
-# an example radio list
-RADIO = ["Option 1", "Option 2"]
-
-# solver time limits in seconds (value means default)
-SOLVER_TIME = {
-    "min": 10,
-    "max": 300,
-    "step": 5,
-    "value": 10,
-}
+TRUNK_COLOR_SCALE = px.colors.sequential.Bluered
+BRANCH_COLOR_SCALE = px.colors.sequential.Aggrnyl

@@ -14,26 +14,83 @@
 
 from __future__ import annotations
 
-from typing import Union
+import os, json, time, math
 
 import dash
-from dash import MATCH
+from dash import MATCH, ctx, html, Patch, set_props
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
+import plotly.graph_objects as go
+import plotly.express as px
 
-from demo_interface import generate_table
-from src.demo_enums import SolverType
+from spiral_plotter import SpiralPlotter
+from src.agents.trial_manager import TrialManager
 
+from demo_interface import generate_view_select
+
+from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
+from demo_constants import (
+    PAUSE_FILE,
+    STATIC_PARAMS_FILE, 
+    EMBEDDINGS_DIRECTORY,
+)
+
+def render_miner_status(block_number: int, miner_status: list):
+    """ Renders the status of the miners in the current trial. Each miner will be named
+        "Miner n" where n is one more than their ID in TrialManager (because numbering 
+        starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
+        Validating, Valid" if they've started acting this round, or "..." if not.
+
+    Args:
+        n_intervals (unused)
+
+    Returns:
+        str: miner status table
+    """
+
+
+    if "Mined" in miner_status:
+        round_state = "Validating"
+    else:
+        round_state = "Mining"
+    table_header = round_state + f" Block {block_number}"
+
+    num_miners = len(miner_status)
+    miner_names = [f"Miner {i}" for i in range(1, num_miners + 1)]
+    columns = min(math.ceil(num_miners / MAX_MINER_ROWS), MAX_MINER_COLUMNS)
+
+    table_rows = []
+    new_row = []
+    for i in range(0, num_miners):
+        new_row.append(html.Td(miner_names[i]))
+        new_row.append(html.Td(miner_status[i]))
+        if len(new_row) >= 2*columns:
+            table_rows.append(html.Tr(new_row))
+            new_row = []
+    if len(new_row) > 0:
+        table_rows.append(html.Tr(new_row))
+
+    return table_header, table_rows
+
+#=======================================================================================
+
+def update_simulation_data(miner_graph_data, blocknum, miner_status):
+    """ Pass-through function used by simulation() callback to pass progress data
+        to various componenets mid-run. """
+    table_header, table_rows = render_miner_status(blocknum, miner_status)
+    return miner_graph_data, table_header, table_rows
+
+#=======================================================================================
 
 @dash.callback(
     Output({"type": "to-collapse-class", "index": MATCH}, "className"),
-    Output({"type": "collapse-trigger", "index": MATCH}, "aria-expanded"),
     inputs=[
         Input({"type": "collapse-trigger", "index": MATCH}, "n_clicks"),
         State({"type": "to-collapse-class", "index": MATCH}, "className"),
     ],
     prevent_initial_call=True,
 )
-def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> tuple[str, str]:
+def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
     """Toggles a 'collapsed' class that hides and shows some aspect of the UI.
 
     Args:
@@ -43,73 +100,215 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> tuple[s
 
     Returns:
         str: The new class name of the thing to collapse.
-        str: The aria-expanded value.
     """
 
     classes = to_collapse_class.split(" ") if to_collapse_class else []
     if "collapsed" in classes:
         classes.remove("collapsed")
-        return " ".join(classes), "true"
-    return to_collapse_class + " collapsed" if to_collapse_class else "collapsed", "false"
+        return " ".join(classes)
+    return to_collapse_class + " collapsed" if to_collapse_class else "collapsed"
 
 
-@dash.callback(
-    Output("input", "children"),
-    inputs=[
-        Input("slider", "value"),
-    ],
-)
-def render_initial_state(slider_value: int) -> str:
-    """Runs on load and any time the value of the slider is updated.
-        Add `prevent_initial_call=True` to skip on load runs.
-
-    Args:
-        slider_value: The value of the slider.
-
-    Returns:
-        str: The content of the input tab.
-    """
-    return f"Put demo input here. The current slider value is {slider_value}."
-
+#=======================================================================================
 
 @dash.callback(
-    # The Outputs below must align with the return values of the function.
-    Output("results", "children"),
-    Output("problem-details", "children"),
-    background=True,
-    inputs=[
-        # The first string in the Input/State elements below must match an id in demo_interface.py
-        # Remove or alter the following id's to match any changes made to demo_interface.py
-        Input("run-button", "n_clicks"),
-        State("solver-type-select", "value"),
-        State("solver-time-limit", "value"),
-        State("slider", "value"),
-        State("dropdown", "value"),
-        State("checklist", "value"),
-        State("radio", "value"),
-    ],
-    running=[
-        (Output("cancel-button", "className"), "", "display-none"),  # Show/hide cancel button.
-        (Output("run-button", "className"), "display-none", ""),  # Hides run button while running.
-        (Output("results-tab", "disabled"), True, False),  # Disables results tab while running.
-        (Output("results-tab", "label"), "Loading...", "Results"),
-        (Output("tabs", "value"), "input-tab", "input-tab"),  # Switch to input tab while running.
-        (Output("run-in-progress", "data"), True, False),  # Can block certain callbacks.
-    ],
-    cancel=[Input("cancel-button", "n_clicks")],
+    Output("graph-data", "data", allow_duplicate=True),
+    Input("graph-data-temp", "data"),
     prevent_initial_call=True,
 )
-def run_optimization(
-    # The parameters below must match the `Input` and `State` variables found
-    # in the `inputs` list above.
-    run_click: int,
-    solver_type: str,
-    time_limit: float,
-    slider_value: int,
-    dropdown_value: int,
-    checklist_value: list,
-    radio_value: int,
-) -> tuple[str, list]:
+def move_graph_data(graph_data_in: list):
+    """ Takes the graph data for a single miner passed into the temp store by the
+        update_simulation_data function and Patches it into the store with the graph
+        data for all of the miners. Must be done this way because Patch won't work
+        properly if returned direction from update_simulation."""
+    to_update = Patch()
+    miner_id = graph_data_in[0]
+    graph_data_out = graph_data_in[1:]
+    to_update.update({f"Miner {miner_id + 1}":graph_data_out})
+    return to_update
+
+#=======================================================================================
+
+@dash.callback(
+    Output("intro-text", "className", allow_duplicate=True),
+    Output("loading-text", "className", allow_duplicate=True),
+    Output("miner-graph-display", "figure", allow_duplicate=True),
+    Output("graph-wrapper", "className", allow_duplicate=True),
+    inputs=[
+        Input("block-number-data", "data"),
+        Input("view-select", "value"),
+        State("run-status", "data"),
+        State ("graph-data", "data")
+    ],
+    prevent_initial_call=True
+)
+def render_graphs(num_blocks: int, selected_view: str, run_status: dict, all_graph_data: dict):
+    """ Updates the display for the miner tab, showing the graph
+        of the current chain state if it is available.
+
+        The file naming logic here is somewhat convoluted because it has to be:
+        the html.Img object seems to cache copies of the last several images it
+        has displayed. If you don't give it a new name, it will keep displaying
+        the older image. So we rotate through a sequence of filenames.
+
+        Args:
+            miner-graph-update: interval set to check if there is anything to update
+            run-status: if run status alters, display should alter
+            tabs: should automatically render on switching tabs.
+
+        Returns:
+            graph-file
+    """
+
+    graph_data = all_graph_data[selected_view]
+
+    if not run_status["Running"] or num_blocks < 2:
+        return "display-none", "", None, "display-none"
+    else:
+        plotter = SpiralPlotter()
+        plotter.import_plotting_data(tree_data=graph_data, num_nodes=num_blocks)
+        plot_data = plotter.plot_spiral()
+        fig = go.Figure(plot_data)
+
+        fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
+            autosize=False,
+            width=700,
+            height=700,
+            showlegend = False,
+            xaxis = dict(showticklabels=False),
+            yaxis = dict(showticklabels=False),
+            margin=dict(
+                l=0,
+                r=0,
+                b=0,
+                t=0,
+                pad=4
+            ),
+        paper_bgcolor="White",
+        plot_bgcolor="White",
+        )
+
+    return "display-none", "display-none", fig, ""
+
+
+#========================================================================================
+@dash.callback(
+    Output("intro-text", "className", allow_duplicate=True),
+    Output("loading-text", "className", allow_duplicate=True),
+    Output("graph-wrapper", "className", allow_duplicate=True),
+    Output("run-button", "className", allow_duplicate=True),
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("resume-button", "className", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
+    inputs=[
+        Input("reset-button", "n_clicks"),
+    ],
+    prevent_initial_call = True
+)
+def reset_simulation(reset_click: int):
+    prep_directories()
+
+    return (
+        "", #Intro text
+        "display-none", #Loading text
+        "display-none", #Miner Graph
+        "",             #Run Button
+        "display-none", #Reset Button
+        "display-none", #Resume Button
+        {"Running": False, "Paused": False}
+    )
+
+#========================================================================================
+
+@dash.callback(
+    Output("resume-button", "className", allow_duplicate=True),
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("pause-button", "className", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
+    inputs=[
+        Input("pause-button", "n_clicks"),
+    ],
+    prevent_initial_call = True
+)
+def pause_simulation(pause_click: int):
+
+    if not os.path.exists(PAUSE_FILE):
+        with open(PAUSE_FILE, "w") as f:
+            f.write(" ")
+
+    return "", "", "display-none", {"Running":True, "Paused": True}
+
+#========================================================================================
+
+@dash.callback(
+    Output("resume-button", "className", allow_duplicate=True),
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("pause-button", "className", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
+    inputs=[
+        Input("resume-button", "n_clicks"),
+    ],
+    prevent_initial_call = True
+)
+def resume_simulation(pause_click: int):
+    if os.path.exists(PAUSE_FILE):
+        os.remove(PAUSE_FILE)
+    return "display-none", "display-none", "", {"Running":True, "Paused": False}
+
+#========================================================================================
+
+@dash.callback(
+    Output("intro-text", "className", allow_duplicate=True),
+    Output("loading-text", "className", allow_duplicate=True),
+    Output("pause-button", "className", allow_duplicate=True),
+    Output("run-button", "className", allow_duplicate=True),
+    Output("run-status", "data", allow_duplicate=True),
+    Output("view-select-wrapper", "children"),
+    Output("graph-data", "data", allow_duplicate=True),
+    inputs=[
+        Input("run-button", "n_clicks"),
+        State("miner-slider", "value"),
+    ],
+    prevent_initial_call=True,
+)
+def run_simulation(run_click: int, num_miners: int):
+    if os.path.exists(PAUSE_FILE):
+        os.remove(PAUSE_FILE)
+    miner_data = {f"Miner {i+1}":[] for i in range(num_miners)}
+    miner_data.update({"Global View": []})
+    return "display-none", "", "", "display-none", {"Running":True, "Paused": False}, generate_view_select(num_miners), miner_data
+
+#========================================================================================
+
+@dash.callback(
+
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("pause-button", "className", allow_duplicate=True),
+    background=True,
+    inputs=[
+        Input("run-status", "data"),
+        State("miner-slider", "value"),
+        State("blocks-input", "value"),
+    ],
+    running=[
+        (Output("miner-slider", "disabled"), True, False),
+        (Output("blocks-input", "disabled"), True, False), 
+    ],
+    progress=[
+        Output("graph-data-temp", "data"),
+        Output("miner-table-head", "children"), 
+        Output("miner-table-body", "children"),
+        
+    ],
+    cancel = [Input("reset-button", "n_clicks")],
+    prevent_initial_call=True,
+)
+def simulation(
+    display_data_update,
+    run_status: dict,
+    miner_slider_val: int,
+    block_input_val: int,
+):
     """Runs the optimization and updates UI accordingly.
 
     This is the main function which is called when the ``Run Optimization`` button is clicked.
@@ -119,29 +318,60 @@ def run_optimization(
 
     Args:
         run_click: The (total) number of times the run button has been clicked.
-        solver_type: The solver to use for the optimization run defined by SolverType in demo_enums.py.
-        time_limit: The solver time limit.
-        slider_value: The value of the slider.
-        dropdown_value: The value of the dropdown.
-        checklist_value: A list of the values of the checklist.
-        radio_value: The value of the radio.
+
 
     Returns:
-        results: The results to display in the results tab.
-        problem-details: List of the table rows for the problem details table.
+        A NamedTuple (RunOptimizationReturn) containing all outputs to be used when updating the HTML
+        template (in ``demo_interface.py``). These are:
+
+            results: The results to display in the results tab.
+            problem-details: List of the table rows for the problem details table.
     """
 
-    solver_type = SolverType(int(solver_type))
+    # Only run optimization code if this function was triggered by a click on `run-button`.
+    # Setting `Input` as exclusively `run-button` and setting `prevent_initial_call=True`
+    # also accomplishes this.
 
+    if run_status["Running"] == False or ctx.triggered_id != "run-status":
+        raise PreventUpdate
+    else:
+        num_blocks = block_input_val
+        num_miners = miner_slider_val
+        prep_directories()
+        trial_directory = make_output_directory()
+        with open(STATIC_PARAMS_FILE, 'r') as f:
+            trial_params = json.load(f)
 
-    ###########################
-    ### YOUR CODE GOES HERE ###
-    ###########################
+        #Trial initialization stuff. Takes a long time, so we only want to do it once per run.
+        trial_owners = TrialOwners()
+        owner_keys = [owner.private_key.export_key().decode('utf8') for owner in trial_owners]
+        del trial_owners
+        trial_params.update({"Miners":num_miners,"Blocks":num_blocks, 
+                             "Owners":owner_keys})
 
+        pow_protocol = ProofOfWorkProtocolQpu(embedding_directory=EMBEDDINGS_DIRECTORY,
+                                          randomize_solver=trial_params["Random_Solver"], 
+                                          randomize_embedding=trial_params["Random_Solver"], 
+                                          profile=trial_params["Profile"],
+                                          solver=trial_params["Solver"], 
+                                          annealing_time=trial_params["Annealing_Time"], 
+                                          ensemble=trial_params["Ensemble"])
 
-    # Generates the problem details table on the results page.
-    problem_details_table = generate_table(
-        {"Solver": [solver_type.label], "Time Limit": [time_limit]}
-    )
+        pow_protocol.to_json(trial_directory)
+        with open(os.path.join(trial_directory,TRIAL_PARAMETERS_FILE), 'w') as f:
+            json.dump(trial_params, f)
 
-    return "Put demo results here.", problem_details_table
+        manager = TrialManager(trial_directory)
+
+        #End of trial initialization. Start of trial proper.
+
+        while(manager.iteration_number <= num_blocks):
+            if not os.path.exists(PAUSE_FILE):
+               graph_data, min_id, blocknum, miner_stats = manager.miner_step()
+               graph_data_out = [min_id] + graph_data
+               display_data_update(update_simulation_data(graph_data_out, blocknum, miner_stats))
+               set_props(component_id="block-number-data", props={"data":blocknum})
+            time.sleep(0.15) #intent is to give other components a chance to update. But might not be necessary.
+  
+        
+    return "", "display-none"
