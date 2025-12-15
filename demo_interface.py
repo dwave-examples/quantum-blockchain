@@ -16,21 +16,20 @@
 from __future__ import annotations
 
 from dash import dcc, html
-import dash_mantine_components as dmc
+import json, os
+import plotly.graph_objects as go
+import plotly.express as px
 
 from demo_configs import (
-    CHECKLIST,
     DESCRIPTION,
-    DROPDOWN,
     MAIN_HEADER,
-    RADIO,
-    SLIDER,
-    SOLVER_TIME,
     THUMBNAIL,
+    MINER_SLIDER,
+    DISPLAY_REFRESH_RATE,
+    INTRO_TEXT,
+    INTRO_SUBTEXT,
+    LOADING_TEXT
 )
-from src.demo_enums import SolverType
-
-THEME_COLOR = "#2d4376"
 
 
 def slider(label: str, id: str, config: dict) -> html.Div:
@@ -39,23 +38,24 @@ def slider(label: str, id: str, config: dict) -> html.Div:
     Args:
         label: The title that goes above the slider.
         id: A unique selector for this element.
-        config: A dictionary of slider configerations, see dcc.Slider Dash docs.
+        config: A dictionary of slider configurations, see dcc.Slider Dash docs.
     """
     return html.Div(
         className="slider-wrapper",
         children=[
-            html.Label(label, htmlFor=id),
-            dmc.Slider(
+            html.Label(label),
+            dcc.Slider(
                 id=id,
                 className="slider",
                 **config,
-                marks=[
-                    {"value": config["min"], "label": f"{config["min"]}"},
-                    {"value": config["max"], "label": f"{config["max"]}"},
-                ],
-                labelAlwaysOn=True,
-                thumbLabel=f"{label} slider",
-                color=THEME_COLOR,
+                marks={
+                    config["min"]: str(config["min"]),
+                    config["max"]: str(config["max"]),
+                },
+                tooltip={
+                    "placement": "bottom",
+                    "always_visible": True,
+                },
             ),
         ],
     )
@@ -72,66 +72,51 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
     return html.Div(
         className="dropdown-wrapper",
         children=[
-            html.Label(label, htmlFor=id),
-            dmc.Select(
+            html.Label(label),
+            dcc.Dropdown(
                 id=id,
-                data=options,
+                options=options,
                 value=options[0]["value"],
-                allowDeselect=False,
+                clearable=False,
+                searchable=False,
             ),
         ],
     )
 
 
-def checklist(label: str, id: str, options: list, values: list, inline: bool = True) -> html.Div:
-    """Checklist element for option selection.
-
-    Args:
-        label: The title that goes above the checklist.
-        id: A unique selector for this element.
-        options: A list of dictionaries of labels and values.
-        values: A list of values that should be preselected in the checklist.
-        inline: Whether the options of the checklist are displayed beside or below each other.
-    """
+def num_blocks_input() -> html.Div:
     return html.Div(
-        className="checklist-wrapper",
+        className="blocks-input-wrapper",
         children=[
-            html.Label(label, htmlFor=id),
-            dcc.Checklist(
-                id=id,
-                className=f"checklist{' checklist--inline' if inline else ''}",
-                inline=inline,
-                options=options,
-                value=values,
-            ),
+            html.Label("Number of Blocks"),
+            dcc.Input(
+                value=10,
+                id = "blocks-input",
+                type= "number",
+                min=2,
+                max=200,
+                step=1
+            )
         ],
     )
 
-
-def radio(label: str, id: str, options: list, value: int, inline: bool = True) -> html.Div:
-    """Radio element for option selection.
-
-    Args:
-        label: The title that goes above the radio.
-        id: A unique selector for this element.
-        options: A list of dictionaries of labels and values.
-        value: The value of the radio that should be preselected.
-        inline: Whether the options are displayed beside or below each other.
-    """
+def generate_view_select(num_miners):
+    global_opt = ["Global View"]
+    miner_opts = [f"Miner {i+1}" for i in range(num_miners)]
+    view_opts = global_opt + miner_opts
     return html.Div(
-        className="radio-wrapper",
+        className="dropdown-wrapper",
         children=[
-            html.Label(label, htmlFor=id),
-            dcc.RadioItems(
-                id=id,
-                className=f"radio{' radio--inline' if inline else ''}",
-                inline=inline,
-                options=options,
-                value=value,
+            html.Label("Select View"),
+            dcc.Dropdown(
+                id="view-select",
+                options=view_opts,
+                value=view_opts[1],
+                clearable=False,
+                searchable=False,
             ),
         ],
     )
-
 
 def generate_options(options_list: list) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
@@ -144,150 +129,61 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    dropdown_options = [{"label": label, "value": f"{i}"} for i, label in enumerate(DROPDOWN)]
-    checklist_options = generate_options(CHECKLIST)
-    radio_options = generate_options(RADIO)
-
-    solver_options = [
-        {"label": solver_type.label, "value": f"{solver_type.value}"} for solver_type in SolverType
-    ]
 
     return html.Div(
         className="settings",
         children=[
             slider(
-                "Example Slider",
-                "slider",
-                SLIDER,
+                "Number of Miners",
+                "miner-slider",
+                MINER_SLIDER,
             ),
-            dropdown(
-                "Example Dropdown",
-                "dropdown",
-                sorted(dropdown_options, key=lambda op: op["value"]),
-            ),
-            checklist(
-                "Example Checklist",
-                "checklist",
-                sorted(checklist_options, key=lambda op: op["value"]),
-                [0],
-            ),
-            radio(
-                "Example Radio",
-                "radio",
-                sorted(radio_options, key=lambda op: op["value"]),
-                0,
-            ),
-            dropdown(
-                "Solver",
-                "solver-type-select",
-                sorted(solver_options, key=lambda op: op["value"]),
-            ),
-            html.Label("Solver Time Limit (seconds)", htmlFor="solver-time-limit"),
-            dmc.NumberInput(
-                id="solver-time-limit",
-                type="number",
-                **SOLVER_TIME,
-            ),
+            num_blocks_input(),
         ],
     )
 
 
 def generate_run_buttons() -> html.Div:
-    """Run and cancel buttons to run the optimization."""
+    """Run, Pause, Reset and Resume buttons for the simulation"""
     return html.Div(
         id="button-group",
         children=[
-            html.Button(id="run-button", children="Run Optimization", n_clicks=0, disabled=False),
+            html.Button(id="run-button", children="Begin Simulation", n_clicks=0, disabled=False),
             html.Button(
-                id="cancel-button",
-                children="Cancel Optimization",
+                id="pause-button",
+                children="Pause Simulation",
                 n_clicks=0,
                 className="display-none",
             ),
-        ],
-    )
-
-
-def generate_table(table_data: dict[str, list]) -> html.Table:
-    """Generates a table containing table_data.
-
-    Args:
-        table_data: A dictionary of table header keys and table column values.
-
-    Returns:
-        html.Table: An HTML table containing table_data.
-    """
-    table_columns = table_data.values()
-    num_rows = len(next(iter(table_columns)))
-
-    return html.Table(
-        className="problem-details-table",
-        children=[
-            html.Thead(html.Tr([html.Th(table_header) for table_header in table_data.keys()])),
-            html.Tbody(
-                [
-                    html.Tr(
-                        [
-                            html.Td(column[i]) for column in table_columns
-                        ]
-                    ) for i in range(num_rows)
-                ]
+            html.Button(id="reset-button", 
+                        children="Reset Simulation", 
+                        n_clicks=0, 
+                        className="display-none",
+            ),
+            html.Button(id="resume-button", 
+                        children="Resume Simulation", 
+                        n_clicks=0, 
+                        className="display-none",
             ),
         ],
     )
-
-
-def problem_details(index: int) -> html.Div:
-    """Generate the problem details section.
-
-    Args:
-        index: Unique element id to differentiate matching elements.
-            Must be different from left column collapse button.
-
-    Returns:
-        html.Div: Div containing a collapsable table.
-    """
-    return html.Div(
-        id={"type": "to-collapse-class", "index": index},
-        className="details-collapse-wrapper collapsed",
-        children=[
-            # Problem details collapsible button and header
-            html.Button(
-                id={"type": "collapse-trigger", "index": index},
-                className="details-collapse",
-                children=[
-                    html.H5("Problem Details"),
-                    html.Div(className="collapse-arrow"),
-                ],
-                **{"aria-expanded": "true"},
-            ),
-            html.Div(
-                className="details-to-collapse",
-                id="problem-details",
-            ),
-        ],
-    )
-
 
 def create_interface():
     """Set the application HTML."""
     return html.Div(
         id="app-container",
         children=[
-            html.A(  # Skip link for accessibility
-                "Skip to main content",
-                href="#main-content",
-                id="skip-to-main",
-                className="skip-link",
-            ),
             # Below are any temporary storage items, e.g., for sharing data between callbacks.
-            dcc.Store(id="run-in-progress", data=False),  # Indicates whether run is in progress
+            dcc.Store(id="run-status", data={"Running": False, "Paused": False}),  # Indicates whether run is in progress and whether the run is paused
+            dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
+            dcc.Store(id="block-number-data", data=0),
+            dcc.Store(id="graph-data", data=[]),    #Stores graph data for all miners
+            dcc.Store(id="graph-data-temp", data=[]), #Allows partial updates to be passed through to graph-data
             # Header brand banner
-            html.Header(className="banner", children=[html.Img(src=THUMBNAIL, alt="D-Wave logo")]),
+            html.Div(className="banner", children=[html.Img(src=THUMBNAIL)]),
             # Settings and results columns
-            html.Main(
+            html.Div(
                 className="columns-main",
-                id="main-content",
                 children=[
                     # Left column
                     html.Div(
@@ -304,6 +200,7 @@ def create_interface():
                                             html.P(DESCRIPTION),
                                             generate_settings_form(),
                                             generate_run_buttons(),
+                                            html.Div(id="view-select-wrapper"),
                                         ],
                                     )
                                 ],
@@ -313,9 +210,7 @@ def create_interface():
                                 html.Button(
                                     id={"type": "collapse-trigger", "index": 0},
                                     className="left-column-collapse",
-                                    title="Collapse sidebar",
                                     children=[html.Div(className="collapse-arrow")],
-                                    **{"aria-expanded": "true"},
                                 ),
                             ),
                         ],
@@ -324,54 +219,41 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
-                            dcc.Tabs(
-                                id="tabs",
-                                value="input-tab",
-                                mobile_breakpoint=0,
+                            html.Div(
+                                children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
+                                id="intro-text",
+                            ),
+                            html.H3(
+                                LOADING_TEXT,
+                                id="loading-text",
+                                className="display-none",
+                            ),
+                            html.Div(
+                                className="display-none",
+                                id="graph-wrapper",
                                 children=[
-                                    dcc.Tab(
-                                        label="Input",
-                                        id="input-tab",
-                                        value="input-tab",  # for switching tabs programatically
-                                        className="tab",
-                                        children=[
-                                            html.Div(
-                                                className="tab-content-wrapper",
-                                                children=[
-                                                    dcc.Loading(
-                                                        parent_className="input",
-                                                        type="circle",
-                                                        color=THEME_COLOR,
-                                                        # A Dash callback (in app.py) will generate content in the Div below
-                                                        children=html.Div(id="input"),
-                                                    ),
-                                                ]
-                                            )
-                                        ],
+                                    dcc.Graph(
+                                        id="miner-graph-display",
+                                        config={"displayModeBar": False},
                                     ),
-                                    dcc.Tab(
-                                        label="Results",
-                                        id="results-tab",
-                                        className="tab",
-                                        disabled=True,
-                                        children=[
-                                            html.Div(
-                                                className="tab-content-wrapper",
-                                                children=[
-                                                    dcc.Loading(
-                                                        parent_className="results",
-                                                        type="circle",
-                                                        color=THEME_COLOR,
-                                                        # A Dash callback (in app.py) will generate content in the Div below
-                                                        children=html.Div(id="results"),
-                                                    ),
-                                                    # Problem details dropdown
-                                                    html.Div([html.Hr(), problem_details(1)]),
-                                                ],
-                                            )
-                                        ],
-                                    ),
-                                ],
+                                    html.Div([ #TODO move outside of graph wrapper so miner table will update before first graph is ready.
+                                        html.H4(id="miner-table-head"),
+                                        html.Table(
+                                            id="miner-status-table",
+                                            children=[
+                                                html.Thead(
+                                                    html.Tr(
+                                                        [
+                                                            html.Th("Miner"),
+                                                            html.Th("Status"),
+                                                        ]
+                                                    )
+                                                ),
+                                                html.Tbody(id="miner-table-body"),
+                                            ]
+                                        ),
+                                    ]),
+                                ]
                             )
                         ],
                     ),

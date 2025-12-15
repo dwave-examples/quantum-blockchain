@@ -135,7 +135,7 @@ class Block:
         hashes. Important that this be consistent across all users or they will not calculate
         comparable hash values."""
         seed_string = (
-            f"{self.previous_hash}{self.merkle_root}{self.timestamp}{self.merkle_root}{self._miner_id}{self.nonce}"
+            f"{self.previous_hash}{self.merkle_root}{self.timestamp}{self.merkle_root}{self.miner_id}{self.nonce}"
         )
         return calculate_hash(seed_string)
 

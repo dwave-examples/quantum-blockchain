@@ -1,27 +1,20 @@
 import random
 import numpy as np
-
+from scipy.special import erf
 
 from src.structures.block import Block
-from src.utilities.crypto_utils import basic_compound_hash 
-from src.utilities.crypto_utils import validate_zeroes, compare_hashes
-from src.agents.trial_params import PowProtocolParams
+from src.utilities.crypto_utils import basic_compound_hash, validate_zeroes, compare_hashes
 from src.protocols.hash_calculator import HashSolver
-from src.values import MIN_SCORE
-
+from src.values import W_0_ALPHA, DELTA_W_0_ALPHA, MIN_SCORE
 
 class ProofOfWorkProtocol:
     """This class implements the Proof of Work Protocol for a node on the blockchain. In practice, that means the
     class manages mining, scoring and those aspects of Block assembly that require resources outside the scope
-    of the Block class, such as anything needing QPU access or a Private Key. Each miner should declare and
-    keep ownership over a single ProofOfWorkProtocol, which will be used in any method that involves mining
-    or validating blocks.
-
+    of the Block class, such as anything needing QPU access. 
     """
 
     def __init__(
         self,
-        protocol_params: PowProtocolParams,
         hash_solvers: list[HashSolver],
         solver_randomization: str = "none",
     ) -> None:
@@ -38,7 +31,7 @@ class ProofOfWorkProtocol:
             solver_randomization (str): Defaults to 'none'. Scheme for randomizing the solver. See docstring in trials_main.py for details
         """  # TODO replace with Enum
 
-        self.initialize_protocol_settings(protocol_params)
+        self.initialize_protocol_settings()
         self.solver_list = hash_solvers
         self._solver_randomization = solver_randomization
 
@@ -55,17 +48,16 @@ class ProofOfWorkProtocol:
         else:
             return False
 
-    def initialize_protocol_settings(self, protocol_params: PowProtocolParams):
+    def initialize_protocol_settings(self):
         """This initialized all the settings that must be shared across all users of the protocols.
 
         Args:
             protocol_params (PowProtocolParams): set of ProofOfWorkProtocol params as defined in trial_params.py
         """
 
-        self.quantum_hash_length = protocol_params.quantum_hash_length
-        self.ensemble = protocol_params.ensemble
-        self.allowable_err = protocol_params.allowable_err
-        self.n_zeroes = protocol_params.n_zeroes
+        self.quantum_hash_length = 128 #TODO update
+        self.allowable_err = 4 #TODO update
+        self.n_zeroes = 0 #TODO update
         self.compound_hashing_function = basic_compound_hash  # TODO design more flexibility
 
     def validate_block(self, block: Block) -> tuple[bool, float, list[int], float]:
@@ -138,13 +130,11 @@ class ProofOfWorkProtocol:
                 using confidence_based scoring, the miner might score their block low enough to no longer consider
                 it good, requiring another mining attempt.
             sample_time: the sampling time for the QPU call."""
-
-        block.set_quantum_hash()
-        sample_time = 0
-        if self.scoring_function == Scoring.get_all_scoring_functions()["confidence"]:
-            block_score = self.scoring_function([1], self.allowable_err, [1.0])
-        else:
-            block_score = 1.0
+        
+        new_quantum_hash, dot_vector, sample_time = self.calculate_quantum_hash(block)
+        block.set_quantum_hash(new_quantum_hash)
+        validation_bits = [1 for i in range(self.quantum_hash_length)] #TODO check typing
+        block_score = self.calculate_confidence_score(validation_bits, self.allowable_err, dot_vector)
 
         block.set_hash()
         assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
@@ -181,9 +171,33 @@ class ProofOfWorkProtocol:
             dot_vector = []
             sample_time = 0
 
-        block_score = self.scoring_function(validation_bits, self.allowable_err, dot_vector)
+        block_score = self.calculate_confidence_score(validation_bits, self.allowable_err, dot_vector)
         del dot_vector
         return block_score, validation_bits, sample_time
+    
+    def calculate_confidence_score(
+            self, valid_bits: np.ndarray, allowable_err: int, dot_vector: np.ndarray
+            ) -> float:
+        """Confidence-based scoring, as defined in the paper. In practice this is quite sensitive to quantum_hash_length,
+        allowable_err, solver schemas and num_reads. Some trial and error is required to find sets of values that
+        allow for reasonable validation rates."""
+        min_confidence = MIN_SCORE
+        mean = W_0_ALPHA
+        std_dev = DELTA_W_0_ALPHA
+        bits_array = np.array(valid_bits)
+        norm_dist = np.abs((dot_vector - mean) / std_dev)
+        bitwise_confidence = 0.5 * (1 + erf(norm_dist))
+        validation_confidence = [
+            a * b + (1 - a) * (1 - b) for a, b in zip(bits_array, bitwise_confidence)
+        ]  # If a validation bit is 1, we use the confidence. If it's 0, we use 1 - the confidence
+        log_confidence = allowable_err
+        for confidence in validation_confidence:
+            if confidence == 0:
+                return min_confidence
+            else:
+                log_confidence += np.log2(confidence)
+
+        return log_confidence
 
     def calculate_quantum_hash(self, block: Block) -> tuple[str, np.ndarray, float]:
         """Calculates the quantum hash for the block provided. This is the centerpiece of the whole

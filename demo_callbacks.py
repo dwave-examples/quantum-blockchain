@@ -23,7 +23,7 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import plotly.express as px
 
-from spiral_plotter import SpiralPlotter
+#from spiral_plotter import SpiralPlotter
 from src.agents.trial_manager import TrialManager
 
 from demo_interface import generate_view_select
@@ -34,6 +34,7 @@ from demo_constants import (
     STATIC_PARAMS_FILE, 
     EMBEDDINGS_DIRECTORY,
 )
+from demo_solvers import AVAILABLE_SOLVERS
 
 def render_miner_status(block_number: int, miner_status: list):
     """ Renders the status of the miners in the current trial. Each miner will be named
@@ -337,41 +338,14 @@ def simulation(
     else:
         num_blocks = block_input_val
         num_miners = miner_slider_val
-        prep_directories()
-        trial_directory = make_output_directory()
-        with open(STATIC_PARAMS_FILE, 'r') as f:
-            trial_params = json.load(f)
+        solver = AVAILABLE_SOLVERS[-1]
 
-        #Trial initialization stuff. Takes a long time, so we only want to do it once per run.
-        trial_owners = TrialOwners()
-        owner_keys = [owner.private_key.export_key().decode('utf8') for owner in trial_owners]
-        del trial_owners
-        trial_params.update({"Miners":num_miners,"Blocks":num_blocks, 
-                             "Owners":owner_keys})
-
-        pow_protocol = ProofOfWorkProtocolQpu(embedding_directory=EMBEDDINGS_DIRECTORY,
-                                          randomize_solver=trial_params["Random_Solver"], 
-                                          randomize_embedding=trial_params["Random_Solver"], 
-                                          profile=trial_params["Profile"],
-                                          solver=trial_params["Solver"], 
-                                          annealing_time=trial_params["Annealing_Time"], 
-                                          ensemble=trial_params["Ensemble"])
-
-        pow_protocol.to_json(trial_directory)
-        with open(os.path.join(trial_directory,TRIAL_PARAMETERS_FILE), 'w') as f:
-            json.dump(trial_params, f)
-
-        manager = TrialManager(trial_directory)
+        manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solver=solver)
 
         #End of trial initialization. Start of trial proper.
 
-        while(manager.iteration_number <= num_blocks):
-            if not os.path.exists(PAUSE_FILE):
-               graph_data, min_id, blocknum, miner_stats = manager.miner_step()
-               graph_data_out = [min_id] + graph_data
-               display_data_update(update_simulation_data(graph_data_out, blocknum, miner_stats))
-               set_props(component_id="block-number-data", props={"data":blocknum})
-            time.sleep(0.15) #intent is to give other components a chance to update. But might not be necessary.
+        while(manager.blocks_mined <= num_blocks):
+            manager.single_step()
   
         
     return "", "display-none"

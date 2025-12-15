@@ -16,7 +16,6 @@ from dwave.cloud import Client
 
 import numpy as np
 
-
 class SolverName(Enum):
     SOLVER1 = "Advantage2_prototype2.6"
     SOLVER2 = "Advantage_system4.1"
@@ -28,18 +27,11 @@ class SolverName(Enum):
     BOOTSTRAP4 = "simulated_Advantage_system7.1"
 
 
-SolverParams = namedtuple(
-    "SolverParams",
-    ["solver_name", "randomize_embedding", "annealing_time", "profile"],
-    defaults=(None, False, 0.0, "defaults"),
-)
-
-
 class HashSolver(ABC):
 
     @abstractmethod
     def calculate_quantum_hash(
-        self, hash_length: int, rng_seed: int
+        self, rng_seed: int, hash_length: int=128
     ) -> tuple[str, np.ndarray, float]:
         """Template for the method to calculate quantum hash values. Implementation will vary by solver type,
         but input and return values should stay consistent.
@@ -63,7 +55,7 @@ class HashSolver(ABC):
         return self._solver_name
 
 
-def initialize_solver(init_params: SolverParams) -> HashSolver:
+def initialize_solver(solver_name: str) -> HashSolver:
     """Function to allow a HashSolver of either type to be initiated from a SolverParams tuple, without
         having to check which type of solver it is and invoke either subclass directly.
     Args:
@@ -71,19 +63,19 @@ def initialize_solver(init_params: SolverParams) -> HashSolver:
                     in trials_main.py
     """
 
-    if init_params.solver_name not in [str(n.value) for n in SolverName]:
+    if solver_name not in [str(n.value) for n in SolverName]:
         raise Exception(
-            f"Unrecognized solver name {init_params.solver_name} passed. Allowed names are {[str(n.value) for n in SolverName]}"
+            f"Unrecognized solver name {solver_name} passed. Allowed names are {[str(n.value) for n in SolverName]}"
         )
-    elif "simulated" in init_params.solver_name:
-        return BootstrappingHashSolver(init_params)
+    elif "simulated" in solver_name:
+        return BootstrappingHashSolver(solver_name)
     else:
-        return QuantumHashSolver(init_params)
+        return QuantumHashSolver(solver_name)
 
 
 class BootstrappingHashSolver(HashSolver):
 
-    def __init__(self, init_params: SolverParams, dW: float = 1.0) -> None:
+    def __init__(self, solver_name: str, dW: float = 1.0) -> None:
         """Initializes a bootstrap solver. Does not use any of the passed parameters except the solver name,
             which it uses to determine which bootstrapping files to draw from. These file must be in place
             in the filesystem for the initialization to succeed.
@@ -95,10 +87,10 @@ class BootstrappingHashSolver(HashSolver):
                 assessments.
         """
 
-        self._solver_name = init_params.solver_name
-        assert (
-            self.solver_name in BootstrappingHashSolver.allowed_solvers()
-        ), f"BootstrappingHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
+        self._solver_name = solver_name
+        #assert (
+         #   self.solver_name in BootstrappingHashSolver.allowed_solvers()
+        #), f"BootstrappingHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
         mean_filepath = os.path.join(BOOTSTRAP_PATH, self.solver_name + "_mean.npy")
         var_filepath = os.path.join(BOOTSTRAP_PATH, self.solver_name + "_var.npy")
         self.mean_witnesses = np.load(mean_filepath)
@@ -114,8 +106,8 @@ class BootstrappingHashSolver(HashSolver):
         return [str(sn.value) for sn in SolverName if "simulated" in str(sn.value)]
 
     def calculate_quantum_hash(
-        self, hash_length: int, rng_seed: int
-    ) -> tuple[str, np.ndarray, float]:
+            self, rng_seed: int, hash_length: int=128
+            ) -> tuple[str, np.ndarray, float]:
         """Implementation of quantum hash calculation for solvers simulated using bootstrapping. Requires
             Bootstrapping files for the current solver to be in place in order to function.
 
@@ -153,17 +145,19 @@ class QuantumHashSolver(HashSolver):
     connection to run."""
 
     @property
-    def solver_parameters(self) -> SolverParams:
-        return SolverParams(
-            solver_name=self.solver_name,
-            randomize_embedding=self.randomize_embedding,
-            annealing_time=self.annealing_time,
-            profile=self.profile,
-        )
+    def solver_parameters(self) -> dict: #TODO update
+        return {
+            "solver_name": self.solver_name,
+            "randomize_embedding":self.randomize_embedding,
+            "annealing_time":self.annealing_time,
+            "profile": self.profile,
+        }
 
     def __init__(
         self,
-        init_params: SolverParams,
+        solver_name: str,
+        randomize_embedding: bool = False,
+        profile: str = "defaults",
         ensemble: str = "PMJ",
         model_size: int = 4,
         num_reads: int = 600,
@@ -179,14 +173,14 @@ class QuantumHashSolver(HashSolver):
             model_size: The model scale for the quench dynamics.
                 Typically the linear scale of a cubic lattice. Ignored for BiCliques which always take size 18.
         """
-        self._solver_name = init_params.solver_name
+        self._solver_name = solver_name
         assert (
             self._solver_name in QuantumHashSolver.allowed_solvers()
         ), f"QuantumHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
         self.embedding_directory = EMBEDDINGS_PATH
-        self.randomize_embedding = init_params.randomize_embedding
-        self.annealing_time = init_params.annealing_time
-        self.profile = init_params.profile
+        self.randomize_embedding = randomize_embedding
+        self.annealing_time = 0.005 #TODO get annealing time for different solvers 
+        self.profile = profile
         self.ensemble = ensemble
         self.model_size = model_size
         self._num_reads = DEFAULT_NUM_READS
@@ -201,7 +195,7 @@ class QuantumHashSolver(HashSolver):
         return [str(sn.value) for sn in SolverName if "simulated" not in str(sn.value)]
 
     def calculate_quantum_hash(
-        self, hash_length: int, rng_seed: int
+        self, rng_seed: int, hash_length: int=128
     ) -> tuple[str, np.ndarray, float]:
         """Implementation of quantum hash calculation for solvers simulated using bootstrapping. Requires
             Bootstrapping files for the current solver to be in place in order to function.
