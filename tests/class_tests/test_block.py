@@ -5,7 +5,6 @@ import random
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 
 from src.structures.block import Block
-from src.structures.transaction import Transaction
 from src.utilities.crypto_utils import calculate_hash
 
 NUM_BLOCKS = 5
