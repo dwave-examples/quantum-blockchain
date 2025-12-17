@@ -57,7 +57,7 @@ with the `--debug` command-line argument for live reloads and easier debugging:
 Tests can be run by running
 
 ```bash
-python pytest -k "test" 
+pytest -k "test" 
 ```
 from the quantum-blockchian/tests directory.
 

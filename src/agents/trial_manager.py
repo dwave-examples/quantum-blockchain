@@ -239,7 +239,7 @@ class TrialManager:
         failed_validators = self.num_miners - successful_validators - 1
         self.total_validation_successes += self.validation_successes
         self.validation_successes = 0
-        print(f"Round {self.blocks_mined} complete in {round(self.round_end_time - self.round_start_time,4)} seconds. Block accepted by {successful_validators} and rejected by {failed_validators}")
+  
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
