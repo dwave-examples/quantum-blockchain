@@ -1,5 +1,6 @@
 import numpy as np
 import json
+from typing import Optional
 
 from src.structures.score_tree_branch import BlockNode
 from src.structures.block_score_tree import BlockScoreTree
@@ -81,7 +82,7 @@ class Miner():
             ]
             self.blockchain.promote_to_trunk(best_branch)
 
-    def assemble_new_block(self) -> Block:
+    def assemble_new_block(self, previous_block_hash: Optional[str]= None) -> Block:
         """Assembles a new block 
 
         Args:
@@ -90,14 +91,17 @@ class Miner():
         Returns:
             new_block (Block): a new block that is assembled with a random nonce, but has not yet had its quantum hash
                 or block hash set."""
+        
+        if previous_block_hash is None:
+            previous_block_hash = self.blockchain.tip_hash
 
         nonce = np.random.randint(0, 2**32)  # TODO check how to make non-arcitechture specific
         new_block = Block(
-             miner_id=self.id, previous_block_hash=self.blockchain.tip_hash, nonce=nonce
+             miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce
             )
         return new_block
 
-    def attempt_mine(self) -> tuple[bool, float]:
+    def attempt_mine(self, mining_block: Optional[Block] = None) -> tuple[Block, bool, float]:
         """Attempts to mine a new block, choosing the nonce at random, calculating the quantum hash
             and the block hash and validating against the PoW requirement.
 
@@ -106,12 +110,14 @@ class Miner():
             sample_time (float): the time spent performing the quantum experiment. Currently unused, but
                 something we will likely wish to track eventually.
         """
-        if self.mining_block is None:
-            self.mining_block = self.assemble_new_block()
-        else:
-            self.mining_block.nonce += 1  # Unlikely to matter, but incrementing nonce is more efficient than new random choice each time
-
-        new_block, block_score, sample_time = self.pow.mine_block(self.mining_block)
+        if mining_block is None:
+            if self.mining_block is None:
+                mining_block = self.assemble_new_block()
+            else:
+                mining_block = self.mining_block
+                mining_block.nonce += 1
+ 
+        new_block, block_score, sample_time = self.pow.mine_block(mining_block)
 
         succeeded = bool(block_score > 0)
 
@@ -121,8 +127,10 @@ class Miner():
             self.mined_block = new_block
             self.mined_block_score = block_score
             self.mining_block = None
+        else:
+            new_block = mining_block
 
-        return succeeded, sample_time
+        return new_block, succeeded, sample_time
     
     def receive_block(self, new_block_str) -> float: 
         """ Processes a new block that has been received as a broadcast. This includes logging the broadcast in the Owner's 

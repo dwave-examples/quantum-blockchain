@@ -1,11 +1,13 @@
 import os
 import random
 import time
+from typing import Optional
 
 from src.agents.miner import Miner
 from src.structures.block import Block
 from src.values import MINER_NAMES
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
+from src.structures.block_score_tree import BlockScoreTree
 from src.protocols.hash_calculator import (
     HashSolver,
     BootstrappingHashSolver,
@@ -58,9 +60,7 @@ class TrialManager:
         genesis_block.set_hash()
         genesis_block.lock()
         self.genesis_block = genesis_block
-        #self.initialize_miners(num_miners)
         self.initialize_miners(num_miners)
-
 
         self.max_mining_attempts = 1000000  # should definitely have some cutoff, but what's a good value depends a lot on use-case
         self.mining_miner = None
@@ -185,10 +185,9 @@ class TrialManager:
         miner_order = [miner_id for miner_id in self.miners.keys()]
         random.shuffle(miner_order)
         self.round_order = miner_order
+        return self.round_order
 
-        print(f"{miner_order[0]} selected as active miner.")
-
-    def mining_step(self, miner_id: str):
+    def mining_step(self, miner: Miner):
         """Executes the mining step for the single round of the trial. Miner mines a single block (or times
         out after exceeding the maximum number of attempts) and stores it serialized form in self.block_broadcast.
 
@@ -199,23 +198,19 @@ class TrialManager:
             self.block_broadcast: stores the newly-mined block here, serialized in JSON format
 
         """
-        if miner_id in self.miners:
-            self.mining_miner = self.miners[miner_id]
-        else:
-            raise Exception(
-                f"Attempted to mine with invalid id {miner_id}. Valid ids are {self.miners.keys()}"
-            )
+
         mining_attempts = 0
         mine_success = False
         while mining_attempts <= self.max_mining_attempts and not mine_success:
             mining_attempts += 1
-            mine_success, sample_time = self.mining_miner.attempt_mine()
+            mine_success, sample_time = miner.attempt_mine()
             if mine_success:
-                self.block_broadcast = self.mining_miner.broadcast_mined_block()
+                block_broadcast = miner.broadcast_mined_block()
+                return block_broadcast, mining_attempts
 
-        print(f"{self.mining_miner.id} mined a block in {mining_attempts} attempts")
+        return None, mining_attempts #TODO clean up
 
-    def validation_step(self, validator_id: str):
+    def validation_step(self, validator: Miner) -> tuple[float, bool]:
         """Chooses the next miner in validation order to perform validation for the mined block.
 
         Args:
@@ -225,24 +220,10 @@ class TrialManager:
             string containing the score the Miner assigned to the block and whether it passed or failed, formatted
                 to be printed to the console."""
 
-        if validator_id in self.miners:
-            self.validating_miner = self.miners[validator_id]
-        else:
-            raise Exception(
-                f"Attempted to validate with invalid id {validator_id}. Valid ids are {self.miners.keys()}"
-            )
 
-        print(validator_id, end=":", flush=True)
+        score = validator.receive_block(self.block_broadcast)
 
-        score = self.validating_miner.receive_block(self.block_broadcast)
-
-        if score > 0:
-            result = f"{round(score,2)} (pass)"
-            self.validation_successes += 1
-        else:
-            result = f"{round(score,2)} (fail)"
-
-        print(f" {result} |")
+        return score, bool(score > 0)
 
     def cleanup_step(self):
         """Resets all the necessary internal attributes to prepare for starting the next round. Updates progress
@@ -267,18 +248,24 @@ class TrialManager:
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-    def single_step(self):
+    def single_step(self) -> tuple[list[BlockScoreTree], Optional[str], Optional[bool]]:
         """Executes a single, atomic step of the simulation algorithm. Logging and recovery can capture"""
         if self.round_order is None:
             self.setup_step()
+            return [], None, None
         elif len(self.round_order) == self.num_miners:
             mining_miner_id = self.round_order.pop(0)
+            mining_miner = self.miners[mining_miner_id]
             self.mining_step(mining_miner_id)
+            return [mining_miner.blockchain], mining_miner.id, None
         elif len(self.round_order) > 0:
             validating_miner_id = self.round_order.pop(0)
-            self.validation_step(validating_miner_id)
+            validating_miner = self.miners[validating_miner_id]
+            passed = self.validation_step(validating_miner_id)
+            return [validating_miner.blockchain], validating_miner.id, passed
         else:
             self.cleanup_step()
+            return [miner.blockchain for miner in self.miners.values()], None, None
 
 
     def run_trial(self, num_blocks: int = None):

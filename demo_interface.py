@@ -31,6 +31,7 @@ from demo_configs import (
     LOADING_TEXT
 )
 
+from demo_solvers import AVAILABLE_SOLVERS
 
 def slider(label: str, id: str, config: dict) -> html.Div:
     """Slider element for value selection.
@@ -118,6 +119,25 @@ def generate_view_select(num_miners):
         ],
     )
 
+def generate_solver_select():
+    solver_opts = [slvr.solver_name for slvr in AVAILABLE_SOLVERS]
+    solver_opts += ["Random QPU"]
+    solver_opts += ["Random Simulated Solver"]
+    return html.Div(
+        className="dropdown-wrapper",
+        children=[
+            html.Label("Select Solver"),
+            dcc.Dropdown(
+                id="view-select",
+                options=solver_opts,
+                value=solver_opts[0],
+                clearable=False,
+                searchable=False,
+            ),
+        ],
+    )
+
+
 def generate_options(options_list: list) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
     return [{"label": label, "value": i} for i, label in enumerate(options_list)]
@@ -174,11 +194,31 @@ def create_interface():
         id="app-container",
         children=[
             # Below are any temporary storage items, e.g., for sharing data between callbacks.
-            dcc.Store(id="run-status", data={"Running": False, "Paused": False}),  # Indicates whether run is in progress and whether the run is paused
+            dcc.Store(id="run-status", data=False),  # Indicates whether run is in progress and whether the run is paused
+            dcc.Store(id="pause-status", data=False),
+
+            dcc.Store(id="miner-id", data=""),
+            dcc.Store(id="validator-id", data=""),
+            dcc.Store(id="round_reset_flag", data=False),
+
             dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
             dcc.Store(id="block-number-data", data=0),
+            dcc.Store(id="round-progress", data=0),
+            dcc.Store(id="active_blocks", data=[]),
+
+
+            dcc.Store(id="block-broadcast", data=""),
+            dcc.Store(id="score-broadcast", data=0.0),
+
+            dcc.Store(id="block-number-data-temp", data=0),
             dcc.Store(id="graph-data", data=[]),    #Stores graph data for all miners
+            dcc.Store(id="round-order", data=[]),
+
+            dcc.Store(id="miner-status-data", data={}),
+            dcc.Store(id="miner-data-temp", data = {}), #Allows partial updates to be passed through to graph-data
+
             dcc.Store(id="graph-data-temp", data=[]), #Allows partial updates to be passed through to graph-data
+            dcc.Store(id="stopping-block", data=0),
             # Header brand banner
             html.Div(className="banner", children=[html.Img(src=THUMBNAIL)]),
             # Settings and results columns
@@ -200,6 +240,7 @@ def create_interface():
                                             html.P(DESCRIPTION),
                                             generate_settings_form(),
                                             generate_run_buttons(),
+                                            generate_solver_select(),
                                             html.Div(id="view-select-wrapper"),
                                         ],
                                     )
@@ -229,7 +270,7 @@ def create_interface():
                                 className="display-none",
                             ),
                             html.Div(
-                                className="display-none",
+                                className="",
                                 id="graph-wrapper",
                                 children=[
                                     dcc.Graph(
@@ -246,7 +287,7 @@ def create_interface():
                                                         [
                                                             html.Th("Miner"),
                                                             html.Th("Status"),
-                                                        ]
+                                                        ],
                                                     )
                                                 ),
                                                 html.Tbody(id="miner-table-body"),

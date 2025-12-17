@@ -1,17 +1,5 @@
-### Interested in contributing a code example?
 
-Please take a look at our [contribution guidelines](CONTRIBUTING.md) before getting started.
-Thank you!
-
-The Dash template is intended for demos that would benefit from a user interface. This user
-interface could include settings to run and customize the problem, an interactive graphical element,
-or tables/charts to compare different solutions. This template is also useful for demos that are
-intended for a general audience, as it is more approachable for those without a technical background.
-
-<!-- Before submitting your code, please delete everything above and including this comment. -->
-<!-- The following is a README template for your new demo. -->
-
-# Demo Name
+# Quantum Blockchain Demo
 
 Describe your demo and specify what it is demonstrating. Consider the
 following questions:
@@ -66,7 +54,12 @@ Configuration options can be found in the [demo_configs.py](demo_configs.py) fil
 with the `--debug` command-line argument for live reloads and easier debugging:
 `python app.py --debug`
 
-<!-- End of boilerplate. -->
+Tests can be run by running
+
+```bash
+python pytest -k "test" 
+```
+from the quantum-blockchian/tests directory.
 
 ## Problem Description
 Give an overview of the problem you are solving in this demo.
