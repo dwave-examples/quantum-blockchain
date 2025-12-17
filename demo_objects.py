@@ -1,0 +1,25 @@
+from src.agents.miner import Miner
+from src.structures.block_score_tree import BlockScoreTree
+from src.protocols.hash_calculator import initialize_solver
+from demo_solvers import AVAILABLE_SOLVERS
+from demo_constants import GENESIS_BLOCK
+from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
+
+
+demo_pow = ProofOfWorkProtocol(hash_solvers=AVAILABLE_SOLVERS)
+DEMO_MINER = Miner(miner_id="demo_miner", genesis_block=GENESIS_BLOCK, PoW_protocol=demo_pow)
+
+
+test_tree = BlockScoreTree()
+main_hashes = ["ab", "bc", "cd", "de", "ef","fg", "gh"]
+side_hashes = ["cp", "dq", "fw","wx"]
+
+for i in range(len(main_hashes)-1):
+    test_tree.add_block(block_hash=main_hashes[i+1], prev_block_hash=main_hashes[i], block_score=1.0)
+test_tree.add_block(block_hash=side_hashes[0], prev_block_hash=main_hashes[1], block_score=-1.0)
+test_tree.add_block(block_hash=side_hashes[1], prev_block_hash=main_hashes[2], block_score=-1.0)
+test_tree.add_block(block_hash=side_hashes[2], prev_block_hash=main_hashes[4], block_score=-1.0)
+test_tree.add_block(block_hash=side_hashes[3], prev_block_hash=side_hashes[2], block_score=1.0)
+
+
+TEST_TREE = test_tree
