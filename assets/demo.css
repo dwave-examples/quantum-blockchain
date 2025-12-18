@@ -39,6 +39,109 @@ custom CSS can be added below.
     width: 15.5rem;
 }
 
-  /****************************/
- /*** CUSTOM CSS GOES HERE ***/
-/****************************/
+#button-group {
+    margin-top: 2.5rem;
+}
+
+#pause-button {
+    width: 100%;
+}
+
+#reset-button,
+#pause-button {
+    background-color: var(--red-light);
+}
+
+#reset-button:hover,
+#pause-button:hover {
+    background-color: var(--red-dark);
+}
+
+#reset-resume-buttons {
+    display: flex;
+}
+
+#reset-resume-buttons button {
+    width: 100%;
+}
+
+#reset-resume-buttons button:first-child {
+    margin-right: 0.25rem;
+}
+
+#reset-resume-buttons button:last-child {
+    margin-left: 0.25rem;
+}
+
+#miner-status-table {
+    margin: 0 auto 2rem;
+}
+
+#intro-text,
+#loading-text {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+}
+
+#miner-status-table {
+    width: 100%;
+    margin: 0.5%;
+    min-width: 12rem;
+}
+
+#miner-table-title {
+    text-align: center;
+    font-weight: bold;
+    font-size: large;
+    width: 100%
+}
+
+#miner-status-table th,
+#miner-status-table td {
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--grey-medium);
+    width: 50%;
+}
+
+#miner-status-table thead {
+    background-color: var(--blue-dark);
+}
+
+#miner-status-table th {
+    font-weight: 600;
+    color: white;
+}
+
+.right-column {
+    padding: 2rem;
+}
+
+.graph-table-wrapper {
+    display: flex;
+    height: 100%;
+    margin-top: 2rem;
+}
+
+.graph-wrapper {
+    margin-right: 2rem;
+    width: 100%;
+}
+
+.graph-table-wrapper > div:last-child {
+    flex: 1;
+    padding-left: 0;
+}
+
+#miner-graph-and-table {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#miner-graph-and-table .dropdown-wrapper {
+    display: inline-block;
+    width: 12rem;
+}
