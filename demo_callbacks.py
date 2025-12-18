@@ -33,7 +33,6 @@ from src.agents.trial_manager import TrialManager
 from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
-from demo_interface import generate_view_select
 from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
 from demo_solvers import AVAILABLE_SOLVERS
 from demo_objects import DEMO_MINER, TEST_TREE
@@ -142,6 +141,76 @@ def move_graph_data(graph_data_in: list):
     to_update.update({f"Miner {miner_id + 1}":graph_data_out})
     return to_update
 
+<<<<<<< HEAD
+=======
+#=======================================================================================
+
+
+@dash.callback(
+    Output("intro-text", "className", allow_duplicate=True),
+    Output("loading-text", "className", allow_duplicate=True),
+    Output("miner-graph-display", "figure", allow_duplicate=True),
+    Output("miner-graph-and-table", "className", allow_duplicate=True),
+    inputs=[
+        #Input("block-number-data", "data"),
+        #Input("view-select", "value"),
+        #State("run-status", "data"),
+        Input("graph-data", "data")
+    ],
+    prevent_initial_call=True
+)
+def render_graphs(graph_data: dict):
+    """Updates the display for the miner tab, showing the graph
+        of the current chain state if it is available.
+
+        The file naming logic here is somewhat convoluted because it has to be:
+        the html.Img object seems to cache copies of the last several images it
+        has displayed. If you don't give it a new name, it will keep displaying
+        the older image. So we rotate through a sequence of filenames.
+
+        Args:
+            miner-graph-update: interval set to check if there is anything to update
+            run-status: if run status alters, display should alter
+            tabs: should automatically render on switching tabs.
+
+        Returns:
+            graph-file"""
+   
+
+    #if not run_status["Running"] or num_blocks < 2:
+    #    return "display-none", "", None, "display-none"
+    #else:
+    if len(graph_data) > 0:
+        plotter = SpiralPlotter()
+        #graph_data = graph_data["Miner 1"]
+        graph_data = generate_graph_data(TEST_TREE)
+        print(graph_data)
+        plotter.import_plotting_data(tree_data=graph_data, num_nodes=8)
+        plot_data = plotter.plot_spiral()
+        fig = go.Figure(plot_data)
+
+        fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
+            showlegend = False,
+            xaxis = dict(showticklabels=False),
+            yaxis = dict(showticklabels=False),
+            margin=dict(
+                l=0,
+                r=0,
+                b=0,
+                t=0,
+                pad=4
+            ),
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+        )
+
+        return "display-none", "display-none", fig, ""
+    
+    else:
+        return "display-none", "display-none", None, ""
+
+
+>>>>>>> c5d6b317174ec13fc6616e3d67b0c8b4c17191aa
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
 #                             SECTION: Button Triggers                                                |
@@ -149,8 +218,7 @@ def move_graph_data(graph_data_in: list):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @dash.callback(
-    Output("resume-button", "className", allow_duplicate=True),
-    Output("reset-button", "className", allow_duplicate=True),
+    Output("reset-resume-buttons", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
     Output("pause-status", "data", allow_duplicate=True),
     inputs=[
@@ -160,13 +228,12 @@ def move_graph_data(graph_data_in: list):
 )
 def pause_simulation(pause_click: int):
 
-    return "", "", "display-none", True
+    return "", "display-none", True
 
 #========================================================================================
 
 @dash.callback(
-    Output("resume-button", "className", allow_duplicate=True),
-    Output("reset-button", "className", allow_duplicate=True),
+    Output("reset-resume-buttons", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
     Output("pause-status", "data", allow_duplicate=True),
     inputs=[
@@ -175,17 +242,16 @@ def pause_simulation(pause_click: int):
     prevent_initial_call = True
 )
 def resume_simulation(pause_click: int):
-    return "display-none", "display-none", "", False
+    return "display-none", "", False
 
 #========================================================================================
 @dash.callback(
     
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
-    Output("graph-wrapper", "className", allow_duplicate=True),
+    Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
-    Output("reset-button", "className", allow_duplicate=True),
-    Output("resume-button", "className", allow_duplicate=True),
+    Output("reset-resume-buttons", "className", allow_duplicate=True),
     Output("run-status", "data", allow_duplicate=True),
     Output("block-number-data", "data", allow_duplicate=True),
     inputs=[
@@ -200,8 +266,7 @@ def reset_simulation(reset_click: int):
         "display-none", #Loading text
         "display-none", #Miner Graph
         "",             #Run Button
-        "display-none", #Reset Button
-        "display-none", #Resume Button
+        "display-none", #Reset & Resume Buttons
         False,
         0
     )
@@ -214,7 +279,7 @@ def reset_simulation(reset_click: int):
     Output("pause-button", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("run-status", "data", allow_duplicate=True),
-    Output("view-select-wrapper", "children"),
+    Output("view-select", "options"),
     Output("graph-data", "data", allow_duplicate=True),
     Output("miner-status-data", "data", allow_duplicate=True),
     Output("stopping-block", "data"),
@@ -226,22 +291,34 @@ def reset_simulation(reset_click: int):
     prevent_initial_call=True,
 )
 def run_simulation(run_click: int, num_miners: int, num_blocks: int):
-    miner_data = {f"Miner {i+1}":[] for i in range(num_miners)}
-    miner_data.update({"Global View": []})
+    miner_opts = ["Global View"]
+    miner_opts += [f"Miner {i+1}" for i in range(num_miners)]
+    miner_data = {miner: [] for miner in miner_opts}
     miner_status_dict = {MINER_NAMES[i]: "" for i in range(num_miners)}
-    return "display-none", "", "", "display-none", True, generate_view_select(num_miners), miner_data, miner_status_dict, num_blocks
+    return (
+        "display-none",
+        "",
+        "",
+        "display-none",
+        True,
+        miner_opts,
+        miner_data,
+        miner_status_dict,
+        num_blocks
+    )
 
 #=======================================================================================
 
 @dash.callback(
     Output({"type": "to-collapse-class", "index": MATCH}, "className"),
+    Output({"type": "collapse-trigger", "index": MATCH}, "aria-expanded"),
     inputs=[
         Input({"type": "collapse-trigger", "index": MATCH}, "n_clicks"),
         State({"type": "to-collapse-class", "index": MATCH}, "className"),
     ],
     prevent_initial_call=True,
 )
-def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
+def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> tuple[str, str]:
     """Toggles a 'collapsed' class that hides and shows some aspect of the UI.
 
     Args:
@@ -251,10 +328,11 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> str:
 
     Returns:
         str: The new class name of the thing to collapse.
+        str: The aria-expanded value.
     """
 
     classes = to_collapse_class.split(" ") if to_collapse_class else []
     if "collapsed" in classes:
         classes.remove("collapsed")
-        return " ".join(classes)
-    return to_collapse_class + " collapsed" if to_collapse_class else "collapsed"
+        return " ".join(classes), "true"
+    return to_collapse_class + " collapsed" if to_collapse_class else "collapsed", "false"
