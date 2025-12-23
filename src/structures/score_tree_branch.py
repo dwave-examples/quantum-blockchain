@@ -276,6 +276,10 @@ class ScoreTreeBranch:
             return self.node_list[self.hash_to_index_lookup[block_hash]]
         else:
             return None
+        
+    def get_score_map(self):
+        score_map = [node.total_score for node in self.node_list]
+        return score_map
 
     def get_soundness_map(self, high_score: float, trunk: bool = False, start_idx: int = 0):
         """Block soundness measures how secure a block's place in the blockchain is:

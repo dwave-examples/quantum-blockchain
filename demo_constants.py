@@ -15,6 +15,8 @@ EMBEDDINGS_DIRECTORY = os.path.join("src", "trials", "embeddings")
 
 RUNNING_DIRECTORY_LIST = [PAUSE_PATH]
 
+EMPTY_BLOCK_DICT = {"block_json":"", "block_number": None, "scores": []}
+
 timestamp = datetime.timestamp(datetime.now())
 genesis_block = Block(miner_id="genesis", previous_block_hash="", timestamp=timestamp)
 genesis_block.set_quantum_hash()

@@ -52,7 +52,7 @@ DEFAULT_TABLE_BODY = ""
 
 GRAPH_WIDTH = 1000 #width of graph and load screen elements
 
-DISPLAY_REFRESH_RATE = 500 #In milliseconds. How quickly graphs and status tables check for new outputs to display
+DISPLAY_REFRESH_RATE = 300 #In milliseconds. How quickly graphs and status tables check for new outputs to display
 
 MINER_SLIDER = {
     "min": MIN_MINERS,

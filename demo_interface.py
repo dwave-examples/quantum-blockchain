@@ -31,6 +31,7 @@ from demo_configs import (
 )
 
 from demo_solvers import AVAILABLE_SOLVERS
+from demo_constants import EMPTY_BLOCK_DICT
 
 THEME_COLOR = "#2d4376"
 
@@ -173,32 +174,14 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-            # Below are any temporary storage items, e.g., for sharing data between callbacks.
-            dcc.Store(id="run-status", data=False),  # Indicates whether run is in progress and whether the run is paused
-            dcc.Store(id="pause-status", data=False),
 
-            dcc.Store(id="miner-id", data=""),
-            dcc.Store(id="validator-id", data=""),
-            dcc.Store(id="round_reset_flag", data=False),
-
-            dcc.Interval(id="display-update", interval=DISPLAY_REFRESH_RATE),
-            dcc.Store(id="block-number-data", data=0),
-            dcc.Store(id="round-progress", data=0),
-            dcc.Store(id="active_blocks", data=[]),
-
-
-            dcc.Store(id="block-broadcast", data=""),
-            dcc.Store(id="score-broadcast", data=0.0),
-
-            dcc.Store(id="block-number-data-temp", data=0),
-            dcc.Store(id="graph-data", data=[]),    #Stores graph data for all miners
-            dcc.Store(id="round-order", data=[]),
-
+            dcc.Store(id="running-status", data=False),
+            dcc.Store(id="current-block-data", data=""),
+            dcc.Store(id="blockchain-structure-data", data =[]),
+            dcc.Store(id="miner-score-data", data = {}),
+            dcc.Store(id="miner-score-temp", data=[]),
             dcc.Store(id="miner-status-data", data={}),
-            dcc.Store(id="miner-data-temp", data = {}), #Allows partial updates to be passed through to graph-data
 
-            dcc.Store(id="graph-data-temp", data=[]), #Allows partial updates to be passed through to graph-data
-            dcc.Store(id="stopping-block", data=0),
             # Header brand banner
             html.Header(className="banner", children=[html.Img(src=THUMBNAIL, alt="D-Wave logo")]),
             # Settings and results columns
@@ -242,13 +225,19 @@ def create_interface():
                         className="right-column",
                         children=[
                             html.Div(
-                                children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
-                                id="intro-text",
-                            ),
-                            html.H3(
-                                LOADING_TEXT,
-                                id="loading-text",
-                                className="display-none",
+                                id="prelim-text",
+                                className="",
+                                children=[
+                                    html.Div(
+                                    children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
+                                    id="intro-text",
+                                    ),
+                                    html.H3(
+                                        LOADING_TEXT,
+                                        id="loading-text",
+                                        className="display-none",
+                                    ),
+                                ],
                             ),
                             html.Div(
                                 className="display-none",

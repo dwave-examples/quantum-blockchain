@@ -7,7 +7,7 @@ from demo_configs import TRUNK_COLOR_SCALE, BRANCH_COLOR_SCALE
 class GraphBranch:
     def __init__(self, branch_data_dict):
         self.map = branch_data_dict["map"]
-        self.soundness_list = branch_data_dict["soundness"]
+        self.score_map = branch_data_dict["score_map"]
         self.depth = branch_data_dict["depth"]
         self.root = branch_data_dict["root"]
         self.root_depth = branch_data_dict["root_depth"]
@@ -65,26 +65,26 @@ class SpiralPlotter:
         self.full_node_map = [i for i in range(1,num_nodes+1)]
         self.master_size_chart = self.create_master_size_chart()
         self.trunk.create_size_chart(self.master_size_chart)
-        self.trunk_sound_min = min(self.trunk.soundness_list)
-        self.trunk_sound_range = max(max(self.trunk.soundness_list) - self.trunk_sound_min,1)
+        self.trunk_score_min = min(self.trunk.score_map)
+        self.trunk_score_range = max(max(self.trunk.score_map) - self.trunk_score_min,1)
         self.branches = []
         for entry in tree_data:
             new_branch = GraphBranch(entry)
             new_branch.create_size_chart(self.master_size_chart, self.branch_pnt_scaling)
             self.branches.append(new_branch)
         if len(self.branches) > 0:
-            self.branch_sound_min = min([min(b.soundness_list) for b in self.branches])
-            self.branch_sound_range = max(max([max(b.soundness_list) for b in self.branches])-self.branch_sound_min, 1)
+            self.branch_score_min = min([min(b.score_map) for b in self.branches])
+            self.branch_score_range = max(max([max(b.score_map) for b in self.branches])-self.branch_score_min, 1)
             self.max_branch_depth = max([abs(b.depth) for b in self.branches]) #Farthest in or out a branch will be from the trunk
             self.branch_spacing =1/(2*self.max_branch_depth + 1)  #Controls how much space is left between overlapping branches
         else:
-            self.branch_sound_min = 0
-            self.branch_sound_range = 1
+            self.branch_score_min = 0
+            self.branch_score_range = 1
             self.branch_spacing = 1/2
 
-        self.trunk.point_colors = [self.soundness_to_color(s) for s in self.trunk.soundness_list]
+        self.trunk.point_colors = [self.score_to_color(s) for s in self.trunk.score_map]
         for branch in self.branches:
-            branch.point_colors = [self.soundness_to_color(s,trunk=False) for s in branch.soundness_list]
+            branch.point_colors = [self.score_to_color(s,trunk=False) for s in branch.score_map]
 
         
 
@@ -93,7 +93,7 @@ class SpiralPlotter:
         stop_index = branch.map[-1] + 1
         if trunk:
             start_index = branch.root
-            sounds = [branch.soundness_list[0]]
+            scores = [branch.score_map[0]]
             branch.x_points.append(self.center[0])
             branch.y_points.append(self.center[1])
         else:
@@ -106,22 +106,22 @@ class SpiralPlotter:
             y_0 = self.center[1] + r_0*math.sin(theta_0)
             branch.x_edges.append(x_0)
             branch.y_edges.append(y_0)
-            branch.edge_colors.append(self.soundness_to_color(branch.soundness_list[0], trunk=trunk))
+            branch.edge_colors.append(self.score_to_color(branch.score_map[0], trunk=trunk))
             stem_dist = branch.map[0] - start_index
             stem_segs = stem_dist*self.segs_per_point
-            sounds = [branch.soundness_list[0] for i in range(stem_segs)]
+            scores = [branch.score_map[0] for i in range(stem_segs)]
 
         first_idx = start_index
         for k in range(1,len(branch.map)):
             second_idx = branch.map[k]
             diff = second_idx - first_idx
             steps = diff*self.segs_per_point
-            frac_sounds = [(j*branch.soundness_list[k-1] + (steps-j)*branch.soundness_list[k])/steps for j in range(steps)]
-            sounds += frac_sounds
+            frac_scores = [(j*branch.score_map[k-1] + (steps-j)*branch.score_map[k])/steps for j in range(steps)]
+            scores += frac_scores
             first_idx = second_idx
 
-        sounds.append(branch.soundness_list[-1])
-        snd_iter = iter(sounds)
+        scores.append(branch.score_map[-1])
+        score_iter = iter(scores)
 
         for i in range(start_index, stop_index):
             for j in range(self.segs_per_point):
@@ -134,7 +134,7 @@ class SpiralPlotter:
 
                 branch.x_edges.append(point_ij[0])
                 branch.y_edges.append(point_ij[1])
-                branch.edge_colors.append(self.soundness_to_color(next(snd_iter), trunk=trunk))
+                branch.edge_colors.append(self.score_to_color(next(score_iter), trunk=trunk))
 
                 if i in branch.map and j == 0: #Add point to point map
                     branch.x_points.append(point_ij[0])
@@ -144,26 +144,26 @@ class SpiralPlotter:
 
         assert len(branch.edge_colors) == len(branch.x_edges), f"Edge color map for branch {branch.map[0]} is length {len(branch.edge_colors)} but there are {len(branch.x_edges)} branch edges"
     
-    def soundness_to_color(self, soundness: float, trunk: bool = True):
+    def score_to_color(self, score: float, trunk: bool = True):
 
         if trunk:
             color_scale = self.trunk_color_scale
             color_ints = self.trunk_color_ints
-            sound_min = self.trunk_sound_min
-            sound_range = self.trunk_sound_range
+            score_min = self.trunk_score_min
+            score_range = self.trunk_score_range
         else:
             color_scale = self.branch_color_scale
             color_ints = self.branch_color_ints
-            sound_min = self.branch_sound_min
-            sound_range = self.branch_sound_range
+            score_min = self.branch_score_min
+            score_range = self.branch_score_range
 
-        adjusted_soundness = (soundness-sound_min)/sound_range
+        adjusted_score = (score-score_min)/score_range
         scale_len = len(color_scale)  
 
-        scaled_soundness = scale_len*((1-adjusted_soundness)**3)
-        low_idx = min(max(int(scaled_soundness),0), len(color_scale)-1)
+        scaled_score = scale_len*((1-adjusted_score)**3)
+        low_idx = min(max(int(scaled_score),0), len(color_scale)-1)
         high_idx = min(low_idx+1, len(color_scale)-1)
-        fract_idx = scaled_soundness - low_idx
+        fract_idx = scaled_score - low_idx
         rgb_ints = [0,0,0]
         for rgb in range(3):
             rgb_float = (1-fract_idx)*color_ints[low_idx][rgb] + fract_idx*color_ints[high_idx][rgb]

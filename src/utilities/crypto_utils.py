@@ -176,4 +176,8 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     assert len(numpy_bits1) == len(
         numpy_bits2
     ), f"Attempted to compare hashes of different lengths, {len(numpy_bits1)} vs {len(numpy_bits2)}"
-    return np.ones(shape=(len(numpy_bits1)), dtype=np.int64) - np.abs(numpy_bits1 - numpy_bits2)
+    comparison_vector = np.zeros(shape=(len(numpy_bits1)), dtype=np.int8)
+    for i in range(len(numpy_bits1)):
+        if numpy_bits1[i] == numpy_bits2[i]:
+            comparison_vector[i] = 1
+    return comparison_vector

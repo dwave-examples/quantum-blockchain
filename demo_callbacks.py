@@ -19,6 +19,7 @@ import json
 import time
 import math
 import random
+import copy
 
 import dash
 from dash import MATCH, ctx, html, Patch, set_props
@@ -30,14 +31,17 @@ import plotly.express as px
 from src.utilities.spiral_plotter import SpiralPlotter
 from src.utilities.graph_processor import combine_dags, generate_graph_data
 from src.agents.trial_manager import TrialManager
+from src.agents.miner import Miner
 from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
 from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
 from demo_solvers import AVAILABLE_SOLVERS
-from demo_objects import DEMO_MINER, TEST_TREE
+from demo_objects import DEMO_MINER, TEST_TREE, DEMO_POW
+from demo_constants import EMPTY_BLOCK_DICT, GENESIS_BLOCK
+from demo_solvers import AVAILABLE_SOLVERS
 from src.utilities.display_update import render_graphs, render_miner_status
-from src.utilities.mining_steps import mine_block
+from src.utilities.mining_steps import mine_block, validate_block
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -46,45 +50,146 @@ from src.utilities.mining_steps import mine_block
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @dash.callback(
-    Output("round-order", "data"),
-    Output("miner-status-data", "data"),
-    Output("graph-data-temp", "data"),
-    Output("block-broadcast", "data"),
-    inputs = [
-        Input("round-progress", "data"),
-        State("graph-data", "data"),
-        State("round-order", "data"),
-        State("pause-status", "data"),
-        State("running-status", "data"),
+
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("pause-button", "className", allow_duplicate=True),
+    background=True,
+    inputs=[
+        Input("running-status", "data"),
         State("miner-slider", "value"),
+        State("blocks-input", "value"),
+        State("blockchain-structure-data", "data"),
+        State("miner-score-data", "data"),
     ],
+    running=[
+        (Output("miner-slider", "disabled"), True, False),
+        (Output("blocks-input", "disabled"), True, False), 
+    ],
+    progress=[
+        Output("current-block-data", "data"),
+        Output("miner-score-temp", "data"),
+    ],
+    cancel = [Input("reset-button", "n_clicks")],
     prevent_initial_call=True,
 )
-def round_manager(round_progress: int, round_order: list, pause_status: bool, running_status: bool, num_miners: int):
+def simulation(
+    update_current_block_data,
+    running_status: bool,
+    miner_slider_val: int,
+    block_input_val: int,
+    blockchain_structure: list,
+    miner_scores: dict,
+):
+    """Runs the optimization and updates UI accordingly.
+
+    This is the main function which is called when the ``Run Optimization`` button is clicked.
+    This function takes in all form values and runs the optimization, updates the run/cancel
+    buttons, deactivates (and reactivates) the results tab, and updates all relevant HTML
+    components.
+
+    Args:
+        run_click: The (total) number of times the run button has been clicked.
+
+
+    Returns:
+        A NamedTuple (RunOptimizationReturn) containing all outputs to be used when updating the HTML
+        template (in ``demo_interface.py``). These are:
+
+            results: The results to display in the results tab.
+            problem-details: List of the table rows for the problem details table.
     """
-     Triggered By: Run Button, Resume Button, Round Progress Update
 
-     Triggers: set_round_order, validate_block (mine_block?)
-       """
+    # Only run optimization code if this function was triggered by a click on `run-button`.
+    # Setting `Input` as exclusively `run-button` and setting `prevent_initial_call=True`
+    # also accomplishes this.
 
-    if round_progress == 0:
-        miner_list = [MINER_NAMES[i] for i in range(num_miners)]
-        miner_status_dict = {name: "" for name in miner_list}
-        random.shuffle(miner_list)
-        return miner_list, miner_status_dict, dash.no_update
-    elif round_progress == 1:
-        miner_id = "bob"
-        previous_block_hash = "hash"
-        new_block = mine_block(miner_id, previous_block_hash)
-    elif round_progress > 1 and round_progress < num_miners:
-        validator_id = round_order[round_progress]
-        #TODO figure out how to get json_block
-        return dash.no_update, validator_id
+    print("In simulation")
+
+    if running_status == False or ctx.triggered_id != "running-status":
+        raise PreventUpdate
+    else: #TODO: add unpause logic
+        num_blocks = block_input_val
+        num_miners = miner_slider_val
+        print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
+
+        manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solver=AVAILABLE_SOLVERS[-1])
+
+        print("TrialManager successfully instantiated.")
+
+        while(manager.blocks_mined <= num_blocks):
+            print("In main loop")
+            mined, miner_id, block_score = manager.single_step()
+            if mined:
+                print("Mined")
+                current_block = Block.from_json(manager.block_broadcast) #TODO optimize
+                current_block_update = (current_block.hash, current_block.previous_hash)
+                print(f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined.")
+            else:
+                print("Validated")
+                current_block_update = dash.no_update
+            score_data_list = [miner_id, block_score, mined]
+            update_current_block_data((current_block_update, score_data_list))
+
+            time.sleep(1.5)  
+        
+    return "", "display-none"
+
+
+@dash.callback(
+    Output("miner-score-data", "data", allow_duplicate=True),
+    Input("miner-score-temp", "data"),
+    prevent_initial_call=True,
+)
+def move_score_data(miner_score_in: list):
+    """ """
+    print("Moving score data")
+    to_update = Patch()
+    to_update[miner_score_in[0]].append(miner_score_in[1])
+    return to_update
+
+#==========================================================================================
+
+@dash.callback(
+    Output("blockchain-structure-data", "data"),
+    Input("current-block-data", "data"),
+    prevent_initial_call=True,
+)
+def update_blockchain_structure(block_data: tuple[str, str]):
+    """ """
+    print("Updating blockchain data")
+    to_update = Patch()
+    to_update.append(block_data)
+    return to_update
+
+#==========================================================================================
+
+
+
+@dash.callback(
+    Output("miner-status-data", "data"),
+    inputs = [
+        Input("miner-score-temp", "data"),
+        State("miner-slider", "value"),
+        ],
+    prevent_initial_call=True,
+)
+def update_miner_status(miner_score_in: list, num_miners: int):
+    print(f"Updating miner status data with {miner_score_in}")
+    to_update = Patch()
+    if miner_score_in[2] == True:
+        for name in MINER_NAMES[:num_miners]:
+            to_update.update({name: ""})
+        to_update.update({miner_score_in[0]: "Mined"})
     else:
-        return True, dash.no_update
+        if miner_score_in[1] > 0:
+            miner_status = "Validated"
+        else:
+            miner_status = "Rejected"
 
+        to_update.update({miner_score_in[0]: miner_status})
+    return to_update
 
-
+#==========================================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -92,125 +197,47 @@ def round_manager(round_progress: int, round_order: list, pause_status: bool, ru
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 @dash.callback(
-    Output("intro-text", "className", allow_duplicate=True),
-    Output("loading-text", "className", allow_duplicate=True),
-    Output("miner-graph-display", "figure", allow_duplicate=True),
-    Output("graph-wrapper", "className", allow_duplicate=True),
+    Output("miner-graph-and-table", "className", allow_duplicate=True),
+    Output("prelim-text", "className"),
     Output("miner-table-head", "children", allow_duplicate=True),
     Output("miner-table-body", "children", allow_duplicate=True),
     inputs=[
-            Input("graph-data", "data"),
-            Input("miner-status", "data"),
-            State("block-number-data", "data")
+            Input("miner-status-data", "data"),
+            State("blockchain-structure-data", "data"),
     ],
     prevent_initial_call=True,
 )
-def render_main_display(miner_status_data: dict, miner_graph_data: dict, block_num: int):
+def render_miner_status_table(miner_status_data: dict, blockchain_structure_data: list):
     """ """
-    new_graph = render_graphs(miner_graph_data)
-    miner_table_head, miner_table_body = render_miner_status(block_number=block_num, miner_status=miner_status_data)
 
-    return "display-none", "display-none", new_graph, "", miner_table_head, miner_table_body
+    print("Received miner status update")
+    block_number = len(blockchain_structure_data)
+    print(f"Drawing miner status table for block number {block_number}")
 
-#==========================================================================================
+    miner_table_head, miner_table_body = render_miner_status(block_number, miner_status_data)
+    return "", "display-none", miner_table_head, miner_table_body
 
-@dash.callback(
-    Output("miner-status-data", "data", allow_duplicate=True),
-    Input("miner-data-temp", "data"),
-    prevent_initial_call=True,
-)
-def move_miner_data(miner_data_in: list):
-    """ """
-    to_update = Patch()
-    to_update.update(miner_data_in)
-    return to_update
 
 #=======================================================================================
 
+def dummy():
+    """
 @dash.callback(
     Output("graph-data", "data", allow_duplicate=True),
     Input("graph-data-temp", "data"),
     prevent_initial_call=True,
 )
 def move_graph_data(graph_data_in: list):
-    """ """
+
     to_update = Patch()
     miner_id = 0
     graph_data_out = graph_data_in
     to_update.update({f"Miner {miner_id + 1}":graph_data_out})
     return to_update
-
-<<<<<<< HEAD
-=======
-#=======================================================================================
-
-
-@dash.callback(
-    Output("intro-text", "className", allow_duplicate=True),
-    Output("loading-text", "className", allow_duplicate=True),
-    Output("miner-graph-display", "figure", allow_duplicate=True),
-    Output("miner-graph-and-table", "className", allow_duplicate=True),
-    inputs=[
-        #Input("block-number-data", "data"),
-        #Input("view-select", "value"),
-        #State("run-status", "data"),
-        Input("graph-data", "data")
-    ],
-    prevent_initial_call=True
-)
-def render_graphs(graph_data: dict):
-    """Updates the display for the miner tab, showing the graph
-        of the current chain state if it is available.
-
-        The file naming logic here is somewhat convoluted because it has to be:
-        the html.Img object seems to cache copies of the last several images it
-        has displayed. If you don't give it a new name, it will keep displaying
-        the older image. So we rotate through a sequence of filenames.
-
-        Args:
-            miner-graph-update: interval set to check if there is anything to update
-            run-status: if run status alters, display should alter
-            tabs: should automatically render on switching tabs.
-
-        Returns:
-            graph-file"""
-   
-
-    #if not run_status["Running"] or num_blocks < 2:
-    #    return "display-none", "", None, "display-none"
-    #else:
-    if len(graph_data) > 0:
-        plotter = SpiralPlotter()
-        #graph_data = graph_data["Miner 1"]
-        graph_data = generate_graph_data(TEST_TREE)
-        print(graph_data)
-        plotter.import_plotting_data(tree_data=graph_data, num_nodes=8)
-        plot_data = plotter.plot_spiral()
-        fig = go.Figure(plot_data)
-
-        fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
-            showlegend = False,
-            xaxis = dict(showticklabels=False),
-            yaxis = dict(showticklabels=False),
-            margin=dict(
-                l=0,
-                r=0,
-                b=0,
-                t=0,
-                pad=4
-            ),
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-        )
-
-        return "display-none", "display-none", fig, ""
-    
-    else:
-        return "display-none", "display-none", None, ""
-
-
->>>>>>> c5d6b317174ec13fc6616e3d67b0c8b4c17191aa
+"""
+    pass
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
 #                             SECTION: Button Triggers                                                |
@@ -220,7 +247,24 @@ def render_graphs(graph_data: dict):
 @dash.callback(
     Output("reset-resume-buttons", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("pause-status", "data", allow_duplicate=True),
+    Output("running-status", "data", allow_duplicate=True),
+    Output("run-button", "className", allow_duplicate=True),
+    inputs=[
+        Input("run-button", "n_clicks"),
+    ],
+    prevent_initial_call = True
+)
+def run_simulation(run_click: int):
+    print("In run_simulation")
+
+    return "display-none", "", True, "display-none"
+
+#========================================================================================
+
+@dash.callback(
+    Output("reset-resume-buttons", "className", allow_duplicate=True),
+    Output("pause-button", "className", allow_duplicate=True),
+    Output("running-status", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
     ],
@@ -228,21 +272,21 @@ def render_graphs(graph_data: dict):
 )
 def pause_simulation(pause_click: int):
 
-    return "", "display-none", True
+    return "", "display-none", False
 
 #========================================================================================
 
 @dash.callback(
     Output("reset-resume-buttons", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("pause-status", "data", allow_duplicate=True),
+    Output("running-status", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
     ],
     prevent_initial_call = True
 )
 def resume_simulation(pause_click: int):
-    return "display-none", "", False
+    return "display-none", "", True
 
 #========================================================================================
 @dash.callback(
@@ -252,8 +296,7 @@ def resume_simulation(pause_click: int):
     Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-resume-buttons", "className", allow_duplicate=True),
-    Output("run-status", "data", allow_duplicate=True),
-    Output("block-number-data", "data", allow_duplicate=True),
+    Output("running-status", "data", allow_duplicate=True),
     inputs=[
         Input("reset-button", "n_clicks"),
     ],
@@ -269,42 +312,6 @@ def reset_simulation(reset_click: int):
         "display-none", #Reset & Resume Buttons
         False,
         0
-    )
-
-#========================================================================================
-
-@dash.callback(
-    Output("intro-text", "className", allow_duplicate=True),
-    Output("loading-text", "className", allow_duplicate=True),
-    Output("pause-button", "className", allow_duplicate=True),
-    Output("run-button", "className", allow_duplicate=True),
-    Output("run-status", "data", allow_duplicate=True),
-    Output("view-select", "options"),
-    Output("graph-data", "data", allow_duplicate=True),
-    Output("miner-status-data", "data", allow_duplicate=True),
-    Output("stopping-block", "data"),
-    inputs=[
-        Input("run-button", "n_clicks"),
-        State("miner-slider", "value"),
-        State("blocks-input", "value")
-    ],
-    prevent_initial_call=True,
-)
-def run_simulation(run_click: int, num_miners: int, num_blocks: int):
-    miner_opts = ["Global View"]
-    miner_opts += [f"Miner {i+1}" for i in range(num_miners)]
-    miner_data = {miner: [] for miner in miner_opts}
-    miner_status_dict = {MINER_NAMES[i]: "" for i in range(num_miners)}
-    return (
-        "display-none",
-        "",
-        "",
-        "display-none",
-        True,
-        miner_opts,
-        miner_data,
-        miner_status_dict,
-        num_blocks
     )
 
 #=======================================================================================

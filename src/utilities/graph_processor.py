@@ -144,16 +144,16 @@ def generate_graph_data(tree: BlockScoreTree):
     num_nodes = len(tree.hash_to_branch_lookup)
     trunk_map = [node.block_number for node in tree.trunk]
     branches = [branch for branch in tree.branches if branch.root is not None]
-    branches.sort(key= lambda x: num_nodes - x.root.block_number)
+    branches.sort(key= lambda x: num_nodes - x.root.block_number) #TODO figure out why I used this key
     branch_data = []
-    trunk_dict = {"map": trunk_map, "depth": 0, "root": 0, "root_depth": 0, "soundness": tree.trunk.get_soundness_map(tree.high_score, trunk=True)}
+    trunk_dict = {"map": trunk_map, "depth": 0, "root": 0, "root_depth": 0, "score_map": tree.trunk.get_score_map()}
 
     for branch in branches:
         branch_dict = {"root": branch.root.block_number}
         branch_map = [node.block_number for node in branch]
         branch_dict.update({"map": branch_map})
         branch_dict.update({"children": []})
-        branch_dict.update({"soundness": branch.get_soundness_map(tree.high_score)})
+        branch_dict.update({"score_map": branch.get_score_map()})
         branch_data.append(branch_dict)
 
     primary_branches = []

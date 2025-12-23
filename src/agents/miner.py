@@ -12,7 +12,7 @@ class Miner():
         on the blockchain network. Current ownership status is a bit of a mess, should consolidate some other
         classes and give more of their functions to this class."""
 
-    def __init__(self, miner_id: str, genesis_block: Block, PoW_protocol: ProofOfWorkProtocol):
+    def __init__(self, miner_id: str, PoW_protocol: ProofOfWorkProtocol, genesis_block: Block):
         """Instantiates a new miner at the given hostname. The subdir is the
         directory to store the mempool, known nodes, and blockchain.
 
@@ -25,12 +25,12 @@ class Miner():
         self.id = miner_id
 
         genesis_block_node = BlockNode(
-                hash=genesis_block.hash, 
-                prev_hash=genesis_block.previous_hash, 
-                block_score=1.0, 
-                total_score=1.0, 
-                block_height=0, 
-                block_number=0)
+            hash=genesis_block.hash, 
+            prev_hash=genesis_block.previous_hash, 
+            block_score=1.0, 
+            total_score=1.0, 
+            block_height=0, 
+            block_number=0)
 
         self.blockchain = BlockScoreTree(genesis_block=genesis_block_node)
         self.pow = PoW_protocol
@@ -101,7 +101,7 @@ class Miner():
             )
         return new_block
 
-    def attempt_mine(self, mining_block: Optional[Block] = None) -> tuple[Block, bool, float]:
+    def attempt_mine(self, mining_block: Optional[Block] = None) -> tuple[Block, float]:
         """Attempts to mine a new block, choosing the nonce at random, calculating the quantum hash
             and the block hash and validating against the PoW requirement.
 
@@ -117,20 +117,12 @@ class Miner():
                 mining_block = self.mining_block
                 mining_block.nonce += 1
  
-        new_block, block_score, sample_time = self.pow.mine_block(mining_block)
-
-        succeeded = bool(block_score > 0)
-
-        if succeeded:
-            new_block.set_hash()
-            new_block.lock()
-            self.mined_block = new_block
-            self.mined_block_score = block_score
-            self.mining_block = None
-        else:
-            new_block = mining_block
-
-        return new_block, succeeded, sample_time
+        new_block, block_score = self.pow.mine_block(mining_block)
+        new_block.lock()
+        self.mined_block = new_block
+        self.mined_block_score = block_score
+        self.mining_block = None
+        return new_block, block_score
     
     def receive_block(self, new_block_str) -> float: 
         """ Processes a new block that has been received as a broadcast. This includes logging the broadcast in the Owner's 

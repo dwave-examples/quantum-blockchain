@@ -6,8 +6,8 @@ from demo_constants import GENESIS_BLOCK
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 
 
-demo_pow = ProofOfWorkProtocol(hash_solvers=AVAILABLE_SOLVERS)
-DEMO_MINER = Miner(miner_id="demo_miner", genesis_block=GENESIS_BLOCK, PoW_protocol=demo_pow)
+DEMO_POW = ProofOfWorkProtocol(hash_solvers=AVAILABLE_SOLVERS)
+DEMO_MINER = Miner(miner_id="demo_miner", genesis_block=GENESIS_BLOCK, PoW_protocol=DEMO_POW)
 
 
 test_tree = BlockScoreTree()

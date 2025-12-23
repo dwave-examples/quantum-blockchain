@@ -113,7 +113,7 @@ class ProofOfWorkProtocol:
 
         return valid, block_score, validation_bits, sample_time
 
-    def mine_block(self, block: Block) -> tuple[Block, float, float]:
+    def mine_block(self, block: Block) -> tuple[Block, float]:
         """Makes a single attempt to mine a block based on the stored Proof Of Work requirements. Returns
         the block itself (with a current quantum and classical hash, and possibly a digital signature) as
         well as a summary of whether the block passes the stored requirements and the sample time.
@@ -134,15 +134,15 @@ class ProofOfWorkProtocol:
         new_quantum_hash, dot_vector, sample_time = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
         validation_bits = [1 for i in range(self.quantum_hash_length)] #TODO check typing
-        block_score = self.calculate_confidence_score(validation_bits, self.allowable_err, dot_vector)
-
         block.set_hash()
         assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
 
-        passes_pow = int(validate_zeroes(block.hash, self.n_zeroes))
-        score = min(passes_pow, block_score)
+        if validate_zeroes(block.hash, self.n_zeroes):
+            block_score = self.calculate_confidence_score(validation_bits, self.allowable_err, dot_vector)
+        else:
+            block_score = MIN_SCORE
 
-        return block, score, sample_time
+        return block, block_score
 
     def score_block(self, block: Block):
         """Calls the stored scoring function to calculate a score for the block. Checks to make sure the block has a matching
@@ -184,16 +184,18 @@ class ProofOfWorkProtocol:
         min_confidence = MIN_SCORE
         mean = W_0_ALPHA
         std_dev = DELTA_W_0_ALPHA
-        bits_array = np.array(valid_bits)
+
         norm_dist = np.abs((dot_vector - mean) / std_dev)
         bitwise_confidence = 0.5 * (1 + erf(norm_dist))
         validation_confidence = [
-            a * b + (1 - a) * (1 - b) for a, b in zip(bits_array, bitwise_confidence)
+            a * b + (1 - a) * (1 - b) for a, b in zip(valid_bits, bitwise_confidence)
         ]  # If a validation bit is 1, we use the confidence. If it's 0, we use 1 - the confidence
         log_confidence = allowable_err
-        for confidence in validation_confidence:
+        for idx, confidence in enumerate(validation_confidence):
             if confidence == 0:
                 return min_confidence
+            elif confidence < 0:
+                raise Exception(f"Invalid confidence value {confidence} at index {idx} from bit {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}")
             else:
                 log_confidence += np.log2(confidence)
 
