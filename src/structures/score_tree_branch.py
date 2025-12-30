@@ -9,8 +9,6 @@ BlockNode = namedtuple(
     "BlockNode", ["hash", "prev_hash", "block_score", "total_score", "block_number", "block_height"]
 )
 
-BackScore = namedtuple("BackScore", ["score", "index"])
-
 
 class ScoreTreeBranch:
     """This class serves to encapsulate the fundamental structural units of the BlockScoreTree class, namely branches. The
@@ -44,15 +42,12 @@ class ScoreTreeBranch:
             self.depth: number of ScoreTreeBranch objects that are parents or further ancestors of this one. The trunk
                         of a given BlockScoreTree should always have depth 0, and any other branches should have depth 1 or
                         greater.
-            self.back_scores: list maintaining information about the highest scores found among the blocks of this branch and
-                          it's descendants. See docstring for update_back_scores for more detail.
         """
         self.node_list = []
         self.hash_to_index_lookup = {}
         self.children = []  # Children and parent will be dynamically linked for easy access
         self.parent = None
         self.depth = 0
-        self.back_scores = []
         if base_block is not None:
             self._initialize_first_block(base_block)
 
@@ -67,9 +62,7 @@ class ScoreTreeBranch:
         self.node_list.append(base_block)
         self.hash_to_index_lookup.update({base_block.hash: 0})
         self.root_hash = base_block.prev_hash
-        self.back_scores.append(
-            BackScore(score=base_block.total_score, index=0)
-        )  # These are important for calculating block soundness. See docstring of update_back_scores for more detail.
+
 
     @property
     def tip(self) -> BlockNode:
@@ -101,9 +94,9 @@ class ScoreTreeBranch:
 
     @property
     def high_score(self) -> float:
-        """Returns the highest total_score of any block currently stored in either
-        this branch or its children."""
-        return self.back_scores[0].score
+        """Returns the highest total_score of any block currently stored in
+        this branch """ #TODO check logic to make sure this isn't broken by change
+        return max([node.total_score for node in self.node_list])
 
     def __getitem__(self, index: int) -> BlockNode:
         return self.node_list[index]
@@ -154,7 +147,6 @@ class ScoreTreeBranch:
         elif new_block_node.prev_hash == self.tip.hash:
             self.node_list.append(new_block_node)
             self.hash_to_index_lookup.update({new_block_node.hash: self.tip_idx})
-            self.update_back_scores(new_block_node.total_score, self.tip_idx)
         else:
             raise Exception(
                 f"Invalid block. Root hash {new_block_node.prev_hash} cannot connect to tip hash {self.tip.hash}"
@@ -174,7 +166,7 @@ class ScoreTreeBranch:
     def set_parent(self, parent_branch: "ScoreTreeBranch") -> None:
         """Sets the passed branch as the parent of the current branch
         (provided that is a legal assignment). Will not set the other end
-        of the relationship: this is intended to be called by link-to-child,
+        of the relationship: this is intended to be called by link_child_branch,
         rather than on its own.
 
         Args:
@@ -199,71 +191,10 @@ class ScoreTreeBranch:
         if child_branch.root_hash in self:
             self.children.append(child_branch)
             child_branch.set_parent(self)
-            self.update_back_scores(
-                child_branch.high_score, self.hash_to_index_lookup[child_branch.root_hash]
-            )
         else:
             raise Exception("Attempted to link branch that was not a child.")
 
-    def update_back_scores(self, new_score: float, new_index: int) -> None:
-        """This function manages the self.back_scores list maintained by each branch. These scores
-        are the key component of calculating the soundness of each block (how "stable" its place in
-        the blockchain is). For its soundness, each block will use the better of its own total score,
-        and that of any successor block in the tree--that is, any block later in its branch, or in
-        any children higher on its branch. Thus high scores propagate backwards through branches:
-        in the common case where the tip holds the highest score, all blocks in its branch will
-        use its total score as their back score (as will any preceding block in parent branches).
 
-        Back data is maintained as a list of tuples of the form (back_score, index), indicating that the
-        block at self.node_list[index] and every block prior to are assigned back_score. This means that
-        for branches where the tip has the highest score (the most common case), only one entry will need
-        to be maintained. The list is always maintained in strictly decreasing score order and strictly
-        increasing index order, so when an existing entry has lower index and lower score than an new
-        entry, it will be removed.
-
-        Args:
-            new_score (float): the score of the block being linked. When a block is appended to the branch
-                this will just be that block's total score. When a branch is appended, it will be the
-                score of that branch's base, which should always be the high score for that branch.
-            new_index (int): the index at which the new block is being linked. For a block appended to
-                the branch, this will just be the (old) branch tip. For a child branch being linked, this
-                will be whatever index the child branch links to.
-        """
-
-        if len(self.back_scores) == 0:
-            self.back_scores.append(BackScore(score=new_score, index=new_index))
-            if self.parent is not None:
-                root_idx = self.parent.hash_to_index_lookup[self.root_hash]
-                self.parent.update_back_scores(self.high_score, root_idx)
-
-        insert = False
-        if new_index > self.back_scores[-1].index:
-            insertion_point = len(self.back_scores)
-            insert = True
-        else:
-            for idx, entry in enumerate(self.back_scores):
-                if new_index <= entry.index:
-                    insertion_point = idx
-                    if new_score > entry.score:
-                        insert = True
-                        if new_index == entry.score:
-                            insertion_point += 1  # Inserting ahead of same-indexed entries ensures they get removed in the next step
-                    break
-
-        if insert:
-            assert insertion_point >= 0, "Invalid insertion point."
-            self.back_scores.insert(insertion_point, BackScore(score=new_score, index=new_index))
-            current_idx = insertion_point
-            while current_idx > 0:
-                if self.back_scores[current_idx - 1].score <= new_score:
-                    self.back_scores.pop(current_idx - 1)
-                    current_idx -= 1
-                else:
-                    break
-
-            if self.parent is not None:
-                root_idx = self.parent.hash_to_index_lookup[self.root_hash]
-                self.parent.update_back_scores(self.high_score, root_idx)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -281,83 +212,7 @@ class ScoreTreeBranch:
         score_map = [node.total_score for node in self.node_list]
         return score_map
 
-    def get_soundness_map(self, high_score: float, trunk: bool = False, start_idx: int = 0):
-        """Block soundness measures how secure a block's place in the blockchain is:
-        specifically, what is the minimum number of blocks that would be needed to move
-        that block into or out of the trunk. For a block at the tip of a branch (including the trunk),
-        this is simply the difference in scores between the tip of that branch and the highest-scoring block in any
-        other branch. That is, for a branch it will always be branch_tip_score - trunk_high_score. For the
-        trunk it will be trunk_high_score - max_branch_score where the latter is the best score of any block not in
-        the trunk.
-
-        For blocks that are not in a branch tip, the situation is more complicated. Trunk blocks can only be displaced
-        by branches rooted in blocks lower in the trunk. Non-trunk blocks can only be joined to the trunk by the extension
-        of their own branch, or the extension of successor branches rooted higher in their branch than they are. For branch
-        blocks this means that they "inherit" the best soundness of any successor blocks, while trunk blocks inherit the worst
-        soundness of parent blocks
-
-        Args:
-            high_score (float): the highest score of any block in the tree.
-            trunk (bool): indicates whether the branch is the trunk of the tree or not. The trunk score is computed differently.
-            start_idx (int, optional). Defaults to 0. The index at which to start the calculation. Will compute the soundness
-                of the block at this index and every block at a higher index. This allows for computing only the final portion
-                of a very long branch, which can save significant redundant work in long trials. In keeping with Python convention
-                for lists, this index can be negative: negative indices will be counted backwards from the end of the list, starting
-                with the last element at index -1."""
-
-        if start_idx < 0:
-            start_idx = len(self.node_list) + start_idx
-
-        if start_idx < 0 or start_idx >= len(self.node_list):
-            raise Exception()  # TODO add content
-
-        soundness_map = []
-        if trunk:
-            branch_join_indices = {}
-            for (
-                child
-            ) in (
-                self.children
-            ):  # Easier to list which blocks have children once than check the whole list each time
-                child_root_idx = self.hash_to_index_lookup[child.root_hash]
-                if child_root_idx in branch_join_indices:
-                    branch_join_indices[child_root_idx].append(child)
-                elif child_root_idx >= start_idx:
-                    branch_join_indices.update({child_root_idx: [child]})
-            previous_worst = (
-                high_score  # Start with the highest possible score: we can only go down from there
-            )
-            for block in self.node_list[start_idx:]:
-                soundness = high_score - block.total_score
-                if (
-                    block.hash in branch_join_indices
-                ):  # Only need to check branches starting from this block--earlier branches will
-                    for child in branch_join_indices[
-                        block.hash
-                    ]:  # already be covered by previous_worst
-                        soundness = min(soundness, high_score - child.high_score)
-                if previous_worst < soundness:
-                    soundness = previous_worst
-                else:
-                    previous_worst = soundness
-
-                soundness_map.append(soundness)
-
-        else:
-            for idx in range(start_idx, len(self.node_list)):
-                block_score = None
-                for back_score_entry in reversed(self.back_scores):
-                    if idx <= back_score_entry.index:
-                        block_score = back_score_entry.score
-                assert (
-                    block_score is not None
-                ), f"No back score found in branch {self.base.block_number} at index {idx}. Scores are {self.back_scores}"
-                soundness_map.append(block_score - high_score)
-
-        assert len(soundness_map) == len(
-            self.node_list[start_idx:]
-        ), f"Branch {self.base.block_number} missing {len(self.node_list[start_idx:]) - len(soundness_map)} scores!"
-        return soundness_map
+   
 
     def get_descendants_by_depth(self) -> list[list["ScoreTreeBranch"]]:
         """Compiles a list of all the descendants (children and their children and so on)
@@ -372,7 +227,7 @@ class ScoreTreeBranch:
             descendants[1].append(child)
             later_descendants = child.get_descendants_by_depth()
             while len(descendants) < len(later_descendants) + 1:
-                descendants.append([])  # Add enough entries in desendants to hold all the output
+                descendants.append([])  # Add enough entries in descendants to hold all the output
             for i in range(
                 1, len(later_descendants)
             ):  # 0th entry will just be child again, so ignore it
@@ -404,7 +259,6 @@ class ScoreTreeBranch:
             raise Exception("Cannot pop last block in branch")
         else:
             removed_block = self.node_list.pop()
-            self.back_scores.pop()  # last node always has an entry in back_scores()
             self.hash_to_index_lookup.pop(removed_block.hash)
             removed_children = []
 
@@ -414,8 +268,6 @@ class ScoreTreeBranch:
 
             for child in removed_children:
                 self.children.remove(child)
-
-            self.update_back_scores(self.tip.total_score, len(self.node_list) - 1)
 
             return removed_block, removed_children
 

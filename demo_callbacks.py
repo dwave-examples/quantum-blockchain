@@ -13,13 +13,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-
-import os
-import json
 import time
-import math
-import random
-import copy
+
 
 import dash
 from dash import MATCH, ctx, html, Patch, set_props
@@ -35,13 +30,12 @@ from src.agents.miner import Miner
 from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
-from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
 from demo_solvers import AVAILABLE_SOLVERS
 from demo_objects import DEMO_MINER, TEST_TREE, DEMO_POW
 from demo_constants import EMPTY_BLOCK_DICT, GENESIS_BLOCK
 from demo_solvers import AVAILABLE_SOLVERS
 from src.utilities.display_update import render_graphs, render_miner_status
-from src.utilities.mining_steps import mine_block, validate_block
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
