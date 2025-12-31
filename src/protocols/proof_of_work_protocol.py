@@ -190,7 +190,7 @@ class ProofOfWorkProtocol:
         validation_confidence = [
             a * b + (1 - a) * (1 - b) for a, b in zip(valid_bits, bitwise_confidence)
         ]  # If a validation bit is 1, we use the confidence. If it's 0, we use 1 - the confidence
-        log_confidence = allowable_err
+        log_confidence = np.float64(allowable_err)
         for idx, confidence in enumerate(validation_confidence):
             if confidence == 0:
                 return min_confidence
@@ -199,7 +199,7 @@ class ProofOfWorkProtocol:
             else:
                 log_confidence += np.log2(confidence)
 
-        return log_confidence
+        return round(log_confidence.item(), 2)
 
     def calculate_quantum_hash(self, block: Block) -> tuple[str, np.ndarray, float]:
         """Calculates the quantum hash for the block provided. This is the centerpiece of the whole

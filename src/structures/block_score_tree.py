@@ -166,8 +166,8 @@ class BlockScoreTree:
             new_block = BlockNode(
                 hash=block_hash,
                 prev_hash=prev_block_hash,
-                block_score=block_score,
-                total_score=block_score,
+                block_score=round(block_score,3),
+                total_score=round(block_score,3),
                 block_number=block_number,
                 block_height=0,
             )
@@ -186,8 +186,8 @@ class BlockScoreTree:
             new_block = BlockNode(
                 hash=block_hash,
                 prev_hash=prev_block_hash,
-                block_score=block_score,
-                total_score=block_score + prev_block.total_score,
+                block_score=round(block_score,3),
+                total_score=round(block_score + prev_block.total_score,3),
                 block_number=block_number,
                 block_height=prev_block.block_height + 1,
             )

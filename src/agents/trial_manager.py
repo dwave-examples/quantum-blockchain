@@ -196,6 +196,8 @@ class TrialManager:
 
         """
 
+        print("In mining step")
+
         mining_miner_id = self.round_order[0]
         self.mining_miner_id = self.miners[mining_miner_id]
         mining_miner = self.miners[mining_miner_id]
@@ -224,6 +226,7 @@ class TrialManager:
             string containing the score the Miner assigned to the block and whether it passed or failed, formatted
                 to be printed to the console."""
 
+        print("In validation step")
 
         validator_id = self.round_order[self.round_progress]
         validator = self.miners[validator_id]

@@ -109,7 +109,7 @@ class SpiralPlotter:
             arranged such that this can be done simply and efficiently."""
 
         bottom_level_branches = [branch for branch in self.branches if branch.depth == 1]
-        bottom_level_branches.sort(key=lambda x: self.num_nodes - x.tip.block_number) #TODO check order
+        bottom_level_branches.sort(key=lambda x: self.num_nodes - x.root.block_number)
 
         depth_limits = [self.num_nodes+1]    
         for branch in bottom_level_branches:

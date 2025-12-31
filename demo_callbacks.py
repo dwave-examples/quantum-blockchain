@@ -14,9 +14,12 @@
 
 from __future__ import annotations
 import time
+import copy
+import json
 
 
 import dash
+import asyncio
 from dash import MATCH, ctx, html, Patch, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -32,9 +35,10 @@ from src.values import MINER_NAMES #TODO move to DemoConstants
 
 from demo_solvers import AVAILABLE_SOLVERS
 from demo_objects import DEMO_MINER, TEST_TREE, DEMO_POW
-from demo_constants import EMPTY_BLOCK_DICT, GENESIS_BLOCK
+from demo_constants import EMPTY_BLOCK_DICT, GENESIS_BLOCK, GENESIS_BLOCKNODE
 from demo_solvers import AVAILABLE_SOLVERS
 from src.utilities.display_update import render_graphs, render_miner_status
+from src.structures.block_score_tree import BlockScoreTree, BlockNode
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,6 +46,20 @@ from src.utilities.display_update import render_graphs, render_miner_status
 #                             SECTION: Mining Round Steps                                             |
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTree:
+    tree = BlockScoreTree()
+    for block_entry in node_list:
+        score = block_entry["scores"][miner_id]
+        block = Block.from_json(block_entry["block_json"])
+        tree.add_block(block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=score)
+
+    if tree.high_score > tree.trunk.tip.total_score:
+        strongest_branch = tree.hash_to_branch_lookup[tree.strongest_block_hash]
+        tree.promote_to_trunk(strongest_branch)
+
+    return tree
 
 @dash.callback(
 
@@ -53,7 +71,6 @@ from src.utilities.display_update import render_graphs, render_miner_status
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
-        State("miner-score-data", "data"),
     ],
     running=[
         (Output("miner-slider", "disabled"), True, False),
@@ -61,18 +78,16 @@ from src.utilities.display_update import render_graphs, render_miner_status
     ],
     progress=[
         Output("current-block-data", "data"),
-        Output("miner-score-temp", "data"),
     ],
     cancel = [Input("reset-button", "n_clicks")],
     prevent_initial_call=True,
 )
-def simulation(
+async def simulation(
     update_current_block_data,
     running_status: bool,
     miner_slider_val: int,
     block_input_val: int,
     blockchain_structure: list,
-    miner_scores: dict,
 ):
     """Runs the optimization and updates UI accordingly.
 
@@ -110,80 +125,52 @@ def simulation(
 
         print("TrialManager successfully instantiated.")
 
+        block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "miner_id": ""}
+        current_block_dict = copy.deepcopy(block_dict_template)
+
         while(manager.blocks_mined <= num_blocks):
-            print("In main loop")
+
             mined, miner_id, block_score = manager.single_step()
             if mined:
-                print("Mined")
-                current_block = Block.from_json(manager.block_broadcast) #TODO optimize
-                current_block_update = (current_block.hash, current_block.previous_hash)
+                await asyncio.sleep(0.8)
+                current_block_dict = copy.deepcopy(block_dict_template)
+                current_block_dict["block_number"] = manager.blocks_mined
+                current_block_dict["block_json"] = manager.block_broadcast
+                current_block_dict["miner_id"] = miner_id
+                print(f"In main loop, current block dict is {current_block_dict}")
                 print(f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined.")
+                print(f"Miner_1 tip score is {manager.miners[MINER_NAMES[0]].blockchain.trunk.tip.total_score}")
             else:
-                print("Validated")
-                current_block_update = dash.no_update
-            score_data_list = [miner_id, block_score, mined]
-            update_current_block_data((current_block_update, score_data_list))
+                current_block_dict["new"] = False
 
-            time.sleep(1.5)  
+            current_block_dict["scores"][miner_id] = block_score
+
+            update_current_block_data(current_block_dict)
+
+            await asyncio.sleep(0.25)
         
     return "", "display-none"
 
 
-@dash.callback(
-    Output("miner-score-data", "data", allow_duplicate=True),
-    Input("miner-score-temp", "data"),
-    prevent_initial_call=True,
-)
-def move_score_data(miner_score_in: list):
-    """ """
-    print("Moving score data")
-    to_update = Patch()
-    to_update[miner_score_in[0]].append(miner_score_in[1])
-    return to_update
-
 #==========================================================================================
+
 
 @dash.callback(
     Output("blockchain-structure-data", "data"),
-    Input("current-block-data", "data"),
-    prevent_initial_call=True,
-)
-def update_blockchain_structure(block_data: tuple[str, str]):
-    """ """
-    print("Updating blockchain data")
-    to_update = Patch()
-    to_update.append(block_data)
-    return to_update
-
-#==========================================================================================
-
-
-
-@dash.callback(
-    Output("miner-status-data", "data"),
     inputs = [
-        Input("miner-score-temp", "data"),
-        State("miner-slider", "value"),
-        ],
+        Input("current-block-data", "data"),
+    ],
     prevent_initial_call=True,
 )
-def update_miner_status(miner_score_in: list, num_miners: int):
-    print(f"Updating miner status data with {miner_score_in}")
+async def update_blockchain_data(block_data: dict):
+    """ """
+
+
+    block_number = block_data["block_number"]
+    print(f"Updating blockchain data for block {block_number}")
     to_update = Patch()
-    if miner_score_in[2] == True:
-        for name in MINER_NAMES[:num_miners]:
-            to_update.update({name: ""})
-        to_update.update({miner_score_in[0]: "Mined"})
-    else:
-        if miner_score_in[1] > 0:
-            miner_status = "Validated"
-        else:
-            miner_status = "Rejected"
-
-        to_update.update({miner_score_in[0]: miner_status})
+    to_update[block_number-1] = block_data
     return to_update
-
-#==========================================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -191,47 +178,84 @@ def update_miner_status(miner_score_in: list, num_miners: int):
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
 @dash.callback(
     Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("prelim-text", "className"),
     Output("miner-table-head", "children", allow_duplicate=True),
     Output("miner-table-body", "children", allow_duplicate=True),
-    inputs=[
-            Input("miner-status-data", "data"),
-            State("blockchain-structure-data", "data"),
-    ],
+    Output("miner-graph-display", "figure"),
+    inputs = [
+        Input("blockchain-structure-data", "data"),
+        State("miner-slider", "value"),
+        ],
     prevent_initial_call=True,
 )
-def render_miner_status_table(miner_status_data: dict, blockchain_structure_data: list):
-    """ """
+async def update_main_display(blockchain_structure_data: list, num_miners: int):
 
-    print("Received miner status update")
-    block_number = len(blockchain_structure_data)
-    print(f"Drawing miner status table for block number {block_number}")
+    current_view = MINER_NAMES[0] #TODO replace with input
 
-    miner_table_head, miner_table_body = render_miner_status(block_number, miner_status_data)
-    return "", "display-none", miner_table_head, miner_table_body
+    #Get blockchain data
+  
+    block_number = blockchain_structure_data.index(None)
+    last_used_index = block_number -1
+    if last_used_index < 1:
+        raise PreventUpdate()
+    else:
+        print(f"Drawing graph for block number {last_used_index+1}")
+
+    current_blockchain_data = blockchain_structure_data[:last_used_index+1]
+    current_block_data = current_blockchain_data[-1]
+    mining_id = current_block_data["miner_id"]
+
+    #Compute miner status table
+
+    miner_status_dict = {MINER_NAMES[i]:"" for i in range(num_miners)}
+    for miner_id, score in current_block_data["scores"].items():
+        if score > 0:
+            status = "Validated"
+        else:
+            status = "Rejected"
+        miner_status_dict[miner_id] = status
+    miner_status_dict[mining_id] = "Mined"
+    miner_table_head, miner_table_body = render_miner_status(block_number, miner_status_dict)
+
+    #Draw graph
+    #TODO add logic to check if graph update is necessary 
+
+    miner_scores_dict = current_block_data["scores"]
+    finished_miners = list(miner_scores_dict.keys())
+    last_miner = finished_miners[-1]
+    
+    if current_view == last_miner:
+        miner_tree = reconstruct_score_tree(current_blockchain_data, current_view)
+        plotter = SpiralPlotter()
+        miner_fig = plotter.create_plot_from_tree(miner_tree)
+
+        miner_fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
+            autosize=False,
+            width=700,
+            height=700,
+            showlegend = False,
+            xaxis = dict(showticklabels=False),
+            yaxis = dict(showticklabels=False),
+            margin=dict(
+                l=0,
+                r=0,
+                b=0,
+                t=0,
+                pad=4
+            ),
+            paper_bgcolor="White",
+            plot_bgcolor="White",
+        )
+    else:
+        miner_fig = dash.no_update
+
+    return "", "display-none", miner_table_head, miner_table_body, miner_fig
+
 
 
 #=======================================================================================
-
-def dummy():
-    """
-@dash.callback(
-    Output("graph-data", "data", allow_duplicate=True),
-    Input("graph-data-temp", "data"),
-    prevent_initial_call=True,
-)
-def move_graph_data(graph_data_in: list):
-
-    to_update = Patch()
-    miner_id = 0
-    graph_data_out = graph_data_in
-    to_update.update({f"Miner {miner_id + 1}":graph_data_out})
-    return to_update
-"""
-    pass
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
 #                             SECTION: Button Triggers                                                |
@@ -243,15 +267,17 @@ def move_graph_data(graph_data_in: list):
     Output("pause-button", "className", allow_duplicate=True),
     Output("running-status", "data", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
+    Output("blockchain-structure-data", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
+        State("blocks-input", "value"),
     ],
     prevent_initial_call = True
 )
-def run_simulation(run_click: int):
+def run_simulation(run_click: int, num_blocks: int):
     print("In run_simulation")
-
-    return "display-none", "", True, "display-none"
+    blockchain_init = [None for _ in range(num_blocks+3)]
+    return "display-none", "", True, "display-none", blockchain_init
 
 #========================================================================================
 

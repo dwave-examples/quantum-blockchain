@@ -178,9 +178,8 @@ def create_interface():
             dcc.Store(id="running-status", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data =[]),
-            dcc.Store(id="miner-score-data", data = {}),
-            dcc.Store(id="miner-score-temp", data=[]),
             dcc.Store(id="miner-status-data", data={}),
+            dcc.Store(id="blocks-mined", data=0),
 
             # Header brand banner
             html.Header(className="banner", children=[html.Img(src=THUMBNAIL, alt="D-Wave logo")]),
