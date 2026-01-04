@@ -4,18 +4,6 @@ from datetime import datetime
 from src.structures.block import Block
 from src.structures.score_tree_branch import BlockNode
 
-PAUSE_PATH = os.path.join("static", "pause")
-
-PAUSE_FILE = os.path.join("static", "paused.txt")
-
-TRIAL_OUTPUTS_PATH = os.path.join("src", "trials", "outputs")
-
-STATIC_PARAMS_FILE = os.path.join("static", "defualt_params.json")
-
-EMBEDDINGS_DIRECTORY = os.path.join("src", "trials", "embeddings")
-
-RUNNING_DIRECTORY_LIST = [PAUSE_PATH]
-
 EMPTY_BLOCK_DICT = {"block_json":"", "block_number": None, "scores": {}}
 
 timestamp = datetime.timestamp(datetime.now())

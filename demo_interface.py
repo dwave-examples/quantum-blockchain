@@ -27,11 +27,12 @@ from demo_configs import (
     DISPLAY_REFRESH_RATE,
     INTRO_TEXT,
     INTRO_SUBTEXT,
-    LOADING_TEXT
+    LOADING_TEXT,
 )
 
 from demo_solvers import AVAILABLE_SOLVERS
 from demo_constants import EMPTY_BLOCK_DICT
+from src.values import MINER_NAMES
 
 THEME_COLOR = "#2d4376"
 
@@ -101,7 +102,7 @@ def input_number(label: str, id: str, config: dict) -> html.Div:
 
 def generate_options(options_list: list) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
-    return [{"label": label, "value": i} for i, label in enumerate(options_list)]
+    return [{"label": label, "value": f"{i}"} for i, label in enumerate(options_list)]
 
 
 def generate_options_dropdown(options_list: list) -> list[dict]:
@@ -146,16 +147,18 @@ def generate_run_buttons() -> html.Div:
             ),
             html.Div(
                 id="reset-resume-buttons",
-                className="display-none",
+                className="",
                 children=[
                     html.Button(
                         id="reset-button",
-                        children="Reset",
+                        children="Reset Simulation",
                         n_clicks=0,
+                        className="display-none",
                     ),
                     html.Button(id="resume-button",
                         children="Resume",
                         n_clicks=0,
+                        className="display-none",
                     ),
                 ]
             )
@@ -176,6 +179,7 @@ def create_interface():
             ),
 
             dcc.Store(id="running-status", data=False),
+            dcc.Store(id="paused-status", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data =[]),
             dcc.Store(id="miner-status-data", data={}),
@@ -242,7 +246,7 @@ def create_interface():
                                 className="display-none",
                                 id="miner-graph-and-table",
                                 children=[
-                                    dropdown("", "view-select", generate_options_dropdown(["Global View"])),
+                                    dropdown("", "view-select", generate_options_dropdown(["Global View"] + [MINER_NAMES[i] for i in range(3)])),
                                     html.Div(
                                         className="graph-table-wrapper",
                                         children=[

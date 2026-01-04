@@ -16,7 +16,7 @@ from __future__ import annotations
 import time
 import copy
 import json
-
+import random
 
 import dash
 import asyncio
@@ -34,9 +34,9 @@ from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
 from demo_solvers import AVAILABLE_SOLVERS
-from demo_objects import DEMO_MINER, TEST_TREE, DEMO_POW
 from demo_constants import EMPTY_BLOCK_DICT, GENESIS_BLOCK, GENESIS_BLOCKNODE
 from demo_solvers import AVAILABLE_SOLVERS
+from demo_interface import generate_options
 from src.utilities.display_update import render_graphs, render_miner_status
 from src.structures.block_score_tree import BlockScoreTree, BlockNode
 
@@ -71,15 +71,17 @@ def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTr
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
+        State("solver-select", "value"),
     ],
     running=[
         (Output("miner-slider", "disabled"), True, False),
-        (Output("blocks-input", "disabled"), True, False), 
+        (Output("blocks-input", "disabled"), True, False),
+        (Output("solver-select", "disabled"), True, False),  
     ],
     progress=[
         Output("current-block-data", "data"),
     ],
-    cancel = [Input("reset-button", "n_clicks")],
+    cancel = [Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
 )
 async def simulation(
@@ -88,6 +90,7 @@ async def simulation(
     miner_slider_val: int,
     block_input_val: int,
     blockchain_structure: list,
+    solver_select_val: str,
 ):
     """Runs the optimization and updates UI accordingly.
 
@@ -121,12 +124,42 @@ async def simulation(
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
-        manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solver=AVAILABLE_SOLVERS[-1])
+       
+
+        solver = AVAILABLE_SOLVERS[int(solver_select_val)]
+        
+
+        manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solver=solver)
 
         print("TrialManager successfully instantiated.")
 
         block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "miner_id": ""}
         current_block_dict = copy.deepcopy(block_dict_template)
+
+        first_empty_index = blockchain_structure.index(None)
+        if first_empty_index > 0:
+            print(f"Restarting trial at block {first_empty_index}")
+            current_blockchain = blockchain_structure[:first_empty_index]
+            manager.blocks_mined = first_empty_index
+            last_block = current_blockchain[-1]
+            finished_miners = []
+            unfinished_miners = []
+
+            for miner_id, miner in manager.miners.items():
+                if miner_id in last_block.scores:
+                    miner_blockchain = reconstruct_score_tree(current_blockchain, miner_id)
+                    finished_miners.append(miner_id)
+                else:
+                    short_blockchain = current_blockchain[:-1]
+                    miner_blockchain = reconstruct_score_tree(current_blockchain, miner_id)
+                    unfinished_miners.append(miner_id)
+
+                miner.blockchain = miner_blockchain
+
+            manager.round_progress = len(finished_miners)
+            manager.block_broadcast = last_block["block_json"]
+            random.shuffle(unfinished_miners)
+            manager.round_order = finished_miners + unfinished_miners
 
         while(manager.blocks_mined <= num_blocks):
 
@@ -148,6 +181,10 @@ async def simulation(
             update_current_block_data(current_block_dict)
 
             await asyncio.sleep(0.25)
+
+        print("Run Simulation Finished Main Loop")
+
+    print("Run Simulation about to reach 'return' statement.")
         
     return "", "display-none"
 
@@ -186,24 +223,29 @@ async def update_blockchain_data(block_data: dict):
     Output("miner-graph-display", "figure"),
     inputs = [
         Input("blockchain-structure-data", "data"),
+        Input("view-select", "value"),
         State("miner-slider", "value"),
         ],
     prevent_initial_call=True,
 )
-async def update_main_display(blockchain_structure_data: list, num_miners: int):
+async def update_main_display(blockchain_structure_data: list, selected_view: int, num_miners: int):
 
-    current_view = MINER_NAMES[0] #TODO replace with input
+    selected_view = int(selected_view)
+
+    if selected_view == 0:
+        current_view = "Global View"
+    else:
+        current_view = MINER_NAMES[selected_view-1]
 
     #Get blockchain data
   
     block_number = blockchain_structure_data.index(None)
-    last_used_index = block_number -1
-    if last_used_index < 1:
+    if block_number < 2:
         raise PreventUpdate()
     else:
-        print(f"Drawing graph for block number {last_used_index+1}")
+        print(f"Drawing graph for block number {block_number}")
 
-    current_blockchain_data = blockchain_structure_data[:last_used_index+1]
+    current_blockchain_data = blockchain_structure_data[:block_number]
     current_block_data = current_blockchain_data[-1]
     mining_id = current_block_data["miner_id"]
 
@@ -226,7 +268,10 @@ async def update_main_display(blockchain_structure_data: list, num_miners: int):
     finished_miners = list(miner_scores_dict.keys())
     last_miner = finished_miners[-1]
     
-    if current_view == last_miner:
+    if current_view == last_miner or ctx.triggered_id == "view-select": #TODO figure out how to do this reliably
+        if current_view not in finished_miners:
+            current_blockchain_data = current_blockchain_data[:-1]
+
         miner_tree = reconstruct_score_tree(current_blockchain_data, current_view)
         plotter = SpiralPlotter()
         miner_fig = plotter.create_plot_from_tree(miner_tree)
@@ -248,6 +293,9 @@ async def update_main_display(blockchain_structure_data: list, num_miners: int):
             paper_bgcolor="White",
             plot_bgcolor="White",
         )
+    elif current_view == "Global View":
+        miner_fig = dash.no_update
+        #TODO figure out how to compute global view
     else:
         miner_fig = dash.no_update
 
@@ -263,28 +311,31 @@ async def update_main_display(blockchain_structure_data: list, num_miners: int):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @dash.callback(
-    Output("reset-resume-buttons", "className", allow_duplicate=True),
+    Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
     Output("running-status", "data", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("blockchain-structure-data", "data", allow_duplicate=True),
+    #Output("view-select", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
         State("blocks-input", "value"),
+        State("miner-slider", "value")
     ],
     prevent_initial_call = True
 )
-def run_simulation(run_click: int, num_blocks: int):
+def run_simulation(run_click: int, num_blocks: int, num_miners: int):
     print("In run_simulation")
     blockchain_init = [None for _ in range(num_blocks+3)]
-    return "display-none", "", True, "display-none", blockchain_init
+    return "display-none", "", True, "display-none", blockchain_init #, generate_options(["Global View"]+[MINER_NAMES[i] for i in range(num_miners)])
 
 #========================================================================================
 
 @dash.callback(
-    Output("reset-resume-buttons", "className", allow_duplicate=True),
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("running-status", "data", allow_duplicate=True),
+    Output("paused-status", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
     ],
@@ -292,13 +343,36 @@ def run_simulation(run_click: int, num_blocks: int):
 )
 def pause_simulation(pause_click: int):
 
-    return "", "display-none", False
+    return "","", "display-none", True
+
+@dash.callback(
+    background=True,
+    inputs=[
+        Input("paused-status", "data"),
+    ],
+        running=[
+        (Output("miner-slider", "disabled"), True, False),
+        (Output("blocks-input", "disabled"), True, False),
+        (Output("solver-select", "disabled"), True, False),  
+    ],
+    cancel = [Input("resume-button", "n_clicks")],
+    prevent_initial_call = True
+)
+def hold_paused(pause_status: bool):
+
+    if pause_status == True:
+        while True:
+            time.sleep(0.1)
+    else:
+        return
 
 #========================================================================================
 
 @dash.callback(
-    Output("reset-resume-buttons", "className", allow_duplicate=True),
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
+    Output("paused-status", "data", allow_duplicate=True),
     Output("running-status", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
@@ -306,7 +380,7 @@ def pause_simulation(pause_click: int):
     prevent_initial_call = True
 )
 def resume_simulation(pause_click: int):
-    return "display-none", "", True
+    return "display-none", "display-none", "", False, True
 
 #========================================================================================
 @dash.callback(
@@ -315,7 +389,8 @@ def resume_simulation(pause_click: int):
     Output("loading-text", "className", allow_duplicate=True),
     Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
-    Output("reset-resume-buttons", "className", allow_duplicate=True),
+    Output("reset-button", "className", allow_duplicate=True),
+    Output("resume-button", "className", allow_duplicate=True),
     Output("running-status", "data", allow_duplicate=True),
     inputs=[
         Input("reset-button", "n_clicks"),
@@ -329,9 +404,9 @@ def reset_simulation(reset_click: int):
         "display-none", #Loading text
         "display-none", #Miner Graph
         "",             #Run Button
-        "display-none", #Reset & Resume Buttons
-        False,
-        0
+        "display-none", #Reset Button
+        "display-none", #Resume Button
+        False, #Running Status
     )
 
 #=======================================================================================

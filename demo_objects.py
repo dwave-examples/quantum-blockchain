@@ -5,11 +5,6 @@ from demo_solvers import AVAILABLE_SOLVERS
 from demo_constants import GENESIS_BLOCK
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 
-
-DEMO_POW = ProofOfWorkProtocol(hash_solvers=AVAILABLE_SOLVERS)
-DEMO_MINER = Miner(miner_id="demo_miner", genesis_block=GENESIS_BLOCK, PoW_protocol=DEMO_POW)
-
-
 test_tree = BlockScoreTree()
 main_hashes = ["ab", "bc", "cd", "de", "ef","fg", "gh"]
 side_hashes = ["cp", "dq", "fw","wx"]
