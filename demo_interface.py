@@ -246,7 +246,7 @@ def create_interface():
                                 className="display-none",
                                 id="miner-graph-and-table",
                                 children=[
-                                    dropdown("", "view-select", generate_options_dropdown(["Global View"] + [MINER_NAMES[i] for i in range(3)])),
+                                    dropdown("", "view-select", generate_options_dropdown([MINER_NAMES[i] for i in range(3)])),
                                     html.Div(
                                         className="graph-table-wrapper",
                                         children=[

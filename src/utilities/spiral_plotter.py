@@ -56,11 +56,11 @@ class SpiralPlotter:
         self.min_points_per_rev = GRAPH_MIN_POINTS_PER_REV
         self.segs_per_rev = GRAPH_SEGS_PER_REV
         self.coord_dict = {}
-        self.trunk_edge_color = TRUNK_COLOR_SCALE[-1]
-        self.trunk_point_color = TRUNK_COLOR_SCALE[0]
-        self.branch_edge_color = BRANCH_COLOR_SCALE[0]
-        self.branch_point_color = BRANCH_COLOR_SCALE[-1]
-
+        self.trunk_edge_color = "#2a7de1"
+        self.trunk_point_color = "#2a7de1"
+        self.branch_edge_color = "#FF7006"
+        self.branch_point_color = "#FF7006"
+        self.trunk_tip_color = "black"
 
     def create_master_size_chart(self):
         step_size = (self.max_pnt_size - self.min_pnt_size)/max(self.num_nodes-1,1)
@@ -218,17 +218,18 @@ class SpiralPlotter:
         for i in range(len(self.trunk.x_edges)-1):
             edge = go.Scatter(x=self.trunk.x_edges[i:i+2], y=self.trunk.y_edges[i:i+2], mode="lines", line={"color":self.trunk_edge_color})
             trunk_edge_traces.append(edge)
-        trunk_node_trace = go.Scatter(x=self.trunk.x_points, y=self.trunk.y_points, mode="markers", marker={"size": self.trunk.size_chart, "color": self.trunk_point_color, "opacity":1})
+        trunk_node_trace = go.Scatter(x=self.trunk.x_points, y=self.trunk.y_points, mode="markers", marker={"size": self.trunk.size_chart, "color": [self.trunk_point_color for _ in range(len(self.trunk.x_points)-1)] +[self.trunk_tip_color], "opacity":1})
         plot_data = trunk_edge_traces
 
         node_traces = [trunk_node_trace]
 
         for branch in self.branches:
-            for i in range(len(branch.x_edges)-1):
-                edge = go.Scatter(x=branch.x_edges[i:i+2], y=branch.y_edges[i:i+2], mode="lines", line={"color":self.branch_edge_color})
-                plot_data.append(edge)
-            branch_node_trace = go.Scatter(x=branch.x_points, y=branch.y_points, mode="markers", marker={'color': self.branch_point_color, "opacity":1, "size": branch.size_chart})           
-            node_traces.append(branch_node_trace)
+            if branch != self.trunk:
+                for i in range(len(branch.x_edges)-1):
+                    edge = go.Scatter(x=branch.x_edges[i:i+2], y=branch.y_edges[i:i+2], mode="lines", line={"color":self.branch_edge_color})
+                    plot_data.append(edge)
+                branch_node_trace = go.Scatter(x=branch.x_points, y=branch.y_points, mode="markers", marker={'color': self.branch_point_color, "opacity":1, "size": branch.size_chart})           
+                node_traces.append(branch_node_trace)
 
         for trace in node_traces:
             plot_data.append(trace)

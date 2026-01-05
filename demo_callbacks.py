@@ -27,17 +27,14 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.utilities.graph_processor import combine_dags, generate_graph_data
 from src.agents.trial_manager import TrialManager
-from src.agents.miner import Miner
 from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
 from demo_solvers import AVAILABLE_SOLVERS
-from demo_constants import EMPTY_BLOCK_DICT, GENESIS_BLOCK, GENESIS_BLOCKNODE
 from demo_solvers import AVAILABLE_SOLVERS
 from demo_interface import generate_options
-from src.utilities.display_update import render_graphs, render_miner_status
+from src.utilities.display_update import render_miner_status
 from src.structures.block_score_tree import BlockScoreTree, BlockNode
 
 
@@ -51,9 +48,13 @@ from src.structures.block_score_tree import BlockScoreTree, BlockNode
 def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTree:
     tree = BlockScoreTree()
     for block_entry in node_list:
-        score = block_entry["scores"][miner_id]
-        block = Block.from_json(block_entry["block_json"])
-        tree.add_block(block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=score)
+        try: #TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining 
+            scores = block_entry["scores"] #how much of the tree a particular miner has completed
+            score = scores[miner_id]
+            block = Block.from_json(block_entry["block_json"])
+            tree.add_block(block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=score)
+        except: #If we hit an error, then this miner has accessed as much of the tree as able.
+            break
 
     if tree.high_score > tree.trunk.tip.total_score:
         strongest_branch = tree.hash_to_branch_lookup[tree.strongest_block_hash]
@@ -124,14 +125,9 @@ async def simulation(
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
-       
-
         solver = AVAILABLE_SOLVERS[int(solver_select_val)]
-        
 
         manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solver=solver)
-
-        print("TrialManager successfully instantiated.")
 
         block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "miner_id": ""}
         current_block_dict = copy.deepcopy(block_dict_template)
@@ -146,23 +142,25 @@ async def simulation(
             unfinished_miners = []
 
             for miner_id, miner in manager.miners.items():
-                if miner_id in last_block.scores:
+                if miner_id in last_block["scores"]:
                     miner_blockchain = reconstruct_score_tree(current_blockchain, miner_id)
                     finished_miners.append(miner_id)
                 else:
                     short_blockchain = current_blockchain[:-1]
-                    miner_blockchain = reconstruct_score_tree(current_blockchain, miner_id)
+                    miner_blockchain = reconstruct_score_tree(short_blockchain, miner_id)
                     unfinished_miners.append(miner_id)
 
                 miner.blockchain = miner_blockchain
 
+            print("Finished resetting miners")
             manager.round_progress = len(finished_miners)
             manager.block_broadcast = last_block["block_json"]
             random.shuffle(unfinished_miners)
             manager.round_order = finished_miners + unfinished_miners
+            print("Finished all restart logic.")
 
         while(manager.blocks_mined <= num_blocks):
-
+            print("Made it to the main loop.")
             mined, miner_id, block_score = manager.single_step()
             if mined:
                 await asyncio.sleep(0.8)
@@ -170,9 +168,7 @@ async def simulation(
                 current_block_dict["block_number"] = manager.blocks_mined
                 current_block_dict["block_json"] = manager.block_broadcast
                 current_block_dict["miner_id"] = miner_id
-                print(f"In main loop, current block dict is {current_block_dict}")
                 print(f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined.")
-                print(f"Miner_1 tip score is {manager.miners[MINER_NAMES[0]].blockchain.trunk.tip.total_score}")
             else:
                 current_block_dict["new"] = False
 
@@ -181,10 +177,6 @@ async def simulation(
             update_current_block_data(current_block_dict)
 
             await asyncio.sleep(0.25)
-
-        print("Run Simulation Finished Main Loop")
-
-    print("Run Simulation about to reach 'return' statement.")
         
     return "", "display-none"
 
@@ -232,18 +224,13 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
 
     selected_view = int(selected_view)
 
-    if selected_view == 0:
-        current_view = "Global View"
-    else:
-        current_view = MINER_NAMES[selected_view-1]
+    current_view = MINER_NAMES[selected_view]
 
     #Get blockchain data
   
     block_number = blockchain_structure_data.index(None)
     if block_number < 2:
         raise PreventUpdate()
-    else:
-        print(f"Drawing graph for block number {block_number}")
 
     current_blockchain_data = blockchain_structure_data[:block_number]
     current_block_data = current_blockchain_data[-1]
@@ -316,7 +303,6 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
     Output("running-status", "data", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("blockchain-structure-data", "data", allow_duplicate=True),
-    #Output("view-select", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
         State("blocks-input", "value"),
@@ -325,9 +311,8 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
     prevent_initial_call = True
 )
 def run_simulation(run_click: int, num_blocks: int, num_miners: int):
-    print("In run_simulation")
     blockchain_init = [None for _ in range(num_blocks+3)]
-    return "display-none", "", True, "display-none", blockchain_init #, generate_options(["Global View"]+[MINER_NAMES[i] for i in range(num_miners)])
+    return "display-none", "", True, "display-none", blockchain_init 
 
 #========================================================================================
 
