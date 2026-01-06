@@ -1,9 +1,8 @@
 from src.agents.miner import Miner
 from src.structures.block_score_tree import BlockScoreTree
-from src.protocols.hash_calculator import initialize_solver
-from demo_solvers import AVAILABLE_SOLVERS
-from demo_constants import GENESIS_BLOCK
-from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
+
+
+#TODO eliminate this from the final code. Leaving it in for now in case it's useful for future debugging.
 
 test_tree = BlockScoreTree()
 main_hashes = ["ab", "bc", "cd", "de", "ef","fg", "gh"]

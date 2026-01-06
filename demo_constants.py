@@ -1,5 +1,3 @@
-import os
-import time
 from datetime import datetime
 from src.structures.block import Block
 from src.structures.score_tree_branch import BlockNode

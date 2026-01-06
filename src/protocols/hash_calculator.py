@@ -9,7 +9,7 @@ from enum import Enum
 from src.directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
-from src.values import DEFAULT_NUM_READS
+from src.values import ADVANTAGE4_1_MAX_NUM_READS
 
 from dwave.system import DWaveSampler
 from dwave.cloud import Client
@@ -75,7 +75,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
 
 class BootstrappingHashSolver(HashSolver):
 
-    def __init__(self, solver_name: str, dW: float = 1.0) -> None:
+    def __init__(self, solver_name: str, dW: float = 1.0, num_reads=600) -> None:
         """Initializes a bootstrap solver. Does not use any of the passed parameters except the solver name,
             which it uses to determine which bootstrapping files to draw from. These file must be in place
             in the filesystem for the initialization to succeed.
@@ -85,6 +85,8 @@ class BootstrappingHashSolver(HashSolver):
                 in trials_main.py
             dW: rescaling of witnesses. Relevant to confidence-based chainwork
                 assessments.
+            num_reads (int). Defaults to 600. Used to simulate running the solver at different num_reads by
+                scaling the variance.
         """
 
         self._solver_name = solver_name
@@ -97,6 +99,7 @@ class BootstrappingHashSolver(HashSolver):
         self.var_witnesses = np.load(var_filepath)
         self.num_witnesses = self.mean_witnesses.size
         self.dW = dW
+        self.num_reads = num_reads
 
     @staticmethod
     def allowed_solvers() -> list[str]:
@@ -128,7 +131,7 @@ class BootstrappingHashSolver(HashSolver):
         prng_sampling = np.random.default_rng()
         indices = prng_header.integers(self.num_witnesses, size=hash_length)
         mu = self.mean_witnesses.ravel()[indices]
-        var = self.var_witnesses.ravel()[indices]
+        var = ADVANTAGE4_1_MAX_NUM_READS*self.var_witnesses.ravel()[indices]/self.num_reads
         dot_vector = (mu + np.sqrt(var) * prng_sampling.normal(size=hash_length)) / self.dW
         bool_vector = dot_vector > 0
         hash_bits = bool_vector.astype(int)
@@ -183,7 +186,7 @@ class QuantumHashSolver(HashSolver):
         self.profile = profile
         self.ensemble = ensemble
         self.model_size = model_size
-        self._num_reads = DEFAULT_NUM_READS
+        self._num_reads = num_reads
         self.ensemble = "PMJ"
         self.model_size = 4
         self._num_reads = num_reads

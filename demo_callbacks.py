@@ -74,11 +74,6 @@ def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTr
         State("blockchain-structure-data", "data"),
         State("solver-select", "value"),
     ],
-    running=[
-        (Output("miner-slider", "disabled"), True, False),
-        (Output("blocks-input", "disabled"), True, False),
-        (Output("solver-select", "disabled"), True, False),  
-    ],
     progress=[
         Output("current-block-data", "data"),
     ],
@@ -93,30 +88,36 @@ async def simulation(
     blockchain_structure: list,
     solver_select_val: str,
 ):
-    """Runs the optimization and updates UI accordingly.
+    """Manages a single run of the blockchain simulation.
 
-    This is the main function which is called when the ``Run Optimization`` button is clicked.
-    This function takes in all form values and runs the optimization, updates the run/cancel
-    buttons, deactivates (and reactivates) the results tab, and updates all relevant HTML
-    components.
+    This callback is triggered (indirectly) by the "run" and "resume" buttons. When triggered
+    by the "run" button, it will complete a full run of the blockchain simulation with the solver
+    scheme and the numbers of blocks and miners each defined by their respective input fields. As
+    it runs, it will call the 'update_current_block_data' function to provide progress updates,
+    which will then trigger other callbacks to update the display.
 
     Args:
-        run_click: The (total) number of times the run button has been clicked.
+        update_current_block_data: the progress function for providing updates while the callback is running
+        running_status (bool): flag to signal that the 'run' button has been clicked. Passing it this way
+            (instead of the 'run' button itself being used as an input), allows certain UI updates (such as
+            disabling/hiding components) to be processed immediately on clicking 'run', before the simulation starts
+        miner_slider_val (int): the value of the the miner slider: determines how many miners the trial has.
+        block_input_val (int): the value of the blocks input. Determines how many blocks the simulation will run for.
+        blockchain_structure (list): The data structure storing the current blockchain data. If starting a trial,
+            this will simply be a list with 'None' in every field. But if resuming after a pause, this will hold
+            the data needed to reconstruct the blockchain
+        solver_select_val (str): Value of the solver selector. Outputs as a string-typed integer value (e.g.
+            "1", "2"), which can just be immediately typed back to int and put into the AVAILABLE_SOLVERS
+            constant to get the solver #TODO make the selector return either the solver name or an actual integer
 
 
     Returns:
-        A NamedTuple (RunOptimizationReturn) containing all outputs to be used when updating the HTML
-        template (in ``demo_interface.py``). These are:
+        Most of the output of this function is passed by 'update_current_block_data', so the only
+        actual return values simply toggle button visibility
 
-            results: The results to display in the results tab.
-            problem-details: List of the table rows for the problem details table.
+        reset-button: makes the 'reset' button visible
+        pause-button: hides the 'pause' button
     """
-
-    # Only run optimization code if this function was triggered by a click on `run-button`.
-    # Setting `Input` as exclusively `run-button` and setting `prevent_initial_call=True`
-    # also accomplishes this.
-
-    print("In simulation")
 
     if running_status == False or ctx.triggered_id != "running-status":
         raise PreventUpdate
@@ -192,9 +193,9 @@ async def simulation(
     prevent_initial_call=True,
 )
 async def update_blockchain_data(block_data: dict):
-    """ """
-
-
+    """ Pass-through function to patch the single-block update from the 'simulation' callback
+        into the larger blockchain data structure."""
+    #TODO add check to make sure block data isn't ahead of where it should be
     block_number = block_data["block_number"]
     print(f"Updating blockchain data for block {block_number}")
     to_update = Patch()
@@ -221,6 +222,8 @@ async def update_blockchain_data(block_data: dict):
     prevent_initial_call=True,
 )
 async def update_main_display(blockchain_structure_data: list, selected_view: int, num_miners: int):
+    """ This callback processes blockchain structure data and uses it to update the miner status
+        table and the graph display."""
 
     selected_view = int(selected_view)
 
@@ -303,6 +306,9 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
     Output("running-status", "data", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("blockchain-structure-data", "data", allow_duplicate=True),
+    Output("miner-slider", "disabled", allow_duplicate=True),
+    Output("blocks-input", "disabled", allow_duplicate=True),
+    Output("solver-select", "disabled", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
         State("blocks-input", "value"),
@@ -312,7 +318,7 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
 )
 def run_simulation(run_click: int, num_blocks: int, num_miners: int):
     blockchain_init = [None for _ in range(num_blocks+3)]
-    return "display-none", "", True, "display-none", blockchain_init 
+    return "display-none", "", True, "display-none", blockchain_init, True, True, True #TODO break into lines and label
 
 #========================================================================================
 
@@ -320,36 +326,26 @@ def run_simulation(run_click: int, num_blocks: int, num_miners: int):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("paused-status", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
     ],
     prevent_initial_call = True
 )
 def pause_simulation(pause_click: int):
+    """ This callback will pause the current, in-progress simulation. In reality, the
+        'simulation' callback is cancelled, but the data defining its current state is
+        still stored in the blockchain_structure_data dcc.Store object, so the simulation
+        can be restarted by reconstructing the state.
+        
+        Args:
+            pause_click (int): Unused. The pause button just needs to trigger the callback,
+                its value is irrelevant.
+                
+        Returns:
+            reset-button (str): makes visible
+            resume-button (str): makes visible"""
 
-    return "","", "display-none", True
-
-@dash.callback(
-    background=True,
-    inputs=[
-        Input("paused-status", "data"),
-    ],
-        running=[
-        (Output("miner-slider", "disabled"), True, False),
-        (Output("blocks-input", "disabled"), True, False),
-        (Output("solver-select", "disabled"), True, False),  
-    ],
-    cancel = [Input("resume-button", "n_clicks")],
-    prevent_initial_call = True
-)
-def hold_paused(pause_status: bool):
-
-    if pause_status == True:
-        while True:
-            time.sleep(0.1)
-    else:
-        return
+    return "","", "display-none"
 
 #========================================================================================
 
@@ -357,7 +353,6 @@ def hold_paused(pause_status: bool):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("paused-status", "data", allow_duplicate=True),
     Output("running-status", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
@@ -365,7 +360,7 @@ def hold_paused(pause_status: bool):
     prevent_initial_call = True
 )
 def resume_simulation(pause_click: int):
-    return "display-none", "display-none", "", False, True
+    return "display-none", "display-none", "", False
 
 #========================================================================================
 @dash.callback(
@@ -377,6 +372,9 @@ def resume_simulation(pause_click: int):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("running-status", "data", allow_duplicate=True),
+    Output("miner-slider", "disabled", allow_duplicate=True),
+    Output("blocks-input", "disabled", allow_duplicate=True),
+    Output("solver-select", "disabled", allow_duplicate=True),
     inputs=[
         Input("reset-button", "n_clicks"),
     ],
@@ -392,6 +390,9 @@ def reset_simulation(reset_click: int):
         "display-none", #Reset Button
         "display-none", #Resume Button
         False, #Running Status
+        False, #miner-slider 'disabled' prop
+        False, #blocks-input 'disabled' prop
+        False, #solver-select 'disabled' prop
     )
 
 #=======================================================================================
