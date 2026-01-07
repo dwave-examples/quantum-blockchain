@@ -38,7 +38,7 @@ GRAPH_POINT_MIN_SIZE = 5
 GRAPH_POINT_MAX_SIZE = 15
 GRAPH_MAX_POINTS_PER_REV = 36
 GRAPH_MIN_POINTS_PER_REV = 8
-GRAPH_SEGS_PER_REV = GRAPH_MAX_POINTS_PER_REV*4 
+GRAPH_SEGS_PER_REV = GRAPH_MAX_POINTS_PER_REV*2 
 #######################################
 # Sliders, buttons and option entries #
 #######################################

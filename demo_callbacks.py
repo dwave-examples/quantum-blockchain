@@ -317,6 +317,7 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
     prevent_initial_call = True
 )
 def run_simulation(run_click: int, num_blocks: int, num_miners: int):
+    """ Runs a simulation with the selected number of miners and blocks."""
     blockchain_init = [None for _ in range(num_blocks+3)]
     return "display-none", "", True, "display-none", blockchain_init, True, True, True #TODO break into lines and label
 
@@ -360,7 +361,8 @@ def pause_simulation(pause_click: int):
     prevent_initial_call = True
 )
 def resume_simulation(pause_click: int):
-    return "display-none", "display-none", "", False
+    """ Resumes a paused simulation"""
+    return "display-none", "display-none", "", True
 
 #========================================================================================
 @dash.callback(
@@ -375,13 +377,13 @@ def resume_simulation(pause_click: int):
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("solver-select", "disabled", allow_duplicate=True),
-    inputs=[
+    inputs=[ #TODO add blockchain structure
         Input("reset-button", "n_clicks"),
     ],
     prevent_initial_call = True
 )
 def reset_simulation(reset_click: int):
-
+    """ Resets the simulation, allowing a new simulation to be started."""
     return (
         "", #Intro text
         "display-none", #Loading text

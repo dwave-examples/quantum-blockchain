@@ -7,7 +7,12 @@ from src.structures.score_tree_branch import ScoreTreeBranch, BlockNode
 from src.structures.block_score_tree import BlockScoreTree
 
 from demo_configs import GRAPH_POINT_MIN_SIZE, GRAPH_POINT_MAX_SIZE, GRAPH_MAX_POINTS_PER_REV, GRAPH_MIN_POINTS_PER_REV, GRAPH_SEGS_PER_REV
-from demo_configs import TRUNK_COLOR_SCALE, BRANCH_COLOR_SCALE
+
+#TODO higher priority: used line_profiler to determine how long various tasks take. Use this to guide optimization
+
+#TODO consider how much of this can be pre-computed and stored.
+
+#TODO work carefully through branch arrangement logic to improve depth assignments
 
 class GraphBranch(ScoreTreeBranch):
     def __init__(self, branch: ScoreTreeBranch):
@@ -39,12 +44,27 @@ class GraphBranch(ScoreTreeBranch):
                            in enumerate(master_size_chart) 
                            if idx in [b.block_number for b in self]]
 
-    def assign_depth_adjustment(self, depth_adjustment: int):
-        self.depth_adjustment = depth_adjustment
-        for child in self.children:
-            child.assign_depth_adjustment(depth_adjustment)
+    def assign_depth_adjustment(self, parent_depth_adjustment: int, depth_limits: list[int]):
 
+        local_depth_adjustment = None
+        base_depth = self.depth + parent_depth_adjustment 
+        for depth in range(base_depth, len(depth_limits)): 
+            bound = depth_limits[depth]
+            if self.tip.block_number < bound:
+                local_depth_adjustment = depth - self.depth
+                depth_limits[depth] = self.root.block_number    
+                break
 
+        if local_depth_adjustment is None: #In this case, we exceeded the max depth in depth_limits without finding a space
+            depth_limits.append(self.root.block_number) #So we extend depth_limits to accommodate
+            local_depth_adjustment = len(depth_limits) - self.depth
+
+        self.depth_adjustment = local_depth_adjustment
+        sorted_children = [x for x in self.children]
+        sorted_children.sort(key=lambda x: len(self) - x.root.block_number)
+        for child in sorted_children:
+            child.assign_depth_adjustment(self.depth_adjustment, depth_limits)
+ 
 class SpiralPlotter:
     def __init__(self):
         self.fig_width = 1
@@ -56,10 +76,10 @@ class SpiralPlotter:
         self.min_points_per_rev = GRAPH_MIN_POINTS_PER_REV
         self.segs_per_rev = GRAPH_SEGS_PER_REV
         self.coord_dict = {}
-        self.trunk_edge_color = "#2a7de1"
-        self.trunk_point_color = "#2a7de1"
-        self.branch_edge_color = "#FF7006"
-        self.branch_point_color = "#FF7006"
+        self.trunk_edge_color = "#6fa8ee" #TODO move to demo_configs
+        self.trunk_point_color = "#1458aa"
+        self.branch_edge_color = "#F5A86E"
+        self.branch_point_color = "#B85103"
         self.trunk_tip_color = "black"
 
     def create_master_size_chart(self):
@@ -67,16 +87,26 @@ class SpiralPlotter:
         return [self.min_pnt_size + i*step_size for i in range(self.num_nodes + 1)]
 
 
-    def import_plotting_data(self, tree_data: BlockScoreTree): #TODO add code to automatically compute num_nodes
+    def import_plotting_data(self, tree_data: BlockScoreTree): 
         """ Takes a BlockScoreTree object and processes the data to prepare it to be plotted"""
 
         tree_data.refactor_branches()
         self.num_nodes = tree_data.num_nodes
         self.master_size_chart = self.create_master_size_chart()
         self.points_per_rev = min(self.max_point_per_rev, max(self.min_points_per_rev, self.num_nodes+1))
-        self.angles = [2*math.pi*i/self.points_per_rev for i in range(1, self.points_per_rev + 1)]
         self.num_revs = (self.num_nodes+1)/self.points_per_rev
         self.segs_per_point = math.ceil(self.segs_per_rev/self.points_per_rev)
+        self.loop_scaling = 2/3
+        self.max_r = 0.999
+        
+        angle_step = 2*math.pi/self.points_per_rev
+        self.angles = [i*angle_step for i in range(1, self.points_per_rev + 1)]
+        self.fractional_angles = [[(i+j/self.segs_per_point)*angle_step for j in range(1, self.segs_per_point)] for i in range(1, self.points_per_rev+1)]
+        self.radii = [self.calculate_r(i) for i in range(self.num_nodes+1)]
+        self.fractional_radii = [[self.calculate_r(i+j/self.segs_per_point) for j in range(1, self.segs_per_point)] for i in range(self.num_nodes)]
+        
+
+        self.min_branch_adjustment = 0.78
         self.loop_spacing = 0.99*(self.fig_width/(2*self.num_revs)) #Farthest edge should stop just short of the edge of the figure
 
         self.branches = []
@@ -100,6 +130,18 @@ class SpiralPlotter:
             for child in base_branch.children:
                 new_branch.child = branch_pairs[child.base.hash]
 
+    def calculate_r(self, node_num: int|float):
+        if node_num == 0:
+            blarg = -math.inf
+        else:
+            node_rev_num = node_num/self.points_per_rev
+            blarg = node_rev_num - 1/node_rev_num
+
+        r_scale = self.loop_scaling**(self.num_revs-blarg)
+        if node_num == 0:
+            print(f"Smallest r is {self.max_r*r_scale}")
+        return self.max_r*r_scale
+
     def arrange_branches(self):
         """ Queries the overall structure of the tree, and modifies the depth_adjustment
             attribute of branches as necessary to allow every branch to be graphed on the
@@ -110,40 +152,28 @@ class SpiralPlotter:
 
         bottom_level_branches = [branch for branch in self.branches if branch.depth == 1]
         bottom_level_branches.sort(key=lambda x: self.num_nodes - x.root.block_number)
+        max_depth = max(b.depth for b in self.branches)
 
-        depth_limits = [self.num_nodes+1]    
+        #Depth 0 will always be fully occupied by trunk, but including it makes list indices line up to depth values
+        depth_limits = [0]+[self.num_nodes+1 for _ in range(max_depth)] 
+
         for branch in bottom_level_branches:
-            branch_depth = 1
-            while branch_depth <= len(depth_limits):
-                if branch.tip.block_number < depth_limits[branch_depth-1]:
-                    break
-                else:
-                    branch_depth += 1
+            branch.assign_depth_adjustment(0, depth_limits)
 
-            if branch_depth > len(depth_limits):
-                depth_limits.append(branch.base.block_number)
-            else:
-                depth_limits[branch_depth-1] = branch.base.block_number
+        self.max_branch_depth = max(len(depth_limits)-1, 3)
 
-            depth_adjustment = branch_depth - branch.depth
-            branch.assign_depth_adjustment(depth_adjustment)
-            #TODO work children into depth limits
-
-        deepest_branch = max([branch.depth + branch.depth_adjustment for branch in self.branches])
-        self.max_branch_depth = max(deepest_branch, 2)
-        self.branch_spacing = 0.8/self.max_branch_depth
+    def calculate_depth_adjustment(self, branch_depth: int):
+        adjustment_fraction = branch_depth*(1 - self.min_branch_adjustment)
+        return (self.max_branch_depth - adjustment_fraction)/self.max_branch_depth
 
     def plot_spiral_points(self, branch):
         """ Computes and records the x and y coordinates for each node on a particular branch.
             """
-        if branch.depth > 0:
-            r_0 = self.loop_spacing*(branch.root.block_number)/self.points_per_rev
-            adjustment = -min(r_0, self.loop_spacing)*self.branch_spacing*(branch.depth + branch.depth_adjustment)
-        else:
-            adjustment = 0
+
+        adjustment = self.calculate_depth_adjustment(branch.depth + branch.depth_adjustment)
+
         for node in branch:
-            r_node = node.block_number*self.loop_spacing/self.points_per_rev
-            r_node += adjustment
+            r_node = self.radii[node.block_number]*adjustment
             theta_node = self.angles[node.block_number%self.points_per_rev]
             x_node = self.center[0] + r_node*math.cos(theta_node)
             y_node = self.center[1] + r_node*math.sin(theta_node)
@@ -151,7 +181,7 @@ class SpiralPlotter:
             branch.y_points.append(y_node)
             self.coord_dict.update({node.block_number: (x_node, y_node)})
 
-    def compute_fractional_angle(self, start_index, num_steps):
+    def compute_fractional_angle(self, start_index, num_steps): #TODO replace with pre-computed table
         total_index = (start_index + num_steps/self.segs_per_point)%self.points_per_rev
         whole_index = math.floor(total_index)
         frac_index = round(total_index - whole_index, 6)
@@ -173,30 +203,26 @@ class SpiralPlotter:
             branch.x_edges.append(root_x)
             branch.y_edges.append(root_y)
 
-
-        first_idx = branch.start_idx
-        for i in range(len(branch)):
-            if branch.depth > 0:
-                r_0 = self.loop_spacing*(branch.root.block_number)/self.points_per_rev
-                adjustment = -min(r_0, self.loop_spacing)*self.branch_spacing*(branch.depth + branch.depth_adjustment)
-            else:
-                adjustment = 0
-            second_idx = branch[i].block_number
-            if second_idx > first_idx:
-                num_points = second_idx - first_idx
-                num_segs = num_points*self.segs_per_point
-                for j in range(num_segs-1):
-                    r_current = (first_idx + j/self.segs_per_point)*self.loop_spacing/self.points_per_rev
-                    r_current += adjustment
-                    theta_current = self.compute_fractional_angle(first_idx, j)
-                    x_next = self.center[0] + r_current*math.cos(theta_current)
-                    y_next = self.center[1] + r_current*math.sin(theta_current)
-                    branch.x_edges.append(x_next)
-                    branch.y_edges.append(y_next)
-
-            branch.x_edges.append(branch.x_points[i]) 
-            branch.y_edges.append(branch.y_points[i])
-            first_idx = second_idx
+        start_idx = branch.start_idx
+        stop_idx = branch.tip.block_number
+        adjustment = self.calculate_depth_adjustment(branch.depth + branch.depth_adjustment)
+        for i in range(start_idx, stop_idx+1):
+            r_i = self.radii[i]*adjustment
+            theta_i = self.angles[i%self.points_per_rev]
+            x_i = self.center[0] + r_i*math.cos(theta_i)
+            y_i = self.center[1] + r_i*math.sin(theta_i)
+            branch.x_edges.append(x_i)
+            branch.y_edges.append(y_i)
+            if i == stop_idx:
+                break
+            for j in range(self.segs_per_point-1):
+            
+                r_ij = self.fractional_radii[i][j]*adjustment
+                theta_ij = self.fractional_angles[i%self.points_per_rev][j]
+                x_ij = self.center[0] + r_ij*math.cos(theta_ij)
+                y_ij = self.center[1] + r_ij*math.sin(theta_ij)
+                branch.x_edges.append(x_ij)
+                branch.y_edges.append(y_ij)
 
 
     def plot_spiral(self):
@@ -211,6 +237,17 @@ class SpiralPlotter:
         for branch in self.branches:
             self.plot_spiral_curves(branch, trunk=bool(branch == self.trunk))
 
+    def draw_radial_lines(self):
+        traces = []
+        for angle in self.angles:
+            x_end = self.center[0] + self.max_r*math.cos(angle)
+            y_end = self.center[1] + self.max_r*math.sin(angle)
+            x_edge = [self.center[0], x_end]
+            y_edge = [self.center[1], y_end]
+            new_trace = go.Scatter(x=x_edge, y=y_edge, mode="lines", line={"color": "grey", "width":0.5})
+            traces.append(new_trace)
+
+        return traces
     
     def draw_spiral(self):
         """ Assuming all the points and edges have been plotted"""
@@ -232,6 +269,10 @@ class SpiralPlotter:
                 node_traces.append(branch_node_trace)
 
         for trace in node_traces:
+            plot_data.append(trace)
+
+        radial_traces = self.draw_radial_lines()
+        for trace in radial_traces:
             plot_data.append(trace)
 
         fig = go.Figure(plot_data)
