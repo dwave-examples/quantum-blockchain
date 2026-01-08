@@ -158,6 +158,7 @@ async def simulation(
             manager.block_broadcast = last_block["block_json"]
             random.shuffle(unfinished_miners)
             manager.round_order = finished_miners + unfinished_miners
+            current_block_dict = last_block
             print("Finished all restart logic.")
 
         while(manager.blocks_mined <= num_blocks):

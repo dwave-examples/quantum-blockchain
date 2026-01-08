@@ -1,7 +1,7 @@
 
 # Quantum Blockchain Demo
 
-In the paper paper, “Blockchain with Proof of Quantum Work” [arXiv:2503.14462] D-Wave executed the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs.
+In the paper, “Blockchain with Proof of Quantum Work” [arXiv:2503.14462] D-Wave executed the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs.
 
 This demo implements a simple form of the architecture compatible with the paper, demonstrating consensus amongst miners using diverse quantum experiments subject to sampling and control errors.
 After setting parameters, the blockchain is initiated with a genesis block placed at the center of a spiral.
