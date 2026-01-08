@@ -17,14 +17,14 @@ from dwave.cloud import Client
 import numpy as np
 
 class SolverName(Enum):
-    SOLVER1 = "Advantage2_prototype2.6"
+    SOLVER1 = "Advantage2_system2_x_internal"  # Internal name for prototype.
     SOLVER2 = "Advantage_system4.1"
     SOLVER3 = "Advantage_system6.4"
-    SOLVER4 = "Advantage_system7.1"
-    BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"
+    SOLVER4 = "Advantage2_system1.10"  
+    BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"  # No longer general access
     BOOTSTRAP2 = "simulated_Advantage_system4.1"
     BOOTSTRAP3 = "simulated_Advantage_system6.4"
-    BOOTSTRAP4 = "simulated_Advantage_system7.1"
+    BOOTSTRAP4 = "simulated_Advantage_system7.1"  # Offline
 
 
 class HashSolver(ABC):
