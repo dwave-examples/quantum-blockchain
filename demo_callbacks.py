@@ -121,7 +121,7 @@ async def simulation(
 
     if running_status == False or ctx.triggered_id != "running-status":
         raise PreventUpdate
-    else: #TODO: add unpause logic
+    else: 
         num_blocks = block_input_val
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
@@ -161,7 +161,6 @@ async def simulation(
             print("Finished all restart logic.")
 
         while(manager.blocks_mined <= num_blocks):
-            print("Made it to the main loop.")
             mined, miner_id, block_score = manager.single_step()
             if mined:
                 await asyncio.sleep(0.8)
@@ -174,6 +173,8 @@ async def simulation(
                 current_block_dict["new"] = False
 
             current_block_dict["scores"][miner_id] = block_score
+
+            print(f"In simulation... with {manager.blocks_mined} and {current_block_dict["scores"].keys()}")
 
             update_current_block_data(current_block_dict)
 
@@ -195,11 +196,13 @@ async def simulation(
 async def update_blockchain_data(block_data: dict):
     """ Pass-through function to patch the single-block update from the 'simulation' callback
         into the larger blockchain data structure."""
-    #TODO add check to make sure block data isn't ahead of where it should be
     block_number = block_data["block_number"]
-    print(f"Updating blockchain data for block {block_number}")
+    print(f"In update_blockchain_data.. with {block_number} and {block_data["scores"].keys()}")
+    update_start = time.time()
     to_update = Patch()
     to_update[block_number-1] = block_data
+    update_end = time.time()
+    print(f"Update took {update_end - update_start} s and ended at {update_end}")
     return to_update
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -224,6 +227,9 @@ async def update_blockchain_data(block_data: dict):
 async def update_main_display(blockchain_structure_data: list, selected_view: int, num_miners: int):
     """ This callback processes blockchain structure data and uses it to update the miner status
         table and the graph display."""
+    
+    disp_update_start = time.time()
+    print(f"Display update started at {disp_update_start}")
 
     selected_view = int(selected_view)
 
@@ -238,6 +244,11 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
     current_blockchain_data = blockchain_structure_data[:block_number]
     current_block_data = current_blockchain_data[-1]
     mining_id = current_block_data["miner_id"]
+
+    print(f"Starting update_main_display with {block_number} and {current_block_data["scores"].keys()}")
+    print("")
+    print("")
+    print("")
 
     #Compute miner status table
 
@@ -288,6 +299,9 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
         #TODO figure out how to compute global view
     else:
         miner_fig = dash.no_update
+
+    disp_update_end = time.time()
+    print(f"Update main display took {disp_update_end - disp_update_start} seconds.")
 
     return "", "display-none", miner_table_head, miner_table_body, miner_fig
 
@@ -344,7 +358,8 @@ def pause_simulation(pause_click: int):
                 
         Returns:
             reset-button (str): makes visible
-            resume-button (str): makes visible"""
+            resume-button (str): makes visible
+            pause-button (str): hides"""
 
     return "","", "display-none"
 
@@ -361,7 +376,18 @@ def pause_simulation(pause_click: int):
     prevent_initial_call = True
 )
 def resume_simulation(pause_click: int):
-    """ Resumes a paused simulation"""
+    """ Resumes a paused simulation. In practice, this means starting a new instance of the
+        'simulation' callback, but without resetting the blockchain data. The simulation 
+        will then reconstruct its previous state and pick up where it left off.
+        
+        Args:
+            pause_click (int): Unused.
+            
+        Returns:
+            reset-button (str): hides
+            resume-button (str): hides
+            pause-button (str): makes visible
+            running-status (bool): sets to 'True', indicating that simulation should resume."""
     return "display-none", "display-none", "", True
 
 #========================================================================================

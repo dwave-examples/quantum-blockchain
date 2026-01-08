@@ -131,15 +131,24 @@ class SpiralPlotter:
                 new_branch.child = branch_pairs[child.base.hash]
 
     def calculate_r(self, node_num: int|float):
+        """ Calculates the distance from the center at which a point should be drawn. The logic
+            is chosen such that the furthest-out turn of the spiral will take up 1/3 of the total
+            radius, while the next turn in will take up 1/3 of the remainder. A correction factor
+            is added to this so that points very near the beginning of the spiral will converge 
+            more quickly towards the center (which would otherwise only happen in the limit of
+            very many revolutions). 
+            
+            Args:
+                node_num (int or float): the block number (order in the blockchain) of the node
+                    being computed. Allows for fractional node numbers to assist in drawing
+                    graph lines, which requires plotting points in between the actual graph nodes."""
         if node_num == 0:
-            blarg = -math.inf
+            r_exp = -math.inf
         else:
             node_rev_num = node_num/self.points_per_rev
-            blarg = node_rev_num - 1/node_rev_num
+            r_exp = node_rev_num - 1/node_rev_num
 
-        r_scale = self.loop_scaling**(self.num_revs-blarg)
-        if node_num == 0:
-            print(f"Smallest r is {self.max_r*r_scale}")
+        r_scale = self.loop_scaling**(self.num_revs-r_exp)
         return self.max_r*r_scale
 
     def arrange_branches(self):
@@ -181,21 +190,20 @@ class SpiralPlotter:
             branch.y_points.append(y_node)
             self.coord_dict.update({node.block_number: (x_node, y_node)})
 
-    def compute_fractional_angle(self, start_index, num_steps): #TODO replace with pre-computed table
-        total_index = (start_index + num_steps/self.segs_per_point)%self.points_per_rev
-        whole_index = math.floor(total_index)
-        frac_index = round(total_index - whole_index, 6)
-        if frac_index > 0:
-            angle_adjustment = (self.angles[1] - self.angles[0])*frac_index
-        else:
-            angle_adjustment = 0
-
-        return self.angles[whole_index] + angle_adjustment
-
-    def plot_spiral_curves(self, branch, trunk: bool = True):
+    def plot_spiral_curves(self, branch: GraphBranch, trunk: bool = True):
         """ For a given branch, adds the points defining the 'curves' connecting the points
-            on that branch. Each such 'curve' will be made up self.segs_per_point line
-            segments, with larger numbers making smoother curves."""
+            on that branch. Each such 'curve' will be made up of a number of line segments 
+            defined by the self.segs_per_point attribute. Plotly accepts these as lists
+            of x- and y-coordinates, between which it will draw the lines. These coordinates
+            include all of the coordinates of points on the graph, but also many points 
+            between them so as to create a smooth curve:
+            
+            Args:
+                branch (GraphBranch): the branch to be plotted
+                trunk (bool): Defaults to 'True'. Flag to signal whether the branch
+                is the trunk: non-trunk branches need a 'stem' segment drawn
+                to connect them to their parent branch."""
+        
         if not trunk: #Adds straight "stem" segment connecting branch to parent
             root_idx = branch.parent.hash_to_index_lookup[branch.root_hash]
             root_x = branch.parent.x_points[root_idx]
@@ -238,6 +246,7 @@ class SpiralPlotter:
             self.plot_spiral_curves(branch, trunk=bool(branch == self.trunk))
 
     def draw_radial_lines(self):
+        """ Draws radial lines at the pre-defined angles at which blocks will be plotted. """
         traces = []
         for angle in self.angles:
             x_end = self.center[0] + self.max_r*math.cos(angle)
