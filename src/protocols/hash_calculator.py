@@ -6,15 +6,16 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from enum import Enum
 
-from src.directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH
+from directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
-from src.values import ADVANTAGE4_1_MAX_NUM_READS
+from src.values import DEFAULT_NUM_READS, ADVANTAGE4_1_MAX_NUM_READS
 
 from dwave.system import DWaveSampler
 from dwave.cloud import Client
 
 import numpy as np
+
 
 class SolverName(Enum):
     SOLVER1 = "Advantage2_system2_x_internal"  # Internal name for prototype.
@@ -27,11 +28,18 @@ class SolverName(Enum):
     BOOTSTRAP4 = "simulated_Advantage_system7.1"  # Offline
 
 
+SolverParams = namedtuple(
+    "SolverParams",
+    ["solver_name", "randomize_embedding", "annealing_time", "profile"],
+    defaults=(None, False, 0.0, "defaults"),
+)
+
+
 class HashSolver(ABC):
 
     @abstractmethod
     def calculate_quantum_hash(
-        self, rng_seed: int, hash_length: int=128
+        self, hash_length: int, rng_seed: int
     ) -> tuple[str, np.ndarray, float]:
         """Template for the method to calculate quantum hash values. Implementation will vary by solver type,
         but input and return values should stay consistent.
@@ -47,7 +55,8 @@ class HashSolver(ABC):
                     more convenient to leave it as raw bits here.
             dot_vector: a np vector encoding the hyperplane distance for each bit (that is, the dot product of the
                         hash vector and the hyperplane's normal vector)
-            sample_time: the time required by the sampler to generate the sampler_output"""
+            sample_time: the time required by the sampler to generate the sampler_output
+        """
         pass
 
     @property
@@ -75,7 +84,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
 
 class BootstrappingHashSolver(HashSolver):
 
-    def __init__(self, solver_name: str, dW: float = 1.0, num_reads=600) -> None:
+    def __init__(self, solver_name: str, dW =1.0, num_reads = 600) -> None:
         """Initializes a bootstrap solver. Does not use any of the passed parameters except the solver name,
             which it uses to determine which bootstrapping files to draw from. These file must be in place
             in the filesystem for the initialization to succeed.
@@ -85,14 +94,12 @@ class BootstrappingHashSolver(HashSolver):
                 in trials_main.py
             dW: rescaling of witnesses. Relevant to confidence-based chainwork
                 assessments.
-            num_reads (int). Defaults to 600. Used to simulate running the solver at different num_reads by
-                scaling the variance.
         """
 
         self._solver_name = solver_name
-        #assert (
-         #   self.solver_name in BootstrappingHashSolver.allowed_solvers()
-        #), f"BootstrappingHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
+        assert (
+            self.solver_name in BootstrappingHashSolver.allowed_solvers()
+        ), f"BootstrappingHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
         mean_filepath = os.path.join(BOOTSTRAP_PATH, self.solver_name + "_mean.npy")
         var_filepath = os.path.join(BOOTSTRAP_PATH, self.solver_name + "_var.npy")
         self.mean_witnesses = np.load(mean_filepath)
@@ -109,8 +116,8 @@ class BootstrappingHashSolver(HashSolver):
         return [str(sn.value) for sn in SolverName if "simulated" in str(sn.value)]
 
     def calculate_quantum_hash(
-            self, rng_seed: int, hash_length: int=128
-            ) -> tuple[str, np.ndarray, float]:
+        self, hash_length: int, rng_seed: int
+    ) -> tuple[str, np.ndarray, float]:
         """Implementation of quantum hash calculation for solvers simulated using bootstrapping. Requires
             Bootstrapping files for the current solver to be in place in order to function.
 
@@ -148,21 +155,18 @@ class QuantumHashSolver(HashSolver):
     connection to run."""
 
     @property
-    def solver_parameters(self) -> dict: #TODO update
-        return {
-            "solver_name": self.solver_name,
-            "randomize_embedding":self.randomize_embedding,
-            "annealing_time":self.annealing_time,
-            "profile": self.profile,
-        }
+    def solver_parameters(self) -> SolverParams:
+        return SolverParams(
+            solver_name=self.solver_name,
+            randomize_embedding=self.randomize_embedding,
+            annealing_time=self.annealing_time,
+            profile=self.profile,
+        )
 
     def __init__(
-        self,
-        solver_name: str,
+        self, solver_name: str,
         randomize_embedding: bool = False,
         profile: str = "defaults",
-        ensemble: str = "PMJ",
-        model_size: int = 4,
         num_reads: int = 600,
     ) -> None:
         """Initializes the QuantumHashSolver object, which will create and maintain a connection to the
@@ -173,8 +177,6 @@ class QuantumHashSolver(HashSolver):
                 in trials_main.py
             ensemble: The J distribution used for the spin-glass quench. Options are 'DimBiClique' or 'PMJ', for
                 bicliques and cubic lattices respectively.
-            model_size: The model scale for the quench dynamics.
-                Typically the linear scale of a cubic lattice. Ignored for BiCliques which always take size 18.
         """
         self._solver_name = solver_name
         assert (
@@ -182,14 +184,10 @@ class QuantumHashSolver(HashSolver):
         ), f"QuantumHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
         self.embedding_directory = EMBEDDINGS_PATH
         self.randomize_embedding = randomize_embedding
-        self.annealing_time = 0.005 #TODO get annealing time for different solvers 
+        self.annealing_time = 0.005
         self.profile = profile
-        self.ensemble = ensemble
-        self.model_size = model_size
-        self._num_reads = num_reads
         self.ensemble = "PMJ"
-        self.model_size = 4
-        self._num_reads = num_reads
+        self._num_reads = DEFAULT_NUM_READS
         self.client = Client.from_config(profile=self.profile)  # TODO check if this is needed
         self.qpu = DWaveSampler(solver=self.solver_name, profile="defaults")
 
@@ -198,7 +196,7 @@ class QuantumHashSolver(HashSolver):
         return [str(sn.value) for sn in SolverName if "simulated" not in str(sn.value)]
 
     def calculate_quantum_hash(
-        self, rng_seed: int, hash_length: int=128
+        self, hash_length: int, rng_seed: int
     ) -> tuple[str, np.ndarray, float]:
         """Implementation of quantum hash calculation for solvers simulated using bootstrapping. Requires
             Bootstrapping files for the current solver to be in place in order to function.
@@ -214,8 +212,9 @@ class QuantumHashSolver(HashSolver):
             dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence
             sample_time (float): time spent sampling the D-Wave solver"""
 
-        h, J = quantum_cubic_utils.default_ising_model(
-            self.model_size, rng_seed, ensemble=self.ensemble
+        h, J = quantum_cubic_utils.create_model(
+            ensemble=self.ensemble,
+            seed=rng_seed,
         )
 
         sampler, sampler_kwargs = quantum_cubic_utils.generate_default_sampler(
@@ -227,7 +226,6 @@ class QuantumHashSolver(HashSolver):
             annealing_time=self.annealing_time,
             qpu=self.qpu,
             num_reads=self._num_reads,
-            use_pynauty=(self.ensemble == "DimBiClique"),
         )
         sampler_kwargs["J"] = J
         sampler_kwargs["h"] = h

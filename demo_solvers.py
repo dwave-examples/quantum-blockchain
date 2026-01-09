@@ -1,5 +1,5 @@
 from src.protocols.hash_calculator import SolverName, initialize_solver
-from src.utilities.quantum_cubic_utils import get_energy_scale
+from src.values import DEFAULT_ENERGY_TIME_RESCALING
 
 solver_list = []
 
@@ -7,7 +7,8 @@ for name in SolverName:
     name = str(name.value)
     try:
         if "simulated" not in name:
-            get_energy_scale(name)
+            if name not in DEFAULT_ENERGY_TIME_RESCALING:
+                raise Exception("Solver energy scale not found!")
         next_solver = initialize_solver(name)
         solver_list.append(next_solver)
     except:

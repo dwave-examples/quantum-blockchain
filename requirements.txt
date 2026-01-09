@@ -8,6 +8,6 @@ flask
 requests
 pandas
 numpy
-pynauty ##TODO: remove (Jack will do)
 pytest
 matplotlib
+git+https://github.com/jackraymond/dwave-experimental@feature/automorphism_composite#egg=dwave-experimental  # Pull request approval pending

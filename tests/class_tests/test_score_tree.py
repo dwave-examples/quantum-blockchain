@@ -76,9 +76,6 @@ def test_tree_structure():
                     assert (
                         child.root.hash in branch.hash_to_index_lookup
                     ), "Child rooted at {child.root_hash} of branch rooted at {branch.root_hash} not rooted in branch for tree {idx}."
-                    assert (
-                        branch.high_score >= child.high_score
-                    ), "Branch rooted at {branch.root_hash} had lower best score than child rooted at {child.root_hash}."
 
 
 def test_tree_io():

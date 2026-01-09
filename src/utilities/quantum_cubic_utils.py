@@ -32,7 +32,7 @@ from dwave.system import DWaveSampler
 from dwave.samplers import SimulatedAnnealingSampler
 from minorminer.utils.parallel_embeddings import find_multiple_embeddings
 
-from src.directory_paths import (
+from directory_paths import (
     EMBEDDINGS_PATH,
 )  # Improvement? Not a fan of this dependency on the directory structure.
 from src.values import (
@@ -108,7 +108,6 @@ def get_embeddings(
     if os.path.isfile(embedding_filename) and load_from_cache:
         with open(embedding_filename, "rb") as f:
             embeddings = pickle.load(f)
-        print(f"Loaded {len(embeddings)} from {embedding_filename}")
     else:
         if embedding_timeout > 0:
             if load_from_cache:
@@ -634,6 +633,7 @@ def generate_default_sampler(
             find_subgraph_kwargs=find_subgraph_kwargs,
         )
         if len(embeddings) == 0:
+            raise Exception(f"Embeddings not found at {embedding_directory}")
             return None, {}
 
         if time_rescaling_factor is None:
