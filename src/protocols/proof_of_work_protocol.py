@@ -16,7 +16,6 @@ class ProofOfWorkProtocol:
     def __init__(
         self,
         hash_solvers: list[HashSolver],
-        solver_randomization: str = "none",
     ) -> None:
         """Initializes a ProofOfWorkProtocol object. Intended usage is for a single Miner to initialize one of these objects on startup and
             keep it initialized for the duration of a trial.
@@ -28,25 +27,11 @@ class ProofOfWorkProtocol:
             scoring_function (Scoring): scoring function used to assign scores to blocks. See scoring.py for details.
             miner_private_key (RSA.RsaKey): miner's RSA private key.
             miner_public_key (str): the miner's public key, formatted as a hexidecimal string
-            solver_randomization (str): Defaults to 'none'. Scheme for randomizing the solver. See docstring in trials_main.py for details
         """  # TODO replace with Enum
 
         self.initialize_protocol_settings()
         self.solver_list = hash_solvers
-        self._solver_randomization = solver_randomization
-
-        if solver_randomization == "none":
-            self.current_solver = self.solver_list[0]
-        else:
-            self.set_random_solver()
-
-
-    @property
-    def rerandomize_solver(self):
-        if "dynamic" in self._solver_randomization:
-            return True
-        else:
-            return False
+        self.set_random_solver()
 
     def initialize_protocol_settings(self):
         """This initialized all the settings that must be shared across all users of the protocols.
@@ -223,8 +208,7 @@ class ProofOfWorkProtocol:
             sample_time: the time required by the sampler to generate the sampler_output"""
         
         random_seed = int(block.hash_seed, 16)
-        if self.rerandomize_solver:
-            self.set_random_solver()
+        self.set_random_solver()
 
         q_hash = self.current_solver.calculate_quantum_hash(
             hash_length=self.quantum_hash_length, rng_seed=random_seed

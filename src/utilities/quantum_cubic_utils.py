@@ -45,7 +45,17 @@ from src.values import (
 
 
 def get_time_rescaling_factor(solver: str) -> float:
-    """Get the time rescaling factor required for matched dynamics."""
+    """Get the time rescaling factor required for matched dynamics.
+
+    Args:
+        solver: QPU solver name
+
+    Returns
+        A suitable factor by which to rescale the problem Hamiltonian for
+        emulation of Advantage2_system2.6, in combination with the time
+        rescaling factor.
+
+    """
     # Improvement?: Add script for approximate calculation (by energy matching, per paper).
     # Improvement?: Add wildcards, shouldn't depend on minor solver number.
     if solver in DEFAULT_ENERGY_TIME_RESCALING:
@@ -53,6 +63,27 @@ def get_time_rescaling_factor(solver: str) -> float:
     else:
         # Improvement allow fallback (calculation) as option. See examples/
         return None
+
+
+def get_energy_rescaling_factor(solver: str) -> float:
+    """Get the energy rescaling factor required for matched dynamics.
+
+    Args:
+        solver: QPU solver name
+
+    Returns
+        A suitable factor by which to rescale annealing time for
+        emulation of Advantage2_system2.6, in combination with the energy
+        rescaling factor.
+
+    """
+    # Improvement?: Add script for approximate calculation (by energy matching, per paper).
+    # Improvement?: Add wildcards, shouldn't depend on minor solver number.
+    if solver in DEFAULT_ENERGY_TIME_RESCALING:
+        return DEFAULT_ENERGY_TIME_RESCALING[solver][0]
+    else:
+        # Improvement allow fallback (calculation) as option. See examples/
+        return 1.0
 
 
 def get_embeddings(

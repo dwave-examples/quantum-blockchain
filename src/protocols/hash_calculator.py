@@ -18,10 +18,9 @@ import numpy as np
 
 
 class SolverName(Enum):
-    SOLVER1 = "Advantage2_system2_x_internal"  # Internal name for prototype.
-    SOLVER2 = "Advantage_system4.1"
-    SOLVER3 = "Advantage_system6.4"
-    SOLVER4 = "Advantage2_system1.10"  
+    SOLVER1 = "Advantage_system4.1"
+    SOLVER2 = "Advantage_system6.4"
+    SOLVER3 = "Advantage2_system1.10"  
     BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"  # No longer general access
     BOOTSTRAP2 = "simulated_Advantage_system4.1"
     BOOTSTRAP3 = "simulated_Advantage_system6.4"
@@ -46,8 +45,11 @@ class HashSolver(ABC):
 
         Args:
             hash_length (int): length (in bits) of the hash to be calculated
-            rng_seed (int): random seed which sets the properties of both the (real or simulated) quantum experiment
-                      and the random projection that's used to calculate witnesses
+            rng_seed (int): For the case of sampling from QPUs the random seed
+                sets the unitary evolution parameters
+                (for quantum experiments) and random projections defining witnesses.
+                For the case of bootstrap sampling, it initiates the pseudorandom
+                sampling of offline data models.
 
         Returns:
             hash_bits: a np vector whose values should be exclusively 0s and 1s, defining the quantum hash.
@@ -84,7 +86,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
 
 class BootstrappingHashSolver(HashSolver):
 
-    def __init__(self, solver_name: str, dW =1.0, num_reads = 600) -> None:
+    def __init__(self, solver_name: str, dW = 1.0, num_reads = 600) -> None:
         """Initializes a bootstrap solver. Does not use any of the passed parameters except the solver name,
             which it uses to determine which bootstrapping files to draw from. These file must be in place
             in the filesystem for the initialization to succeed.
@@ -216,7 +218,6 @@ class QuantumHashSolver(HashSolver):
             ensemble=self.ensemble,
             seed=rng_seed,
         )
-
         sampler, sampler_kwargs = quantum_cubic_utils.generate_default_sampler(
             J,
             use_qpu=True,

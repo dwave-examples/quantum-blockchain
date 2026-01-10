@@ -27,7 +27,7 @@ DEFAULT_ENERGY_TIME_RESCALING = {
     "Advantage_system4.1": (1.0, 0.535),
     "Advantage_system6.4": (1.0, 0.488),
     "Advantage_system7.1": (1.0, 0.456),  # Offline
-    "Advantage2_system1.10": (1.0, 1.32),  # NB: Does not play nice with 5us (TO DO: energy rescale solution)
+    "Advantage2_system1.10": (1.34, 1.0)  # "Advantage2_system1.10": (1.0, 1.32), SUITABLE FOR ANNEAL DURATIONS LONGER THAN 5*1.32 nanoseconds.
 }
 # ===================================================================================
 #                      Global Trial Definitions

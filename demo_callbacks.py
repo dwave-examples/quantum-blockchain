@@ -36,7 +36,7 @@ from demo_solvers import AVAILABLE_SOLVERS
 from demo_interface import generate_options
 from src.utilities.display_update import render_miner_status
 from src.structures.block_score_tree import BlockScoreTree, BlockNode
-
+from src.protocols.hash_calculator import BootstrappingHashSolver
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -126,9 +126,17 @@ async def simulation(
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
-        solver = AVAILABLE_SOLVERS[int(solver_select_val)]
+        simulated_qpu_solvers = BootstrappingHashSolver.allowed_solvers()
+        qpu_solvers = set(AVAILABLE_SOLVERS).difference(simulated_qpu_solvers)
+        dropdown_idx = int(solver_select_val)
+        if dropdown_idx == 0:
+            solvers = list(qpu_solvers)
+        elif dropdown_idx == 1:
+            solvers = simulated_qpu_solvers
+        else:
+            solvers = [AVAILABLE_SOLVERS[dropdown_idx - 2]]
 
-        manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solver=solver)
+        manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solvers=solvers)
 
         block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "miner_id": ""}
         current_block_dict = copy.deepcopy(block_dict_template)
@@ -175,7 +183,7 @@ async def simulation(
 
             current_block_dict["scores"][miner_id] = block_score
 
-            print(f"In simulation... with {manager.blocks_mined} and {current_block_dict["scores"].keys()}")
+            print(f"In simulation... with {manager.blocks_mined} and {current_block_dict['scores'].keys()}")
 
             update_current_block_data(current_block_dict)
 
@@ -198,7 +206,7 @@ async def update_blockchain_data(block_data: dict):
     """ Pass-through function to patch the single-block update from the 'simulation' callback
         into the larger blockchain data structure."""
     block_number = block_data["block_number"]
-    print(f"In update_blockchain_data.. with {block_number} and {block_data["scores"].keys()}")
+    print(f"In update_blockchain_data.. with {block_number} and {block_data['scores'].keys()}")
     update_start = time.time()
     to_update = Patch()
     to_update[block_number-1] = block_data
@@ -246,7 +254,7 @@ async def update_main_display(blockchain_structure_data: list, selected_view: in
     current_block_data = current_blockchain_data[-1]
     mining_id = current_block_data["miner_id"]
 
-    print(f"Starting update_main_display with {block_number} and {current_block_data["scores"].keys()}")
+    print(f"Starting update_main_display with {block_number} and {current_block_data['scores'].keys()}")
     print("")
     print("")
     print("")

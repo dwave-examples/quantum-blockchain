@@ -95,7 +95,7 @@ def input_number(label: str, id: str, config: dict) -> html.Div:
             dmc.NumberInput(
                 id=id,
                 **config,
-            )
+            ),
         ],
     )
 
@@ -116,8 +116,8 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    solver_opts = [slvr.solver_name for slvr in AVAILABLE_SOLVERS]
-    solver_opts += ["Random QPU", "Random Simulated Solver"]
+    solver_opts = ["All QPUs", "All simulated QPUs"]
+    solver_opts += [slvr.solver_name for slvr in AVAILABLE_SOLVERS]
 
     return html.Div(
         className="settings",
@@ -155,13 +155,14 @@ def generate_run_buttons() -> html.Div:
                         n_clicks=0,
                         className="display-none",
                     ),
-                    html.Button(id="resume-button",
+                    html.Button(
+                        id="resume-button",
                         children="Resume",
                         n_clicks=0,
                         className="display-none",
                     ),
-                ]
-            )
+                ],
+            ),
         ],
     )
 
@@ -177,14 +178,12 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-
             dcc.Store(id="running-status", data=False),
             dcc.Store(id="paused-status", data=False),
             dcc.Store(id="current-block-data", data=""),
-            dcc.Store(id="blockchain-structure-data", data =[]),
+            dcc.Store(id="blockchain-structure-data", data=[]),
             dcc.Store(id="miner-status-data", data={}),
             dcc.Store(id="blocks-mined", data=0),
-
             # Header brand banner
             html.Header(className="banner", children=[html.Img(src=THUMBNAIL, alt="D-Wave logo")]),
             # Settings and results columns
@@ -232,8 +231,8 @@ def create_interface():
                                 className="",
                                 children=[
                                     html.Div(
-                                    children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
-                                    id="intro-text",
+                                        children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
+                                        id="intro-text",
                                     ),
                                     html.H3(
                                         LOADING_TEXT,
@@ -246,7 +245,13 @@ def create_interface():
                                 className="display-none",
                                 id="miner-graph-and-table",
                                 children=[
-                                    dropdown("", "view-select", generate_options_dropdown([MINER_NAMES[i] for i in range(3)])),
+                                    dropdown(
+                                        "",
+                                        "view-select",
+                                        generate_options_dropdown(
+                                            [MINER_NAMES[i] for i in range(3)]
+                                        ),
+                                    ),
                                     html.Div(
                                         className="graph-table-wrapper",
                                         children=[
@@ -258,29 +263,31 @@ def create_interface():
                                                         responsive=True,
                                                         config={"displayModeBar": False},
                                                     ),
+                                                ],
+                                            ),
+                                            html.Div(
+                                                [
+                                                    html.H4(id="miner-table-head"),
+                                                    html.Table(
+                                                        id="miner-status-table",
+                                                        children=[
+                                                            html.Thead(
+                                                                html.Tr(
+                                                                    [
+                                                                        html.Th("Miner"),
+                                                                        html.Th("Status"),
+                                                                    ],
+                                                                )
+                                                            ),
+                                                            html.Tbody(id="miner-table-body"),
+                                                        ],
+                                                    ),
                                                 ]
                                             ),
-                                            html.Div([
-                                                html.H4(id="miner-table-head"),
-                                                html.Table(
-                                                    id="miner-status-table",
-                                                    children=[
-                                                        html.Thead(
-                                                            html.Tr(
-                                                                [
-                                                                    html.Th("Miner"),
-                                                                    html.Th("Status"),
-                                                                ],
-                                                            )
-                                                        ),
-                                                        html.Tbody(id="miner-table-body"),
-                                                    ]
-                                                ),
-                                            ]),
-                                        ]
-                                    )
-                                ]
-                            )
+                                        ],
+                                    ),
+                                ],
+                            ),
                         ],
                     ),
                 ],
