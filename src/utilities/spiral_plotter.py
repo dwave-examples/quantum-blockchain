@@ -6,7 +6,17 @@ import plotly.express as px
 from src.structures.score_tree_branch import ScoreTreeBranch, BlockNode
 from src.structures.block_score_tree import BlockScoreTree
 
-from demo_configs import GRAPH_POINT_MIN_SIZE, GRAPH_POINT_MAX_SIZE, GRAPH_MAX_POINTS_PER_REV, GRAPH_MIN_POINTS_PER_REV, GRAPH_SEGS_PER_REV
+from demo_configs import (GRAPH_POINT_MIN_SIZE, 
+                          GRAPH_POINT_MAX_SIZE, 
+                          GRAPH_MAX_POINTS_PER_REV, 
+                          GRAPH_MIN_POINTS_PER_REV, 
+                          GRAPH_SEGS_PER_REV,
+                          TRUNK_EDGE_COLOR,
+                          TRUNK_POINT_COLOR,
+                          ABANDONED_BRANCH_EDGE_COLOR,
+                          ABANDONED_BRANCH_POINT_COLOR,
+                          ACTIVE_BRANCH_EDGE_COLOR,
+                          ACTIVE_BRANCH_POINT_COLOR)
 
 #TODO higher priority: used line_profiler to determine how long various tasks take. Use this to guide optimization
 
@@ -76,10 +86,13 @@ class SpiralPlotter:
         self.min_points_per_rev = GRAPH_MIN_POINTS_PER_REV
         self.segs_per_rev = GRAPH_SEGS_PER_REV
         self.coord_dict = {}
-        self.trunk_edge_color = "#6fa8ee" #TODO move to demo_configs
-        self.trunk_point_color = "#1458aa"
-        self.branch_edge_color = "#F5A86E"
-        self.branch_point_color = "#B85103"
+        self.trunk_point_color = TRUNK_POINT_COLOR
+        self.trunk_edge_color = TRUNK_EDGE_COLOR
+        self.branch_point_color_a = ABANDONED_BRANCH_POINT_COLOR
+        self.branch_edge_color_a = ABANDONED_BRANCH_EDGE_COLOR
+        self.branch_point_color_b = ACTIVE_BRANCH_POINT_COLOR
+        self.branch_edge_color_b = ACTIVE_BRANCH_EDGE_COLOR
+
         self.trunk_tip_color = "black"
 
     def create_master_size_chart(self):
@@ -272,9 +285,9 @@ class SpiralPlotter:
         for branch in self.branches:
             if branch != self.trunk:
                 for i in range(len(branch.x_edges)-1):
-                    edge = go.Scatter(x=branch.x_edges[i:i+2], y=branch.y_edges[i:i+2], mode="lines", line={"color":self.branch_edge_color})
+                    edge = go.Scatter(x=branch.x_edges[i:i+2], y=branch.y_edges[i:i+2], mode="lines", line={"color":self.branch_edge_color_a})
                     plot_data.append(edge)
-                branch_node_trace = go.Scatter(x=branch.x_points, y=branch.y_points, mode="markers", marker={'color': self.branch_point_color, "opacity":1, "size": branch.size_chart})           
+                branch_node_trace = go.Scatter(x=branch.x_points, y=branch.y_points, mode="markers", marker={'color': self.branch_point_color_a, "opacity":1, "size": branch.size_chart})           
                 node_traces.append(branch_node_trace)
 
         for trace in node_traces:

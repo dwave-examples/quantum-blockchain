@@ -34,6 +34,17 @@ INTRO_TEXT = "Select a number of miners and blocks and press \"Begin Simulation\
 INTRO_SUBTEXT = "Results will display here while simulation is running."
 LOADING_TEXT = "Generating graphs..."
 
+#######################################
+# Graph Visual Elements              #
+#######################################
+TRUNK_POINT_COLOR = "#1458aa"
+TRUNK_EDGE_COLOR = "#6fa8ee" 
+ABANDONED_BRANCH_POINT_COLOR = "#B85103"
+ABANDONED_BRANCH_EDGE_COLOR = "#F5A86E"
+ACTIVE_BRANCH_POINT_COLOR = 4
+ACTIVE_BRANCH_EDGE_COLOR = 5
+
+
 GRAPH_POINT_MIN_SIZE = 5
 GRAPH_POINT_MAX_SIZE = 15
 GRAPH_MAX_POINTS_PER_REV = 36

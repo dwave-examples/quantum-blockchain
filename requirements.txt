@@ -1,13 +1,11 @@
-dash[diskcache]~=3.2
+dash[diskcache,async]~=3.2
 dash-mantine-components~=2.3
 dwave-ocean-sdk~=9.0
-dwave-system>=1.30.0 #Also investigate, also probably obsolete
-dwave-preprocessing>=0.6.8 #TODO investigate if this is still needed (probably not)
 pycryptodome
 flask
 requests
 pandas
-numpy
+numpy<2.4  # Pending bugfix for dwave-samplers
 pytest
 matplotlib
 git+https://github.com/jackraymond/dwave-experimental@feature/automorphism_composite#egg=dwave-experimental  # Pull request approval pending
