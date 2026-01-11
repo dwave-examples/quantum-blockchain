@@ -1,15 +1,25 @@
 
-# Quantum Blockchain Demo
+# Proof of Quantum Work Blockchain Demo
 
-In the paper, “Blockchain with Proof of Quantum Work” [arXiv:2503.14462] D-Wave executed the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs.
+Ledgers are widespread record keeping structures. A proof of work blockchain is a ledger supported by concensus mechanisms to ensure that no single authority is required to verify the ledger. Cryptographically-linked hard problems are solved by miners to encode new transactions. These transactions are protected because a lot of work is required manipulate the ledger and dishonest behaviour is unrewarded with high probability. The proof of quantum work blockchain we demonstrate works similarly to Bitcoin, but replaces the hard problem of finding rare SHA256 hashes, with the problem of finding quantum experiments with rare distributional properties. The statistics of a problem are digitalized into a quantum hash, which is used to define a solution. 
 
-This demo implements a simple form of the architecture compatible with the paper, demonstrating consensus amongst miners using diverse quantum experiments subject to sampling and control errors.
-After setting parameters, the blockchain is initiated with a genesis block placed at the center of a spiral.
-As blocks are mined and proposed they are assessed independently by miners.
-Consensus mechanisms guarantee that with high probability miners agree upon a common set of good blocks (marked blue), defining a robust ledger.
-Unverified work (marked orange) is kept at a finite fraction (efficiency is high), and the number of uncertain blocks [final portion the blockchain) is kept small (delay is small). 
+Miners create quantum hashes by first conducting multiple annealing experiments to generate a sampleset, and then post-processing this sampleset to a set of pairwise correlations (shown below). Correlations realized by a particular experiment define a point in a high dimensional space, a miner must find experimental parameters such that this point falls in a small subspace. This statistics can be digitalized to produce a hash.
+
+![Demo Example](static/DW_Quantum_Hashing_Infographic_Final_V3-01.png "Image of quantum hash generation")
+
+Owing to control and sampling errors, miners must present work subject to statistical uncertainty. As such, their work is not guaranteed to be accepted by the community. Concensus mechanisms ensure that such uncertainty is resolved by the community, so that (subject to a short delay) the state of the ledger can be confidently asserted. An example of how confidence impacts the state of the chain is shown below.
+
+![Demo Example](static/UTF-8DW_Quantum_Hashing_Infographic_Final_V4.png "Image of blockchain state uncertainty")
+
+This demo implements a quantum blockchain wherein a set of miners perform quantum experiments on a set of QPUs (and embeddings), yet arrive at a consensus on experimental outcomes and the state of the ledger. Miners are selected to use a variety of QPUs, and embeddings over those QPUs.
+After setting parameters in the browser, the blockchain is initiated with a genesis block.
+As blocks are mined and proposed they are assessed independently by miners conducting their own quantum experiments.
+Owing to sampling and control error, miners may diverge in their opinion on the validity of different blocks.
+Consensus mechanisms guarantee that such disagreements are short lived, and there is only ever uncertainty on the status of very recently proposed blocks. The interface is shown below.
 
 ![Demo Example](static/demo.png "Image of demo interface")
+
+In the paper, “Blockchain with Proof of Quantum Work” [arXiv:2503.14462] D-Wave executed the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs. This demo implements the methods of the paper.
 
 ## Installation
 You can run this example without installation in cloud-based IDEs that support the
