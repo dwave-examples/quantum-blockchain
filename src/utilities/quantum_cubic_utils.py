@@ -29,7 +29,6 @@ from dwave.experimental.automorphism import (
 from dwave.preprocessing.composites import SpinReversalTransformComposite
 from dwave.system.composites import ParallelEmbeddingComposite
 from dwave.system import DWaveSampler
-from dwave.samplers import SimulatedAnnealingSampler
 from minorminer.utils.parallel_embeddings import find_multiple_embeddings
 
 from directory_paths import (
@@ -40,50 +39,7 @@ from src.values import (
     DEFAULT_CUBIC_BOUNDARY_CONDITIONS,
     DEFAULT_CUBIC_LATTICE_SHAPE,
     DEFAULT_CUBIC_DIMERIZATION,
-    DEFAULT_ENERGY_TIME_RESCALING,
 )
-
-
-def get_time_rescaling_factor(solver: str) -> float:
-    """Get the time rescaling factor required for matched dynamics.
-
-    Args:
-        solver: QPU solver name
-
-    Returns
-        A suitable factor by which to rescale the problem Hamiltonian for
-        emulation of Advantage2_system2.6, in combination with the time
-        rescaling factor.
-
-    """
-    # Improvement?: Add script for approximate calculation (by energy matching, per paper).
-    # Improvement?: Add wildcards, shouldn't depend on minor solver number.
-    if solver in DEFAULT_ENERGY_TIME_RESCALING:
-        return DEFAULT_ENERGY_TIME_RESCALING[solver][1]
-    else:
-        # Improvement allow fallback (calculation) as option. See examples/
-        return None
-
-
-def get_energy_rescaling_factor(solver: str) -> float:
-    """Get the energy rescaling factor required for matched dynamics.
-
-    Args:
-        solver: QPU solver name
-
-    Returns
-        A suitable factor by which to rescale annealing time for
-        emulation of Advantage2_system2.6, in combination with the energy
-        rescaling factor.
-
-    """
-    # Improvement?: Add script for approximate calculation (by energy matching, per paper).
-    # Improvement?: Add wildcards, shouldn't depend on minor solver number.
-    if solver in DEFAULT_ENERGY_TIME_RESCALING:
-        return DEFAULT_ENERGY_TIME_RESCALING[solver][0]
-    else:
-        # Improvement allow fallback (calculation) as option. See examples/
-        return 1.0
 
 
 def get_embeddings(
@@ -366,6 +322,7 @@ def create_model(
     *,
     seed: np.random.Generator | int | None = None,
     model_dimensions: int | tuple | None = None,
+    problem_energy_scale=1.0,
 ) -> tuple[dict, dict]:
     """Create binary quadratic models compatible with DOI: 10.1126/science.ado6285
 
@@ -381,6 +338,8 @@ def create_model(
             be an integer for DimerizedBiclique in the range 8
             to 24 (specifying the size of each partition in the
             biclique) or a tuple of dimensions for cubic lattices.
+        problem_energy_scale: A rescaling of couplings and fields, required
+            to emulate evolution on one solver with another.
 
     Returns
         An Ising model specified by h and J dictionaries keyed by nodes
@@ -403,6 +362,7 @@ def create_model(
                 if (node1[0] == node2[0])  # Same orientation (dimension 0) define dimers
                 else (2 * prng.integers(2) - 1) * abs_J_inter_partition
             )
+            / problem_energy_scale
             for node1, node2 in edge_list
         }
         # Improvement: Move following (trivial) assertions to tests
@@ -589,17 +549,9 @@ def source_dimer_orientation(node_list: list, ensemble: str) -> dict:
 
 
 def generate_default_sampler(
-    J: dict,
-    qpu: DWaveSampler | None = None,
+    source_edge_list: list,
+    qpu: DWaveSampler,
     *,
-    num_reads: int | None = None,
-    qpu_access_time_ub: float = float("Inf"),
-    use_qpu: bool = True,
-    seed_SA: int = None,
-    solver: str = "Advantage_system4.1",  # Minor specific!
-    annealing_time: float = 0.005,
-    time_rescaling_factor: float | None = None,
-    randomize_embedding: bool = False,
     embedding_directory: str = EMBEDDINGS_PATH,
     embedding_timeout: int | float = 0,
     max_num_emb: int = None,
@@ -610,268 +562,57 @@ def generate_default_sampler(
 
 
     Args:
-        J (dict): A dictionary of the form {((x1, y1), (x2, y2)): Jij} where Jij is the
-            coupling strength between spins at (x1, y1) and (x2, y2). Note that for QPU
-            only the keys() are used and values are assumed to be in programmable range.
-        num_reads (int, optional): The number of reads to perform. Defaults to unbounded.
-        qpu_access_time_ub (float, optional): Upper bound on QPU access time. Bounds the
-            num_reads in combination with experiment-specific per-read and constant overheads.
-        use_qpu (bool, optional): Whether to use a QPU or not. Defaults to False, which
-            means that a SA sampler will be used.
-        seed_SA (int, optional): The seed for the random number generator. Defaults to None.
-        solver (str, QPU solver): Name of a generally accessible QPU solver.  # TO DO, REMOVE ARGUMENT, LOOKUP ENERGY FROM QPU.
-        annealing_time: The annealing time for Advantage2 system1. Time and/or
-            energy rescaling is used to emulate this time on other systems.
+        source_edge_list: A list of couplers relevant to the programmed Hamiltonian
+        qpu: A DWaveSampler
         embedding_directory: Path to the embedding repo
         embedding_timeout: If embeddings are not found, time in seconds to allocate for search.
             Note that this process may be iterated (if `max_num_emb` is None, or larger than 1),
-            and so the timeout may be up to 2 times larger.
+            and so the timeout may be up to 2 times larger.  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
         max_num_emb: When embeddings are not found in the path, a bound on the number
-            if embeddings to attempt to find. By default None (unbounded).
+            if embeddings to attempt to find. By default None (unbounded).  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
         ensemble: When specified to a supported ensemble additional information
-            settings are adjusted for the find_subgraph embedding utility.
+            settings are adjusted for the find_subgraph embedding utility.  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
     Returns:
-        tuple: A tuple containing the sampler and the sampler_kwargs.
+        tuple: A sampler aggregating samplesets from random parallel QPU embeddings
     """
 
     # Improvement: the sampler and kwargs should probably be separated into two functions.
-    # Improvement: The classical sampler could also be specified by a separate function.
-    if use_qpu:
-        if qpu is None:
-            raise ValueError(
-                "QPU might be instantiated on the fly in principle, in practice managing many clients results in inefficiencies."
-            )
-        if ensemble is not None:
-            # Use ensemble-specific dimer orientation properties to accelerate search:
-            node_labels = (
-                source_dimer_orientation(set(n for e in J.keys() for n in e), ensemble),
-                target_dimer_orientation(qpu),
-            )
-            find_subgraph_kwargs = {
-                "timeout": embedding_timeout,
-                "node_labels": node_labels,
-            }
-        else:
-            # The ensemble should be known to assert a dimer orientation:
-            find_subgraph_kwargs = {"timeout": embedding_timeout}
-        #
-        embeddings = get_embeddings(
-            J.keys(),
-            qpu.edgelist,
-            embedding_directory=embedding_directory,
-            embedding_timeout=embedding_timeout,
-            max_num_emb=max_num_emb,
-            find_subgraph_kwargs=find_subgraph_kwargs,
+    if qpu is None:
+        raise ValueError(
+            "QPU might be instantiated on the fly in principle, in practice managing many clients results in inefficiencies."
         )
-        if len(embeddings) == 0:
-            raise Exception(f"Embeddings not found at {embedding_directory}")
-            return None, {}
-
-        if time_rescaling_factor is None:
-            time_rescaling_factor = get_time_rescaling_factor(solver)
-            if time_rescaling_factor is None:
-                raise ValueError(f"energy/time rescaling is not known for {solver}")
-        sampler_kwargs = dict(
-            fast_anneal=True,
-            annealing_time=annealing_time / time_rescaling_factor,
-            auto_scale=False,
+    if ensemble is not None:
+        # Use ensemble-specific dimer orientation properties to accelerate search:
+        node_labels = (
+            source_dimer_orientation(set(n for e in source_edge_list for n in e), ensemble),
+            target_dimer_orientation(qpu),
         )
-        if num_reads is None:
-            num_reads = get_max_num_reads(
-                qpu,
-                qpu_kwargs=sampler_kwargs,
-                num_var=len(embeddings) * len(embeddings[0]),
-                max_time=qpu_access_time_ub,
-            )
-        sampler_kwargs["num_reads"] = num_reads
-        if randomize_embedding:
-            # Improvement: (and to match paper implementation) make Automorphism composite inner loop
-            # Improvement: allow seeding for reproducibility of SRT and automorphisms.
-            sampler = AutomorphismComposite(
-                ParallelEmbeddingComposite(
-                    SpinReversalTransformComposite(qpu),
-                    embeddings=embeddings,
-                    source=nx.from_edgelist(J.keys()),
-                )
-            )
-        else:
-            sampler = ParallelEmbeddingComposite(
-                qpu,
-                embeddings=embeddings,
-            )
-    else:
-        # Improvement: This branch can be omitted from the demo
-        if num_reads is None:
-            num_reads = 1000
-        sampler = SimulatedAnnealingSampler()
-
-        # For qualitatively correct behaviour, some tuning:
-        beta_max = 3  # Limits how spiky equilibrated distribution is.
-        num_sweeps = 16  # Controls how equilibrated distribution is.
-        # Approx match: (1) mean energy and (2) rate of local excitations.
-        sampler_kwargs = {
-            "beta_range": [
-                1 / np.sqrt(np.sum([Jij**2 for Jij in J.values()])),
-                beta_max,
-            ],
-            "num_reads": num_reads,
-            "num_sweeps": num_sweeps,  # Controls ohw out-of-equilibrium
-            "randomize_order": True,
-            "seed": seed_SA,
+        find_subgraph_kwargs = {
+            "timeout": embedding_timeout,
+            "node_labels": node_labels,
         }
-    return sampler, sampler_kwargs
-
-
-# Improvement: omit this function and main script (for demo, and main repo after testing, should be an example instead)
-def unit_test_functional_BER(ensemble="PMJ", num_tests=20, stat_type=None, annealing_time=0.005):
-    """A script used for debugging, not to be tested
-
-    TO DO: Remove from demo and quantum-blockchain once elements are well tested, perhaps
-    turn into an example
-    Mostly legacy code... will remove.
-    """
-
-    from random_projection import RandomProjectionHasher
-
-    # For 100 models and 1024 projections on Adv2 and Adv4.1 processors measure bit errors within and between.
-    expected_num_reads = {}  # Optional checks
-    expected_annealing_time = {}  # Optional checks
-    randomize_embedding = True
-    if ensemble == "PMJ":
-        stat_type = "NN"
-        solver = "Advantage2_prototype2.6"
-        if annealing_time == 0.005:
-            expected_num_reads = {
-                "Advantage2_prototype2.6": 9558,
-                "Advantage_system4.1": 3860,
-            }
-            expected_annealing_time = {
-                "Advantage2_prototype2.6": 0.005,
-                "Advantage_system4.1": 0.0097196261682243,
-            }
-        solvers = [
-            "Advantage2_prototype2.6",
-            "Advantage_system4.1",
-            "Advantage_system6.4",
-            "Advantage_system7.1",
-            "Advantage2_system1_x_internal",
-        ]  # LEGACY!
-        solvers = ["Advantage_system4.1", "Advantage2_system1_x_internal"]
-        profile = {s: "cloud" for s in solvers}
     else:
-        solver = "Advantage2_prototype2_x_internal"
-        solvers = ["Advantage2_prototype2_x_internal", "BAY20_Z12_ALPHA"]
-        solvers = [
-            "Advantage2_system1_x_internal",
-            "Advantage2_prototype2_x_internal",
-        ]  # Easy
-        profile = {
-            "Advantage2_prototype2_x_internal": "cloud",
-            "BAY20_Z12_ALPHA": "vpn",
-            "Advantage2_system1_x_internal": "cloud",
-        }
-        randomize_embedding = True
-    h, J = create_model(ensemble, seed=0)  # Only used for qpu access time defaulting.
-    if stat_type == "NN":
-        stat_edges = J.keys()
-    elif stat_type == "FM1":
-        stat_edges = [
-            e for e, v in J.items() if v == -1
-        ]  # Frozen out edges! Should be super robust
-    else:
-        node_list = list(h.keys())
-        stat_edges = [
-            (node1, node2) for idx, node1 in enumerate(node_list) for node2 in node_list[idx:]
-        ]
+        # The ensemble should be known to assert a dimer orientation:
+        find_subgraph_kwargs = {"timeout": embedding_timeout}
 
-    kwargs0 = dict(
-        J=J,  # Used by SA only! Should really just do at ensemble level.
-        num_reads=None,  # Use upper bound, unless time contrained
-        qpu_access_time_ub=float("Inf"),  # max(this value, solver upper bound)
-        use_qpu=True,
-        solver=solver,  # Minor specific!
-        annealing_time=annealing_time,
-        randomize_embedding=randomize_embedding,
+    embeddings = get_embeddings(
+        source_edge_list,
+        qpu.edgelist,
+        embedding_directory=embedding_directory,
+        embedding_timeout=embedding_timeout,
+        max_num_emb=max_num_emb,
+        find_subgraph_kwargs=find_subgraph_kwargs,
     )
-    print(solvers)
-    qpus = {solver: DWaveSampler(solver=solver, profile=profile[solver]) for solver in solvers}
-    BitErrorRate = {(s1, s2): [] for s1, s2 in product(solvers, solvers)}
-    ValidationRate28 = {(s1, s2): [] for s1, s2 in product(solvers, solvers)}
-    NZ = 32
-    nbits = NZ * (1024 // NZ)
-    for seed in range(num_tests):
-        print(seed, " of ", num_tests)
-        h, J = create_model(ensemble, seed=seed)
-        hv = RandomProjectionHasher(
-            random_seed=seed + 1, nbits=nbits, input_dimension=len(stat_edges)
+    if len(embeddings) == 0:
+        raise Exception(f"Embeddings not found at {embedding_directory}")
+        return None, {}
+    # Improvement: (and to match paper implementation) make Automorphism composite inner loop
+    # Improvement: allow seeding for reproducibility of SRT and automorphisms.
+    sampler = AutomorphismComposite(
+        ParallelEmbeddingComposite(
+            SpinReversalTransformComposite(qpu),
+            embeddings=embeddings,
+            source=nx.from_edgelist(source_edge_list),
         )
-        returned_bits = {}
-        for solver in solvers:
-            kwargs = kwargs0.copy()
-            kwargs["solver"] = solver
-            sampler, sampler_kwargs = generate_default_sampler(
-                **kwargs, qpu=qpus[solver], embedding_timeout=60
-            )
-
-            # Improvement: move following two asserts to tests with forward-compatible solver behaviour:
-            if solver in expected_num_reads:
-                assert (
-                    sampler_kwargs["num_reads"] == expected_num_reads[solver]
-                ), "Hard coded solver-specific values to compare against"
-            if solver in expected_annealing_time:
-                assert (
-                    abs(sampler_kwargs["annealing_time"] - expected_annealing_time[solver]) < 1e-8
-                ), "Hard coded solver-specific values to compare against"
-            sampler_output = sampler.sample_ising(
-                h,
-                J,
-                **sampler_kwargs,
-            )
-            stats = build_stats(sampler_output, stat_edges)  ## NN case
-            returned_bits[solver] = hv.hash_vector(stats.reshape(-1))[0].reshape((NZ, nbits // NZ))
-        for s1 in solvers:
-            for s2 in solvers:
-                BitErrorRate[(s1, s2)].append(np.mean(returned_bits[s1] != returned_bits[s2]))
-                ValidationRate28[(s1, s2)].append(
-                    np.mean(np.sum(returned_bits[s1] == returned_bits[s2], axis=0) == NZ)
-                )
-        numelB = (seed + 1) * nbits
-        numelV = (seed + 1) * nbits // NZ
-        print("Bit Error Rate by solver pair")
-        print(solvers)
-        print(np.array([[np.mean(BitErrorRate[(s1, s2)]) for s1 in solvers] for s2 in solvers]))
-        print(
-            np.array(
-                [
-                    [np.sqrt(np.var(BitErrorRate[(s1, s2)]) / numelB) for s1 in solvers]
-                    for s2 in solvers
-                ]
-            )
-        )
-
-        print(
-            "Bit Error Rate",
-            np.mean([BER for BER in BitErrorRate.values()]),
-            "+/-",
-            np.sqrt(np.var([BER for BER in BitErrorRate.values()]) / (numelB * len(BitErrorRate))),
-        )
-        print(
-            f"{NZ}B Validation Rate",
-            np.mean([BER for BER in ValidationRate28.values()]),
-            "+/-",
-            np.sqrt(
-                np.var([BER for BER in ValidationRate28.values()]) / (numelV * len(BitErrorRate))
-            ),
-        )
-
-    return BitErrorRate, ValidationRate28
-
-
-# Improvement: omit this function and main script (for demo, and main repo after testing, should be an example instead).
-# Improvement: solve the directory dependence (location of embedding folder, workaround of symbolic linking is currently used).
-if __name__ == "__main__":
-    print("Expecting BER to be ~< 0.01 with multiple (distinct) solvers:")
-    for annealing_time in [0.015, 0.005]:
-        for scheme in ["DimBiClique", "PMJ"]:
-            print(annealing_time, scheme)
-            unit_test_functional_BER(ensemble=scheme, annealing_time=annealing_time)
+    )
+    return sampler

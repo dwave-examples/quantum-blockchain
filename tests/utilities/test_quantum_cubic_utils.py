@@ -5,7 +5,6 @@ from dwave.system import DWaveSampler
 from dwave.system.testing import MockDWaveSampler
 
 from src.utilities.quantum_cubic_utils import (
-    get_time_rescaling_factor,
     dimerize_coupling_3d,
     get_embeddings,
     displace_n_by_c,
@@ -26,10 +25,6 @@ try:
     client_unavailable = False
 except:
     client_unavailable = True
-
-
-def test_get_time_rescaling_factor():
-    assert get_time_rescaling_factor("Advantage_system4.1") == 0.535
 
 
 def test_get_embeddings():
@@ -193,11 +188,10 @@ def test_source_dimer_orientation():
 
 
 def test_generate_default_sampler():
-    J = {(0, 1): 1}
+    source_edge_list = [(0, 1)]
     t = 4
     qpu = MockDWaveSampler(topology_type="chimera", topology_shape=[1, 1, t])
-    sampler, skw = generate_default_sampler(
-        J=J, qpu=qpu, num_reads=10, embedding_timeout=10  # To avoid QPU default
+    sampler = generate_default_sampler(
+        source_edge_list, qpu=qpu, embedding_timeout=10  # To avoid QPU default
     )  # find embeddings
-    assert type(skw) is dict
-    assert len(sampler.embeddings) == t
+    assert len(sampler.child.embeddings) == t
