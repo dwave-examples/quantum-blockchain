@@ -32,7 +32,6 @@ from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
 from demo_solvers import AVAILABLE_SOLVERS
-from demo_solvers import AVAILABLE_SOLVERS
 from demo_interface import generate_options
 from src.utilities.display_update import render_miner_status
 from src.structures.block_score_tree import BlockScoreTree, BlockNode
@@ -126,9 +125,10 @@ async def simulation(
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
-        simulated_qpu_solvers = BootstrappingHashSolver.allowed_solvers()
+        simulated_qpu_solvers = [solver for solver in AVAILABLE_SOLVERS if isinstance(solver, BootstrappingHashSolver)]
         qpu_solvers = set(AVAILABLE_SOLVERS).difference(simulated_qpu_solvers)
         dropdown_idx = int(solver_select_val)
+
         if dropdown_idx == 0:
             solvers = list(qpu_solvers)
         elif dropdown_idx == 1:
