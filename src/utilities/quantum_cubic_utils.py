@@ -23,7 +23,7 @@ from minorminer.utils.parallel_embeddings import find_multiple_embeddings
 
 from directory_paths import (
     EMBEDDINGS_PATH,
-)  # Improvement? Not a fan of this dependency on the directory structure.
+)
 from src.values import (
     DEFAULT_CUBIC_BOUNDARY_CONDITIONS,
     DEFAULT_CUBIC_LATTICE_SHAPE,
@@ -111,7 +111,6 @@ def get_embeddings(
         else:
             embeddings = []
 
-    # Improvement: json rather than pickle format?
     if verify_embeddings and len(embeddings) > 0:
         assert all(
             dwave.embedding.verify_embedding(emb, edge_list_source, edge_list_target)
@@ -355,12 +354,7 @@ def generate_default_sampler(
     Returns:
         tuple: A sampler aggregating samplesets from random parallel QPU embeddings
     """
-
-    # Improvement: the sampler and kwargs should probably be separated into two functions.
-    if qpu is None:
-        raise ValueError(
-            "QPU might be instantiated on the fly in principle, in practice managing many clients results in inefficiencies."
-        )
+    #TO DO: Move into embedding generation example:
     if ensemble is not None:
         # Use ensemble-specific dimer orientation properties to accelerate search:
         node_labels = (
@@ -374,7 +368,7 @@ def generate_default_sampler(
     else:
         # The ensemble should be known to assert a dimer orientation:
         find_subgraph_kwargs = {"timeout": embedding_timeout}
-
+    # TO DO, SIMPLIFY TO NO-SEARCH. RUN SEARCH SEPARATELY:
     embeddings = get_embeddings(
         source_edge_list,
         qpu.edgelist,
