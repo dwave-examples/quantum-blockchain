@@ -1,20 +1,10 @@
-# TO DO (GENERAL):
-# Change order of composites so that we have per-embedding automorphisms, rather
-# than a common automorphism for all embeddings.
-# Move test functions/module code into an example/ (can be removed entirely for demo).
-# Automate energy-scale, energy scale as a function of qpu chip_id when looked - up, remove solver argument.
-# See also # Improvements comments.
-
 # TO DO (DEMO ONLY):
-# Modifications to this module impact a few other files, these should be
-# updated to match changes in the pull request.
 # Delete non-default code branches, and remove arguments associated to non-default branches.
 # See also # Improvements comments.
 
 from itertools import product
 import pickle
 import os
-import math
 
 import hashlib
 import networkx as nx
@@ -35,10 +25,8 @@ from directory_paths import (
     EMBEDDINGS_PATH,
 )  # Improvement? Not a fan of this dependency on the directory structure.
 from src.values import (
-    DEFAULT_BICLIQUE_PARTITION_SIZE,
     DEFAULT_CUBIC_BOUNDARY_CONDITIONS,
     DEFAULT_CUBIC_LATTICE_SHAPE,
-    DEFAULT_CUBIC_DIMERIZATION,
 )
 
 
@@ -75,7 +63,6 @@ def get_embeddings(
             succeeds. A value of zero can be used to disable generation on the fly.
         max_num_emb: max_num_emb to seek when loading from files fails. This
             parameter is ignored if loading succeeds.
-        save_to_cache: Whether to save an embedding.
         load_from_cache: attempt to load from the src.static.embeddings directory.
         save_to_cache: save new embeddings to the src.static.embeddings directory.
         verify_embeddings: Whether to test embeddings validity, this is only
@@ -85,10 +72,7 @@ def get_embeddings(
         A list of dictionaries, each dictionary defines an embedding.
 
     """
-    # Sorted edge lists uniquely identify graphs (up to ordering of nodes within edges,
-    # assumed this is canonical - potential future improvement).
-    # The hashes of the source and target edgelists can be used to
-    # identify embeddings for which valid embeddings are known:
+    # Sufficient graph identifiers:
     els_hash = hashlib.sha256(str(tuple(sorted(edge_list_source))).encode()).hexdigest()
     elt_hash = hashlib.sha256(str(tuple(sorted(edge_list_target))).encode()).hexdigest()
     embedding_filename = os.path.join(embedding_directory, f"emb_S{els_hash}_T{elt_hash}.pkl")
@@ -139,8 +123,8 @@ def get_embeddings(
 def dimerize_coupling_3d(
     node1: tuple[int, int, int],
     node2: tuple[int, int, int],
-    z_parity: int,
-    lattice_dims: tuple[int, int, int],
+    z_parity,
+    lattice_dims: tuple[int, int, int] = DEFAULT_CUBIC_LATTICE_SHAPE,
 ) -> tuple[tuple, tuple]:
     """Convert a simple cubic lattice to a dimerized cubic lattice.
 
@@ -198,74 +182,9 @@ def displace_n_by_c(n: tuple, c: tuple, lattice_dims: tuple | None = None):
         return tuple((n[i] + c[i]) % lattice_dims[i] for i in range(len(n)))
 
 
-def dimer_biclique_to_zephyr_coordinate(
-    partition: int, partition_idx: int, dimer_idx: int, t: int = 4
-) -> tuple[int, int, int, int, int]:
-    """Partition linear order to zephyr coordinates
-
-    Args:
-        partition: partition (0 or 1)
-        partition_idx: index within the biclique
-        z: dimer index (0 ot 1)
-        t: tile parameter of the zephyr graph
-    Returns:
-        zephyr coordinate u, w, k, j, z
-    """
-    return (
-        partition,
-        1 + partition_idx // (2 * t),
-        (partition_idx // 2) % t,
-        partition_idx % 2,
-        dimer_idx,
-    )
-
-
-def create_dimerized_biclique(partition_size: int = DEFAULT_BICLIQUE_PARTITION_SIZE):
-    """Create a regular biclique embedding on Zephyr
-
-    Nodes of a biclique are expanded onto dimers (pairs of qubits) that define
-    a special subgraph of Zephyr[m=2]. Viability of embedding requires that
-    :math:`ceil(partition_size/6)` is not larger than the tile parameter
-    of the target graph (`t=4` for Advantage system 2).
-
-    Args:
-        partition_size: The paritition size (p) of a biclique :math:`K_{p,p}`
-
-    Returns:
-        A node and edge list defining the model. Nodes have coordinate the labels.
-        The first coordinate indicates the partition (0 or 1). The final
-        coordinate indicates the position within the dimer (0 or 1). Contracting
-        the dimers results in a biclique.
-    """
-    t = math.ceil(partition_size / 6)
-    emb = {
-        (partition, partition_idx): tuple(
-            dimer_biclique_to_zephyr_coordinate(partition, partition_idx, dimer_idx, t=t)
-            for dimer_idx in range(2)
-        )
-        for partition in range(2)
-        for partition_idx in range(partition_size)
-    }
-
-    node_list = [node for logical_node in emb.values() for node in logical_node]
-    edge_list = [
-        (node1, node2)
-        for node1, node2 in dnx.zephyr_graph(m=2, t=t, coordinates=True, node_list=node_list).edges
-        if node1[0] != node2[0] or node1[3] == node2[3]
-    ]  # Include all but the odd-couplers
-
-    # Improvement: Move following two trivial asserts to tests/
-    assert len(node_list) == 4 * partition_size, "Incorrect number of variables"
-    assert len(edge_list) == 2 * partition_size + partition_size**2, "Incorrect number of edges"
-
-    return node_list, edge_list
-
-
 def create_lattice(
-    lattice_dims: tuple,
-    *,
-    dim_periodicity: tuple | None = None,
-    dimerization_mode: str | None = None,
+    lattice_dims: tuple = DEFAULT_CUBIC_LATTICE_SHAPE,
+    dim_periodicity=DEFAULT_CUBIC_BOUNDARY_CONDITIONS,
 ) -> tuple[list, list]:
     """Creates a square, cubic or hyper-cubic simple or dimerized lattice
 
@@ -274,17 +193,13 @@ def create_lattice(
         dim_periodicity: periodic boundary specification in each of the dimensions.
             A tuple of bools of length matching lattice_dims each endicating if the
             dimension is periodic or open.
-        dimerization_mode: create a generalized lattice where each variable is expanded onto a dimer.
-            This str parameter controls the nature of couplings between dimers, None is used
-            to indicate no dimerization.
 
     Returns:
         A tuple of node and edge lists
     """
-    # Improvement: hardcode dimerization_mode=='single' for demo and remove branching.
+    if len(dim_periodicity) != len(lattice_dims):
+        raise ValueError("There should be a periodicity setting for every dimension")
     ndim = len(lattice_dims)
-    if dim_periodicity is None:
-        dim_periodicity = tuple([False] * ndim)
     node_list = list(product(*[range(l) for l in lattice_dims]))
     node_set = set(node_list)
     # We generate 3 edges per node, wrap around those corresponding to
@@ -299,29 +214,19 @@ def create_lattice(
         if displace_n_by_c(n, c, dim_wrap_around)
         in node_set  # Exclude open boundary spanning edges.
     ]
-    if dimerization_mode is not None:
-        # Expand simple cubic lattice edges onto dimers (one extra dimension to indicate position in the dimer)
-        edge_set = {(node + (0,), node + (1,)) for node in node_list}
-        node_list = [node + (t,) for node in node_list for t in range(2)]
-        edge_set |= {
-            dimerize_coupling_3d(node1, node2, z_parity=0, lattice_dims=lattice_dims)
-            for node1, node2 in edge_list
-        }
-        if dimerization_mode == "double":
-            edge_set |= {
-                dimerize_coupling_3d(node1, node2, z_parity=1, lattice_dims=lattice_dims)
-                for node1, node2 in edge_list
-            }
-        edge_list = sorted(edge_set)
+    # Expand simple cubic lattice edges onto dimers (one extra dimension to indicate position in the dimer)
+    edge_set = {(node + (0,), node + (1,)) for node in node_list}
+    node_list = [node + (t,) for node in node_list for t in range(2)]
+    edge_set |= {
+        dimerize_coupling_3d(node1, node2, z_parity=0, lattice_dims=lattice_dims)
+        for node1, node2 in edge_list
+    }
 
-    return node_list, edge_list
+    return node_list, sorted(edge_set)
 
 
 def create_model(
-    ensemble: str,
-    *,
-    seed: np.random.Generator | int | None = None,
-    model_dimensions: int | tuple | None = None,
+    seed: int | None = None,
     problem_energy_scale=1.0,
 ) -> tuple[dict, dict]:
     """Create binary quadratic models compatible with DOI: 10.1126/science.ado6285
@@ -330,14 +235,7 @@ def create_model(
     of quantum supremacy in approximate sampling. A subset of the models are supported.
 
     Args:
-        ensemble: Either 'DimBiClique' for the dimerized biclique model, or
-            or one of 'PMJ' or 'Uniform' for a cubic lattice (low and high
-            precision coupling between dimers respectively).
         seed: A seed for the coupler specification
-        model_dimensions: The dimensions of the model, should
-            be an integer for DimerizedBiclique in the range 8
-            to 24 (specifying the size of each partition in the
-            biclique) or a tuple of dimensions for cubic lattices.
         problem_energy_scale: A rescaling of couplings and fields, required
             to emulate evolution on one solver with another.
 
@@ -347,62 +245,8 @@ def create_model(
 
     """
     prng = np.random.default_rng(seed)
-    if ensemble == "DimBiClique":  # Improvement: Use enum for ensemble
-        if model_dimensions is None:
-            partition_size = DEFAULT_BICLIQUE_PARTITION_SIZE
-        else:
-            partition_size = model_dimensions
-        node_list, edge_list = create_dimerized_biclique(partition_size=partition_size)
-        h = {i: 0 for i in node_list}
-        abs_J_inter_partition = 1 / np.sqrt(partition_size)  # Coupling between dimers
-        J_intra_partition = -1.0  # Coupling within dimer
-        J = {
-            (node1, node2): (
-                J_intra_partition
-                if (node1[0] == node2[0])  # Same orientation (dimension 0) define dimers
-                else (2 * prng.integers(2) - 1) * abs_J_inter_partition
-            )
-            / problem_energy_scale
-            for node1, node2 in edge_list
-        }
-        # Improvement: Move following (trivial) assertions to tests
-        assert len(node_list) == len(set(node_list)), "node_list should contain no duplications"
-        assert len(edge_list) == len(set(edge_list)), "edge_list should contain no duplications"
-        assert (
-            np.sum([abs(v) == -J_intra_partition for v in J.values()]) == 2 * partition_size
-        ), "There should be one chain (with J=-1) per logical variable, in each partition"
-        assert set(n for ij, v in J.items() for n in ij if v == J_intra_partition) == set(
-            node_list
-        ), "couplings should be consistent with node_list"
-        assert (
-            np.sum([abs(v) != -J_intra_partition for v in J.values()]) == partition_size**2
-        ), "There should be exactly one coupling between every dimer"
-    else:
-        # Improvement: Can restrict to defaults for non-experimental code.
-        if model_dimensions is None:
-            lattice_dims = DEFAULT_CUBIC_LATTICE_SHAPE
-        else:
-            lattice_dims = model_dimensions
-        if len(lattice_dims) == 3:
-            # Cubic lattice defaults:
-            dim_periodicity = DEFAULT_CUBIC_BOUNDARY_CONDITIONS
-            dimerization_mode = DEFAULT_CUBIC_DIMERIZATION
-        else:
-            dim_periodicity = None
-            dimerization_mode = None
-
-        node_list, edge_list = create_lattice(
-            lattice_dims,
-            dim_periodicity=dim_periodicity,
-            dimerization_mode=dimerization_mode,
-        )
-        # Improvement: restrict to default for non-experimental code.
-        if ensemble == "PMJ":  # Low precision no-dimer
-            J = {ij: 2 * prng.integers(2) - 1 for ij in edge_list}
-        elif ensemble == "Uniform":  # High precision no-dimer
-            J = {ij: 2 * prng.random() - 1 for ij in edge_list}
-        else:
-            raise ValueError(f"Unknown emsemble {ensemble}")
+    node_list, edge_list = create_lattice()
+    J = {ij: (2 * prng.integers(2) - 1) / problem_energy_scale for ij in edge_list}
     h = {i: 0 for i in node_list}
 
     return h, J
@@ -441,63 +285,6 @@ def build_stats(response: dimod.SampleSet, edge_list: list) -> np.ndarray:
     return corrs
 
 
-def get_qpu_access_times(
-    qpu: DWaveSampler, *, qpu_kwargs: dict | None = None, num_var: int = None
-) -> tuple[float, float]:
-    """Return the constant overhead time, and per read time.
-
-    Args:
-        qpu: The DWaveSampler
-        qpu_kwargs: Experimental arguments other than num_var impacting runtime.
-        num_var: Total number of programmed qubits (across all embeddings)
-    Returns
-        A tuple of the constant time and per-read time
-    """
-    if num_var is None:
-        num_var = qpu.properties["num_qubits"]
-    if qpu_kwargs is None:
-        _qpu_kwargs = {}
-    else:
-        _qpu_kwargs = qpu_kwargs.copy()
-    _qpu_kwargs["num_reads"] = 0
-    constant_time = qpu.solver.estimate_qpu_access_time(num_var, **_qpu_kwargs)
-    _qpu_kwargs["num_reads"] = 1
-    per_read_time = qpu.solver.estimate_qpu_access_time(num_var, **_qpu_kwargs) - constant_time
-    return float(constant_time), float(per_read_time)
-
-
-def get_max_num_reads(
-    qpu: DWaveSampler,
-    qpu_kwargs: dict | None = None,
-    num_var: int | None = None,
-    max_time: float = float("Inf"),
-) -> int:
-    """Number of reads required to fully exploit given QPU access time.
-
-    Args:
-        qpu: The DWaveSampler
-        qpu_kwargs: Experimental arguments other than num_var impacting runtime.
-        num_var: Total number of programmed qubits (across all embeddings)
-        max_time: Determine a maximum time in combination with the solver-specific
-            max run duration parameter. The smaller of the two is used. The value should
-            be seconds.
-    Returns:
-        number of reads exploiting the given time scale.
-    """
-    if qpu_kwargs is None:
-        qpu_kwargs = {}
-    estimated_runtime = min(qpu.properties["problem_run_duration_range"][1], max_time * 1000000)
-    constant_time, per_read_time = get_qpu_access_times(qpu, qpu_kwargs=qpu_kwargs, num_var=num_var)
-    if estimated_runtime < constant_time + per_read_time:
-        num_reads = 0
-    else:
-        num_reads = min(
-            qpu.properties["num_reads_range"][1],
-            int((estimated_runtime - constant_time) / per_read_time),
-        )
-    return num_reads
-
-
 def target_dimer_orientation(qpu: DWaveSampler) -> dict:
     """A labeling of qubits by orientation
 
@@ -529,23 +316,16 @@ def target_dimer_orientation(qpu: DWaveSampler) -> dict:
     return {n: int_to_str[to_coordinates(n)[dim_orientation]] for n in qpu.nodelist}
 
 
-def source_dimer_orientation(node_list: list, ensemble: str) -> dict:
+def source_dimer_orientation(node_list: list) -> dict:
     """A mapping from the node to the expected qubit-orientation on processor.
+
     Args:
         node_list: A list of nodes.
-        ensemble: The ensemble 'PMJ', 'Uniform' or 'DimBiClique' compatible
-            with the node format.
     Returns:
         A mapping of nodes to the orientations ('horizontal' or 'vertical')
     """
-    if ensemble == "DimBiClique":
-        dim_orientation = 0  # First dimension indicates orientation.
-    elif ensemble == "PMJ" or ensemble == "Uniform":
-        dim_orientation = -1  # Final dimension indicates orientation.
-    else:
-        return {}  # No (known) labeling
     int_to_str = {0: "vertical", 1: "horizontal"}
-    return {n: int_to_str[n[dim_orientation]] for n in node_list}
+    return {n: int_to_str[n[-1]] for n in node_list}
 
 
 def generate_default_sampler(
