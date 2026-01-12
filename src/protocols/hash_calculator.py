@@ -16,12 +16,15 @@ from dwave.cloud import Client
 
 import numpy as np
 
+from src.values import (
+    DEFAULT_ENERGY_TIME_RESCALING,
+)
+
 
 class SolverName(Enum):
-    SOLVER1 = "Advantage2_system2_x_internal"  # Internal name for prototype.
-    SOLVER2 = "Advantage_system4.1"
-    SOLVER3 = "Advantage_system6.4"
-    SOLVER4 = "Advantage2_system1.10"  
+    SOLVER1 = "Advantage_system4.1"
+    SOLVER2 = "Advantage_system6.4"
+    SOLVER3 = "Advantage2_system1.10"
     BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"  # No longer general access
     BOOTSTRAP2 = "simulated_Advantage_system4.1"
     BOOTSTRAP3 = "simulated_Advantage_system6.4"
@@ -30,8 +33,8 @@ class SolverName(Enum):
 
 SolverParams = namedtuple(
     "SolverParams",
-    ["solver_name", "randomize_embedding", "annealing_time", "profile"],
-    defaults=(None, False, 0.0, "defaults"),
+    ["solver_name", "profile"],
+    defaults=(None, "defaults"),
 )
 
 
@@ -46,8 +49,11 @@ class HashSolver(ABC):
 
         Args:
             hash_length (int): length (in bits) of the hash to be calculated
-            rng_seed (int): random seed which sets the properties of both the (real or simulated) quantum experiment
-                      and the random projection that's used to calculate witnesses
+            rng_seed (int): For the case of sampling from QPUs the random seed
+                sets the unitary evolution parameters
+                (for quantum experiments) and random projections defining witnesses.
+                For the case of bootstrap sampling, it initiates the pseudorandom
+                sampling of offline data models.
 
         Returns:
             hash_bits: a np vector whose values should be exclusively 0s and 1s, defining the quantum hash.
@@ -84,7 +90,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
 
 class BootstrappingHashSolver(HashSolver):
 
-    def __init__(self, solver_name: str, dW =1.0, num_reads = 600) -> None:
+    def __init__(self, solver_name: str, dW=1.0, num_reads=600) -> None:
         """Initializes a bootstrap solver. Does not use any of the passed parameters except the solver name,
             which it uses to determine which bootstrapping files to draw from. These file must be in place
             in the filesystem for the initialization to succeed.
@@ -138,7 +144,7 @@ class BootstrappingHashSolver(HashSolver):
         prng_sampling = np.random.default_rng()
         indices = prng_header.integers(self.num_witnesses, size=hash_length)
         mu = self.mean_witnesses.ravel()[indices]
-        var = ADVANTAGE4_1_MAX_NUM_READS*self.var_witnesses.ravel()[indices]/self.num_reads
+        var = ADVANTAGE4_1_MAX_NUM_READS * self.var_witnesses.ravel()[indices] / self.num_reads
         dot_vector = (mu + np.sqrt(var) * prng_sampling.normal(size=hash_length)) / self.dW
         bool_vector = dot_vector > 0
         hash_bits = bool_vector.astype(int)
@@ -158,13 +164,12 @@ class QuantumHashSolver(HashSolver):
     def solver_parameters(self) -> SolverParams:
         return SolverParams(
             solver_name=self.solver_name,
-            randomize_embedding=self.randomize_embedding,
-            annealing_time=self.annealing_time,
             profile=self.profile,
         )
 
     def __init__(
-        self, solver_name: str,
+        self,
+        solver_name: str,
         randomize_embedding: bool = False,
         profile: str = "defaults",
         num_reads: int = 600,
@@ -175,19 +180,24 @@ class QuantumHashSolver(HashSolver):
         Args:
             init_params (SolverParams): Information about each of the fields can be found in the main docstring
                 in trials_main.py
-            ensemble: The J distribution used for the spin-glass quench. Options are 'DimBiClique' or 'PMJ', for
-                bicliques and cubic lattices respectively.
         """
+        if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
+            raise ValueError(
+                "Unsupported {solver_name}: See examples/ for generation of energy-time rescaling values and embeddings"
+            )
         self._solver_name = solver_name
         assert (
             self._solver_name in QuantumHashSolver.allowed_solvers()
         ), f"QuantumHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
         self.embedding_directory = EMBEDDINGS_PATH
-        self.randomize_embedding = randomize_embedding
-        self.annealing_time = 0.005
+        self.sampler_kwargs = dict(
+            fast_anneal=True,
+            annealing_time=0.005 / DEFAULT_ENERGY_TIME_RESCALING[solver_name][1],
+            auto_scale=False,
+            num_reads=DEFAULT_NUM_READS,
+        )
+        self.problem_energy_scale = DEFAULT_ENERGY_TIME_RESCALING[solver_name][0]
         self.profile = profile
-        self.ensemble = "PMJ"
-        self._num_reads = DEFAULT_NUM_READS
         self.client = Client.from_config(profile=self.profile)  # TODO check if this is needed
         self.qpu = DWaveSampler(solver=self.solver_name, profile="defaults")
 
@@ -213,26 +223,16 @@ class QuantumHashSolver(HashSolver):
             sample_time (float): time spent sampling the D-Wave solver"""
 
         h, J = quantum_cubic_utils.create_model(
-            ensemble=self.ensemble,
-            seed=rng_seed,
+            seed=rng_seed, problem_energy_scale=self.problem_energy_scale
         )
-
-        sampler, sampler_kwargs = quantum_cubic_utils.generate_default_sampler(
-            J,
-            use_qpu=True,
-            solver=self.solver_name,
-            randomize_embedding=self.randomize_embedding,
-            embedding_directory=self.embedding_directory,
-            annealing_time=self.annealing_time,
+        sampler = quantum_cubic_utils.generate_default_sampler(
+            J.keys(),
             qpu=self.qpu,
-            num_reads=self._num_reads,
+            embedding_directory=self.embedding_directory,
         )
-        sampler_kwargs["J"] = J
-        sampler_kwargs["h"] = h
-
         sample_start = time.time()
         sampler_output = sampler.sample_ising(
-            **sampler_kwargs
+            h, J, **self.sampler_kwargs
         )  # TODO decide when and if passing sampleset info is useful
         sample_end = time.time()
 
@@ -243,7 +243,6 @@ class QuantumHashSolver(HashSolver):
         del problem_id  # Failed attempts to work around memory leak issue, can likely delete
         del sampler_output  # Failed attempts to work around memory leak issue, can likely delete
         del sampler  # Failed attempts to work around memory leak issue, can likely delete
-        del sampler_kwargs  # Failed attempts to work around memory leak issue, can likely delete
 
         hv = RandomProjectionHasher(
             random_seed=rng_seed + 1, input_dimension=stats.size, nbits=hash_length

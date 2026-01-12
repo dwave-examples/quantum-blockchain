@@ -16,18 +16,23 @@ MIN_SCORE = -(
 #                      Unitary dynamics parameterization
 # ===================================================================================
 DEFAULT_CUBIC_LATTICE_SHAPE = (4, 4, 4)  # Default dimensions of dimerized cubic lattice.
-DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)
-DEFAULT_CUBIC_DIMERIZATION = "single"  # One coupler between every dimer.
-DEFAULT_BICLIQUE_PARTITION_SIZE = 18  # Default dimension of dimerized biclique (n for K_{n,n}).
-# Rescaling of energy (problem Hamiltonian) and time required per system. Embeddings are provided for
-# the same systems:  # TO DO - Add energy rescaling option, check which is best.
+DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
+# Energy time rescalings required to emulate Advantage2_system2.6 at
+# full problem energy scale (see examples/). For systems of lower energy scale,
+# we run longer anneals, for systems of higher energy scale, we reduce the
+# problem Hamiltonian (energy) scale..
 DEFAULT_ENERGY_TIME_RESCALING = {
-    "Advantage2_prototype2_x_internal": (1.0, 1.0),  # Internal name for prototype.
-    "Advantage2_prototype2.6": (1.0, 1.0),  # General access offline
+    "Advantage2_prototype2.6": (
+        1.0,
+        1.0,
+    ),  # Not generally available, available for resampling (simulated) experiments.
     "Advantage_system4.1": (1.0, 0.535),
     "Advantage_system6.4": (1.0, 0.488),
-    "Advantage_system7.1": (1.0, 0.456),  # Offline
-    "Advantage2_system1.10": (1.0, 1.32),  # NB: Does not play nice with 5us (TO DO: energy rescale solution)
+    "Advantage_system7.1": (
+        1.0,
+        0.456,
+    ),  # Not generally available, available for resampling (simulated) experiments.
+    "Advantage2_system1.10": (1.34, 1.0),
 }
 # ===================================================================================
 #                      Global Trial Definitions

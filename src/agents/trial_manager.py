@@ -1,22 +1,11 @@
-import os
 import random
 import time
-from typing import Optional
 
 from src.agents.miner import Miner
 from src.structures.block import Block
 from src.values import MINER_NAMES
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
-from src.structures.block_score_tree import BlockScoreTree
-from src.protocols.hash_calculator import (
-    HashSolver,
-    BootstrappingHashSolver,
-    QuantumHashSolver,
-    initialize_solver,
-)
-
-from dwave.system import DWaveSampler
-from dwave.cloud import Client
+from src.protocols.hash_calculator import HashSolver
 
 
 class TrialManager:
@@ -33,7 +22,7 @@ class TrialManager:
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def __init__(self, num_blocks: int, num_miners: int, solver: HashSolver):
+    def __init__(self, num_blocks: int, num_miners: int, solvers: list[HashSolver]):
         """Initializes a new TrialManager object. Requires a file with name matching
         the name stored in TRIAL_PARAMETERS_FILE (found in common.values) to be located
         in the same directory and properly formatted in order to initialize. Such a
@@ -50,10 +39,8 @@ class TrialManager:
         self.max_blocks = num_blocks
         num_miners = num_miners
 
-        self.solver = solver
-        #self.solver_randomization = self.global_params.solver_randomization #TODO add back in later
-        #self.initialize_solvers()
-        self.pow = ProofOfWorkProtocol(hash_solvers=[self.solver])
+        self.solvers = solvers
+        self.pow = ProofOfWorkProtocol(hash_solvers=self.solvers)
         self.trial_init_time = time.time()
         genesis_block = Block(miner_id="genesis", previous_block_hash="")
         genesis_block.set_quantum_hash()
@@ -69,76 +56,9 @@ class TrialManager:
         self.round_progress = 0
         self.blocks_mined = 0
 
-
     @property
     def num_miners(self):
         return len(self.miners)
-
-    def initialize_solvers(self, individual_solvers: bool = False):
-        """Initializes the set of solver objects required by the simulation settings. This will be a single solver
-        if 'solver_randomization' is set to 'none,' or a set of either QPU solvers or Bootstrapping solvers if
-        given any other setting. TrialManager will share this list of solvers with every miner, allowing the
-        same pool of solvers to be re-used without constantly creating and breaking connections.
-
-        Args:
-            individual_solvers (bool): Defaults to False. Determines whether each miner is allocated their own solvers,
-                or whether all miners share the same pool of solvers.
-
-        if False: #TODO add solver randomization
-            self.solver_list = [initialize_solver(self.solver_params)]
-            solver_param_list = [self.solver_params]
-
-        else:
-            if (
-                "simulated" in self.solver_name
-            ):  # Bootstrapping solvers don't care about any parameter except solver name
-                solver_param_list = [
-                    SolverParams(solver_name=name)
-                    for name in BootstrappingHashSolver.allowed_solvers()
-                ]
-            else:
-                allowed_solvers = set(QuantumHashSolver.allowed_solvers())
-                self.client = Client.from_config(profile="defaults")
-                available_solvers = set([solver.name for solver in self.client.get_solvers()])
-                if False: #"strict" in self.global_params.solver_randomization:
-                    num_retries = 8
-                    while num_retries > 0:
-                        if allowed_solvers.issubset(available_solvers):
-                            break
-                        else:
-                            time.sleep(2 ** (8 - num_retries) + random.randint(1, 1000) / 1000)
-                            self.client = Client.from_config(profile=self.solver_params.profile)
-                            available_solvers = set(
-                                [solver.name for solver in self.client.get_solvers()]
-                            )
-                            num_retries -= 1
-
-                    if not allowed_solvers.issubset(available_solvers):
-                        raise Exception(
-                            f"Strict randomization requires all solvers from list {allowed_solvers} to be available. List of available solvers {available_solvers} was inadequate."
-                        )
-                name_list = list(allowed_solvers & available_solvers)
-
-                solver_param_list = [
-                    SolverParams(
-                        name,
-                        #self.solver_params.randomize_embedding,
-                        #self.solver_params.annealing_time,
-                        #self.solver_params.profile,
-                    )
-                    for name in name_list
-                ]
-
-            self.solver_list = [initialize_solver(params) for params in solver_param_list]
-
-        assert (
-            len(self.solver_list) > 0
-        ), "No solvers found. At least one solver must be available for algorithm to run."
-        """
-
-        pass
-
-
 
     def initialize_miners(self, num_miners: int):
         """Creates all the Miner objects necessary to run the trial, passing each one a reference to
@@ -153,9 +73,9 @@ class TrialManager:
         self.miners = {}
 
         for i in range(num_miners):
-                miner_id = MINER_NAMES[i]
-                next_miner = Miner(miner_id, self.pow, self.genesis_block)
-                self.miners.update({next_miner.id: next_miner})
+            miner_id = MINER_NAMES[i]
+            next_miner = Miner(miner_id, self.pow, self.genesis_block)
+            self.miners.update({next_miner.id: next_miner})
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -175,7 +95,6 @@ class TrialManager:
 
         Returns:
             a string summary of the round order, to use as console output if desired."""
-        
 
         self.block_broadcast = None
         self.round_progress = 0
@@ -204,12 +123,12 @@ class TrialManager:
             mining_attempts += 1
             mined_block, block_score = mining_miner.attempt_mine()
             if block_score > 0:
-                self.block_broadcast = mining_miner.broadcast_mined_block()   
+                self.block_broadcast = mining_miner.broadcast_mined_block()
                 self.round_progress += 1
                 self.blocks_mined += 1
                 return mining_miner_id, block_score
-            
-            #TODO figure out what to do if mining fails
+
+            # TODO figure out what to do if mining fails
 
         return "failed", -1.0
 
@@ -229,7 +148,6 @@ class TrialManager:
         self.round_progress += 1
 
         return validator_id, block_score
-  
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -237,10 +155,9 @@ class TrialManager:
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
     def single_step(self) -> tuple[bool, str, float]:
         """Executes a single, atomic step of the simulation algorithm. Logging and recovery can capture"""
-        if self.round_progress == 0 or self.round_progress >= self.num_miners: #TODO reconsider
+        if self.round_progress == 0 or self.round_progress >= self.num_miners:  # TODO reconsider
             mined = True
             self.reset_round()
             miner_id, block_score = self.mining_step()
@@ -248,7 +165,6 @@ class TrialManager:
             mined = False
             miner_id, block_score = self.validation_step()
         return mined, miner_id, block_score
-
 
     def run_trial(self, num_blocks: int = None):
         """Runs the trial through some number of complete block mining and validation events. By default it will run until the
@@ -271,6 +187,3 @@ class TrialManager:
 
         while self.blocks_mined < stopping_block:
             self.single_step()
-
-
-     
