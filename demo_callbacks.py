@@ -79,7 +79,7 @@ def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTr
     cancel = [Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
 )
-async def simulation(
+def simulation(
     update_current_block_data,
     running_status: bool,
     miner_slider_val: int,
@@ -169,10 +169,12 @@ async def simulation(
             current_block_dict = last_block
             print("Finished all restart logic.")
 
+        min_loop_time = 1.5 #TODO make a constant
+
         while(manager.blocks_mined <= num_blocks):
+            iter_start_time = time.time()
             mined, miner_id, block_score = manager.single_step()
             if mined:
-                await asyncio.sleep(0.8)
                 current_block_dict = copy.deepcopy(block_dict_template)
                 current_block_dict["block_number"] = manager.blocks_mined
                 current_block_dict["block_json"] = manager.block_broadcast
@@ -185,9 +187,15 @@ async def simulation(
 
             print(f"In simulation... with {manager.blocks_mined} and {current_block_dict['scores'].keys()}")
 
+            iter_end_time = time.time()
+            iter_total_time = iter_end_time - iter_start_time
+            extra_wait_time = min_loop_time - iter_total_time
+            if extra_wait_time > 0:
+                print(f"Main loop only took {iter_total_time}, waiting {extra_wait_time} to compensate.")
+                time.sleep(extra_wait_time)
+
             update_current_block_data(current_block_dict)
 
-            await asyncio.sleep(0.25)
         
     return "", "display-none"
 
@@ -202,7 +210,7 @@ async def simulation(
     ],
     prevent_initial_call=True,
 )
-async def update_blockchain_data(block_data: dict):
+def update_blockchain_data(block_data: dict):
     """ Pass-through function to patch the single-block update from the 'simulation' callback
         into the larger blockchain data structure."""
     block_number = block_data["block_number"]
@@ -233,7 +241,7 @@ async def update_blockchain_data(block_data: dict):
         ],
     prevent_initial_call=True,
 )
-async def update_main_display(blockchain_structure_data: list, selected_view: int, num_miners: int):
+def update_main_display(blockchain_structure_data: list, selected_view: int, num_miners: int):
     """ This callback processes blockchain structure data and uses it to update the miner status
         table and the graph display."""
     
