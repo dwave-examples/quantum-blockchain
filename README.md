@@ -16,8 +16,6 @@ The proof of quantum work blockchain we demonstrate works similarly to Bitcoin[[
 Fixing the number of miners, depth of the chain and computational context (the set of QPUs available to the miners) a blockchain evolution is simulated.
 Concensus on the state of the chain from the perspective of mining participants is presented. Below is an example output of the program:
 
-![Demo Example](static/demo.png)  # TO DO, CHANGE RESTING IMAGE
-
 <a id="plot"></a>
 ![Example Solution](static/demo.png)  # TO DO, SUITABLE 4-QPU CHAIN
 
@@ -63,12 +61,12 @@ Tests can be run by running
 ```bash
 pytest -k "test" 
 ```
-from the quantum-blockchian/tests directory.
+from the quantum-blockchain/tests directory.
 
 
 # Problem description
 
-This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources -- with these assumptions in place the mining rate can be accelerated to on the order of seconds for a timely presentation of the evolution with reduced QPU access time on the order of seconds (in proportion to the number of miners), without impacting the structure of the blockchains presented.
+This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources -- with these assumptions in place the evolution rate, but not structure becomes dependent on the parameters so that we can select a hardness threshold so as not to waste QPU resources.
 
 Miners demonstrate completion of quantum work by performing experiments parameterized the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space, a miner must find experimental parameters such that this point falls in a small subspace. This statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors.
 
@@ -79,27 +77,17 @@ Consensus mechanisms guarantee that such disagreements are short lived, and ther
 
 ![Demo Example](static/UTF-8DW_Quantum_Hashing_Infographic_Final_V4.png "Image of blockchain state uncertainty")
 
-This demo implements a quantum blockchain wherein a set of miners perform quantum experiments on a set of QPUs (and embeddings), yet arrive at a consensus on experimental outcomes and the state of the ledger. Miners are selected to use a variety of QPUs, and embeddings over those QPUs.
+This demo implements a quantum blockchain wherein a set of miners perform quantum experiments on a set of QPUs (and embeddings), yet arrive at a consensus on experimental outcomes and the state of the ledger.
 After setting parameters in the browser, the blockchain is initiated with a genesis block.
 As blocks are mined and proposed they are assessed independently by miners conducting their own quantum experiments.
 
 In the paper, “Blockchain with Proof of Quantum Work” [[1]](#arXiv:2503.14462) D-Wave executed the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs. This demo implements the methods of the paper.
 
 
-## Architectural comparison with Amin et al. Blockchain with Proof of Quantum Work
+### Comparison with Amin et al. Blockchain with Proof of Quantum Work [[1]](#arXiv:2503.14462)
 
-For purposes of timely blockchain evolution, and code simplicity, we highlight the following restrictions: 
-* The case of unitary dynamics of 4x4x4 cubic-lattice spin glasses is used for the hash.
-* Mining is accelerated with impact only on the blockchain rate (not structure) by setting the hardness at 
-minimum
-* We also allow the option to simulate the blockchain using resampled experimental data. 
-* The hash length is fixed to 128 with confidence-based chainwork.
-
-Weaknesses of the particular demonstrated architecture. Cross-validation rates can be increased by use of additional experimental data (confidence-based validation). Mitigations for attacks are explained in the paper. We do not model a transaction ecosystem of transactions on top of the mining process, although this is supported by the block structure.
-
-### Differences from [[1]](#arXiv:2503.14462) and demonstration weaknesses:
-
-We fix the num_reads to 600 (as opposed to the standardized 1 second of QPU access time in [ar] experiments) in order to accelerate blockchain evolution; to keep this from resulting in undesired extra branching, the error tolerance N_max is somewhat increased.
+The simulations of the demo execute unitary evolutions on cubic spin glasses matching the paper with simple +/- chain work, but subject to changes in the generally accessible solvers.
+By contrast with the paper the the hash length is fixed to 32 with confidence-based chainwork. We fix the num_reads to 600 (as opposed to the standardized 1 second of QPU access time in [[1]](#arXiv:2503.14462) experiments) in order to accelerate blockchain evolution.
 
 ### Parameters
 The demo defines the following parameters for the underlying proof-of-work protocol
@@ -111,9 +99,7 @@ The demo defines the following parameters for the underlying proof-of-work proto
 ## Model and Code Overview
 
 The user selects a number of participating miners, a number of mining events to simulate,
-and a set of QPUs (single, or multiple). If multiple QPUs are selected, each experiment is randomized,
-selecting uniformly from the available QPUs, and supported programmings per QPU. Experimental
-outcomes are also subject to control and sampling errors.
+and a set of QPUs (single, or multiple). If multiple QPUs are selected, each experiment selects the QPU uniformly from the available QPUs. Each QPU supports a large set of programmings (differing in control error), which are also sampled uniformly at random on every evaluation. Experimental outcomes are subject to control and sampling errors.
 
 ### Mining and validation
 
