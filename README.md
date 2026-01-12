@@ -89,6 +89,9 @@ In the paper, “Blockchain with Proof of Quantum Work” [[1]](#arXiv:2503.1446
 The simulations of the demo execute unitary evolutions on cubic spin glasses matching the paper with simple +/- chain work, but subject to changes in the generally accessible solvers.
 The hash length is fixed to 32 and num_reads to 600 (as opposed to the standardized 1 second of QPU access time in [[1]](#arXiv:2503.14462) experiments) in order to reduce the QPU access time per experiment (and accelerate the blockchain evolution).
 
+
+## Model and Code Overview
+
 ### Parameters
 The demo defines the following parameters for the underlying proof-of-work protocol
 
@@ -96,7 +99,9 @@ The demo defines the following parameters for the underlying proof-of-work proto
 * The length of the chain:
 * The set of QPUs used: One can select a single generally available QPU, or all available QPUs. 
 
-## Model and Code Overview
+The simulation can be run, paused and reset at fixed parameters.
+
+### Initialization
 
 The user selects a number of participating miners, a number of mining events to simulate,
 and a set of QPUs (single, or multiple). If multiple QPUs are selected, each experiment selects the QPU uniformly from the available QPUs. Each QPU supports a large set of programmings (differing in control error), which are also sampled uniformly at random on every evaluation. Experimental outcomes are subject to control and sampling errors.
