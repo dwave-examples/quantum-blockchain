@@ -131,7 +131,7 @@ def test_source_dimer_orientation():
 
 
 def test_generate_default_sampler():
-    source_edge_list = [(0, 1)]
+    source_edge_list = [((0,0,0,0), (0,0,0,1))]
     t = 4
     qpu = MockDWaveSampler(topology_type="chimera", topology_shape=[1, 1, t])
     sampler = generate_default_sampler(

@@ -334,7 +334,6 @@ def generate_default_sampler(
     embedding_directory: str = EMBEDDINGS_PATH,
     embedding_timeout: int | float = 0,
     max_num_emb: int = None,
-    ensemble: str = None,
 ) -> tuple[dimod.Sampler | None, dict]:
     """This function generates a sampler (either a QPU or a SA sampler), appropriately
     parameterized based on the input to this function.
@@ -349,25 +348,19 @@ def generate_default_sampler(
             and so the timeout may be up to 2 times larger.  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
         max_num_emb: When embeddings are not found in the path, a bound on the number
             if embeddings to attempt to find. By default None (unbounded).  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
-        ensemble: When specified to a supported ensemble additional information
-            settings are adjusted for the find_subgraph embedding utility.  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
     Returns:
         tuple: A sampler aggregating samplesets from random parallel QPU embeddings
     """
     #TO DO: Move into embedding generation example:
-    if ensemble is not None:
-        # Use ensemble-specific dimer orientation properties to accelerate search:
-        node_labels = (
-            source_dimer_orientation(set(n for e in source_edge_list for n in e), ensemble),
-            target_dimer_orientation(qpu),
-        )
-        find_subgraph_kwargs = {
-            "timeout": embedding_timeout,
-            "node_labels": node_labels,
-        }
-    else:
-        # The ensemble should be known to assert a dimer orientation:
-        find_subgraph_kwargs = {"timeout": embedding_timeout}
+    
+    node_labels = (
+        source_dimer_orientation(set(n for e in source_edge_list for n in e)),
+        target_dimer_orientation(qpu),
+    )
+    find_subgraph_kwargs = {
+        "timeout": embedding_timeout,
+        "node_labels": node_labels,
+    }
     # TO DO, SIMPLIFY TO NO-SEARCH. RUN SEARCH SEPARATELY:
     embeddings = get_embeddings(
         source_edge_list,

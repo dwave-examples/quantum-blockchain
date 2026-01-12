@@ -180,8 +180,6 @@ class QuantumHashSolver(HashSolver):
         Args:
             init_params (SolverParams): Information about each of the fields can be found in the main docstring
                 in trials_main.py
-            ensemble: The J distribution used for the spin-glass quench. Options are 'DimBiClique' or 'PMJ', for
-                bicliques and cubic lattices respectively.
         """
         if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
             raise ValueError(
@@ -200,7 +198,6 @@ class QuantumHashSolver(HashSolver):
         )
         self.problem_energy_scale = DEFAULT_ENERGY_TIME_RESCALING[solver_name][0]
         self.profile = profile
-        self.ensemble = "PMJ"
         self.client = Client.from_config(profile=self.profile)  # TODO check if this is needed
         self.qpu = DWaveSampler(solver=self.solver_name, profile="defaults")
 
@@ -226,7 +223,7 @@ class QuantumHashSolver(HashSolver):
             sample_time (float): time spent sampling the D-Wave solver"""
 
         h, J = quantum_cubic_utils.create_model(
-            ensemble=self.ensemble, seed=rng_seed, problem_energy_scale=self.problem_energy_scale
+            seed=rng_seed, problem_energy_scale=self.problem_energy_scale
         )
         sampler = quantum_cubic_utils.generate_default_sampler(
             J.keys(),
