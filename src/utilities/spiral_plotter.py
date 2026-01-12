@@ -143,6 +143,14 @@ class SpiralPlotter:
             for child in base_branch.children:
                 new_branch.child = branch_pairs[child.base.hash]
 
+    def calculate_points_per_rev(self):
+        allowed_vals = [2**i for i in range(8) if 2**i <= GRAPH_MAX_POINTS_PER_REV and 2**i >= GRAPH_MIN_POINTS_PER_REV]
+        assert len(allowed_vals) > 0, f"Allowed range of points per revolution is {GRAPH_MIN_POINTS_PER_REV} to {GRAPH_MAX_POINTS_PER_REV}, which does not allow any valid choices."
+        if self.num_nodes <= allowed_vals[0]:
+            return GRAPH_MIN_POINTS_PER_REV
+        #TODO finish conditional
+
+
     def calculate_r(self, node_num: int|float):
         """ Calculates the distance from the center at which a point should be drawn. The logic
             is chosen such that the furthest-out turn of the spiral will take up 1/3 of the total
@@ -272,7 +280,11 @@ class SpiralPlotter:
         return traces
     
     def draw_spiral(self):
-        """ Assuming all the points and edges have been plotted"""
+        """ Assuming all the points and edges have been plotted, draws them on the figure, coloring and sizing them
+            according to the pre-defined color and size schema. This will draw two distinct sorts of elements onto the
+            graph area: points and lines. Each branch of the graph will have one set of points (indicating the blocks
+            that are part of that branch) and one set of lines, arranged so as to connect those points in a curving spiral
+            shape."""
         trunk_edge_traces =[]
         for i in range(len(self.trunk.x_edges)-1):
             edge = go.Scatter(x=self.trunk.x_edges[i:i+2], y=self.trunk.y_edges[i:i+2], mode="lines", line={"color":self.trunk_edge_color})
