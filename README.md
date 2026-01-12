@@ -10,8 +10,8 @@
 Ledgers are widespread record keeping structures.
 A proof of work blockchain is a ledger supported by concensus mechanisms to ensure that no single authority is required to verify the ledger.
 Cryptographically-linked hard problems are solved by miners to encode new transactions.
-Transactions can considered finalized in the ledger because the community is incentived by concensus mechanisms to behave honestly, and any attacker must out-work this majority to manipulate the ledger.
-The proof of quantum work blockchain we demonstrate works similarly to Bitcoin[[1]](#arXiv:2503.14462), but replaces the hard problem of finding rare SHA256 hashes, with the problem of finding quantum experiments with rare distributional properties. The particular quantum experiments can be chosen to be beyond-classical, so that only quantum computers can participate Bitcoin[[2]](#10.1126/science.ado6285)
+Transactions can be considered finalized in the ledger because the community is incentived by concensus mechanisms to behave honestly, and any attacker must out-work this majority to manipulate the ledger.
+The proof of quantum work blockchain we demonstrate works similarly to Bitcoin[[1]](#arXiv:2503.14462), but replaces the hard problem of finding rare SHA256 hashes with the problem of finding quantum experiments consistent with rare statistics. The particular quantum experiments can be chosen to be beyond-classical, so that only quantum computers can participate Bitcoin[[2]](#10.1126/science.ado6285)
 
 Fixing the number of miners, depth of the chain and computational context (the set of QPUs available to the miners) a blockchain evolution is simulated.
 Concensus on the state of the chain from the perspective of mining participants is presented. Below is an example output of the program:
@@ -66,9 +66,9 @@ from the quantum-blockchain/tests directory.
 
 # Problem description
 
-This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources -- with these assumptions in place the evolution rate, but not structure becomes dependent on the parameters so that we can select a hardness threshold so as not to waste QPU resources.
+This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources -- with these assumptions in place the evolution rate, but not structure becomes dependent on the parameters so that we can select a hardness threshold to be minimal so as not to waste QPU resources.
 
-Miners demonstrate completion of quantum work by performing experiments parameterized the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space, a miner must find experimental parameters such that this point falls in a small subspace. This statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors.
+Miners demonstrate completion of quantum work by performing experiments parameterized by the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space, a miner must find experimental parameters such that this point falls in a small subspace. Miners search by varying a nonce parameters, which change the parameters of the unitary evolution and post-processing. Statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors. The process of generating a hash is demonstrated below.
 
 ![Demo Example](static/DW_Quantum_Hashing_Infographic_Final_V3-01.png "Image of quantum hash generation")
 
@@ -87,7 +87,7 @@ In the paper, “Blockchain with Proof of Quantum Work” [[1]](#arXiv:2503.1446
 ### Comparison with Amin et al. Blockchain with Proof of Quantum Work [[1]](#arXiv:2503.14462)
 
 The simulations of the demo execute unitary evolutions on cubic spin glasses matching the paper with simple +/- chain work, but subject to changes in the generally accessible solvers.
-By contrast with the paper the the hash length is fixed to 32 with confidence-based chainwork. We fix the num_reads to 600 (as opposed to the standardized 1 second of QPU access time in [[1]](#arXiv:2503.14462) experiments) in order to accelerate blockchain evolution.
+The hash length is fixed to 32 and num_reads to 600 (as opposed to the standardized 1 second of QPU access time in [[1]](#arXiv:2503.14462) experiments) in order to reduce the QPU access time per experiment (and accelerate the blockchain evolution).
 
 ### Parameters
 The demo defines the following parameters for the underlying proof-of-work protocol
@@ -104,53 +104,49 @@ and a set of QPUs (single, or multiple). If multiple QPUs are selected, each exp
 ### Mining and validation
 
 For each round of mining, we randomly select one miner to be the 'winner' of that round,
-simulating a distributed community with competitive mining where each miner has equal chance
-to win the next block (given the simplifying assumption that they all have equal computing power
-available). The winning miner completes a quantum experiment, creates a hash, and publishes a block.
+simulating a distributed community with competitive mining where each miner has (per our implementation) equal chance
+to win the next block. We needn't simulate irrelevant failed attempts. The winning miner completes a quantum experiment, creates a hash, and publishes a block.
 Each unsuccessful miner validates the block, and adjusts their pattern of mining on validation.
-As the routine iterates this process a panel is updated to demonstrate verification patterns.
+As this process iterates a panel is updated to demonstrate verification patterns.
 A central graphic showing the state of the chain is updated according to either a miner view
-or global view.
+or global view. The genesis block is placed at the center, with blocks spiraling outward in order of proposal.
 
 ### Miner blockchain view:
 
-The state of the chain from the perspective of different miners is graphed as a spiral with the first genesis block at the center.
 The outer blue path representing the strongest chain, with other proposals marked in orange.
 Per [arXiv:] a miner can trust that the initial part of their strongest chain is immutable with high probability;
 transactions in this portion of the chain can be trusted, with some lower confidence in finality for the final few blocks.
 
 ### Global blockchain view:
 
-The user can select a global view that shows the consistency amongst the various miners.
-Blocks that are accepted by all users are marked blue. Blocks that are rejected by all users are marked orange.
+The user can can also select a global view that shows the consistency amongst the various miners.
+Blocks that are finalized for all miners are marked blue. Blocks that are rejected by all users are marked orange.
+Gray and black blocks have disputed status, with black blocks being actively mined by atleast one miner (only black blocks have potential for further branching).
 The efficiency is determined by the proportion of blue blocks, which should be large.
 The delay is determined by the number of grey and black blocks, which indicate blocks whose validity is contested by different miners.
-Black blocks indicate blocks that are currently being mined (have potential for further branching). 
 
 The code structure is designed with a view to practical generations including:
-* parallelized (desynchronized) operation of miner behaviour,
+* parallelized and/or desynchronized experimentation by miners,
 * implementation of weakness mitigation including confidence-based code evaluations and use of a generalized block-structure
 
 
-### Quantum unitary evolution and the quantum hash:
+### Quantum unitary evolution and the quantum hash
 
 The unitary evolution that defines "the quantum puzzle" is defined by a set of programmable couplers J.
 Each coupler is sampled uniformly at random +/- J for each edge matched to a 4x4x4 cubic lattice.
 Miners access QPUs uniformly at random from the selected set. Each access to a QPU involves a randomization of the programming,
 so as to model the enhanced level of control errors that may be expected from a larger set.
-The QPU sampling makes use of the ocean-sdk composites framework accessed in quantum_cubic_utils.py.
-Per mining or validation event the QPU is chosen at random, the realization of control errors is randomized
-(using automorphisms, and spin-reversal transforms) so as to enhance (relative) control errors,
+The QPU sampling makes use of the ocean-sdk composites framework with parallel embedding, automorphism and spin-reversal transform (SRT) averaging. THe use of automorphism and SRT averagin enhances (relative) control errors,
 simulating variability that might exist across a more diverse ecosystem of QPUs.
 
 ### Per-QPU one-time calibration:
 
 The unitary evolution is adjusted by selection of a QPU-specific energy-time rescaling, and embedding.
 These are precalculated for a restricted set of current solvers.
-To generate parameters for a currently unsupported solver the code examples/generate_qpu_specific_properties.py can be used. 
+To generate parameters for a currently unsupported solver the code examples/generate_enery_time_rescaling.py and examples/generate_embedding.py can be used. 
 
 ## References
-x
+
 <a id="arXiv:2503.14462"></a>
 Blockchain with proof of quantum work
 Mohammad H. Amin el al., arXiv:2503.14462 (2025)
