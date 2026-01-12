@@ -17,7 +17,7 @@ Fixing the number of miners, depth of the chain and computational context (the s
 Concensus on the state of the chain from the perspective of mining participants is presented. Below is an example output of the program:
 
 <a id="plot"></a>
-![Example Solution](static/demo.png)  # TO DO, SUITABLE 4-QPU CHAIN
+![Example Solution](static/demo.png)
 
 
 ## Installation
@@ -66,7 +66,7 @@ from the quantum-blockchain/tests directory.
 
 # Problem description
 
-This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources -- with these assumptions in place the evolution rate, but not structure becomes dependent on the parameters so that we can select a hardness threshold to be minimal so as not to waste QPU resources.
+This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources.
 
 Miners demonstrate completion of quantum work by performing experiments parameterized by the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space, a miner must find experimental parameters such that this point falls in a small subspace. Miners search by varying a nonce parameters, which change the parameters of the unitary evolution and post-processing. Statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors. The process of generating a hash is demonstrated below.
 
@@ -132,12 +132,17 @@ The code structure is designed with a view to practical generations including:
 
 ### Quantum unitary evolution and the quantum hash
 
-The unitary evolution that defines "the quantum puzzle" is defined by a set of programmable couplers J.
-Each coupler is sampled uniformly at random +/- J for each edge matched to a 4x4x4 cubic lattice.
-Miners access QPUs uniformly at random from the selected set. Each access to a QPU involves a randomization of the programming,
-so as to model the enhanced level of control errors that may be expected from a larger set.
+The unitary evolution that defines "the quantum puzzle" is defined by a set of programmable couplers J cryptographically determined by the strongest block (the block defining maximum chain work).
+Each coupler is sampled uniformly at random +/- J for each edge matched to a 4x4x4 dimerized cubic lattice, with the desired evolution definded by a 5ns quench on the Advantage2_prototype2 system.
+For other annealing QPUs to emulate the Advantage2_protocol2 schedule it is necesarry to perform time energy rescaling[1, 2], i.e. the rescaling of the problem Hamiltonian and annealing time is device specific with values precalculated.
+A dimerized cubic lattice is a simple cubic lattice in which each node is replaced by a pair of nodes.
+Miners access QPUs uniformly at random from the specified QPUs. .
 The QPU sampling makes use of the ocean-sdk composites framework with parallel embedding, automorphism and spin-reversal transform (SRT) averaging. THe use of automorphism and SRT averagin enhances (relative) control errors,
 simulating variability that might exist across a more diverse ecosystem of QPUs.
+
+After the sampleset is collected it is post-processed to nearest neighbor correlations. These correlations are the then randomly projected by normally distributed random vectors, to give witnesses. The sign on the witnesses specify the bits of the quantum hash. 
+
+Add description of simulation (botstrapping) [probably just omit at this stage]?
 
 ### Per-QPU one-time calibration:
 
