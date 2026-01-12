@@ -1,25 +1,26 @@
+[![Open in GitHub Codespaces](
+  https://img.shields.io/badge/Open%20in%20GitHub%20Codespaces-333?logo=github)](
+  https://codespaces.new/dwave-examples/quantum-blockchain?quickstart=1)
+[![Linux/Mac/Windows build status](
+  https://circleci.com/gh/dwave-examples/quantum-blockchain.svg?style=shield)](
+  https://circleci.com/gh/dwave-examples/quantum-blockchain)
 
-# Proof of Quantum Work Blockchain Demo
+# Proof of Quantum Work Blockchains
 
-Ledgers are widespread record keeping structures. A proof of work blockchain is a ledger supported by concensus mechanisms to ensure that no single authority is required to verify the ledger. Cryptographically-linked hard problems are solved by miners to encode new transactions. These transactions are protected because a lot of work is required manipulate the ledger and dishonest behaviour is unrewarded with high probability. The proof of quantum work blockchain we demonstrate works similarly to Bitcoin, but replaces the hard problem of finding rare SHA256 hashes, with the problem of finding quantum experiments with rare distributional properties. The statistics of a problem are digitalized into a quantum hash, which is used to define a solution. 
+Ledgers are widespread record keeping structures.
+A proof of work blockchain is a ledger supported by concensus mechanisms to ensure that no single authority is required to verify the ledger.
+Cryptographically-linked hard problems are solved by miners to encode new transactions.
+Transactions can considered finalized in the ledger because the community is incentived by concensus mechanisms to behave honestly, and any attacker must out-work this majority to manipulate the ledger.
+The proof of quantum work blockchain we demonstrate works similarly to Bitcoin[[1]](#arXiv:2503.14462), but replaces the hard problem of finding rare SHA256 hashes, with the problem of finding quantum experiments with rare distributional properties. The particular quantum experiments can be chosen to be beyond-classical, so that only quantum computers can participate Bitcoin[[2]](#10.1126/science.ado6285)
 
-Miners create quantum hashes by first conducting multiple annealing experiments to generate a sampleset, and then post-processing this sampleset to a set of pairwise correlations (shown below). Correlations realized by a particular experiment define a point in a high dimensional space, a miner must find experimental parameters such that this point falls in a small subspace. This statistics can be digitalized to produce a hash.
+Fixing the number of miners, depth of the chain and computational context (the set of QPUs available to the miners) a blockchain evolution is simulated.
+Concensus on the state of the chain from the perspective of mining participants is presented. Below is an example output of the program:
 
-![Demo Example](static/DW_Quantum_Hashing_Infographic_Final_V3-01.png "Image of quantum hash generation")
+![Demo Example](static/demo.png)  # TO DO, CHANGE RESTING IMAGE
 
-Owing to control and sampling errors, miners must present work subject to statistical uncertainty. As such, their work is not guaranteed to be accepted by the community. Concensus mechanisms ensure that such uncertainty is resolved by the community, so that (subject to a short delay) the state of the ledger can be confidently asserted. An example of how confidence impacts the state of the chain is shown below.
+<a id="plot"></a>
+![Example Solution](static/demo.png)  # TO DO, SUITABLE 4-QPU CHAIN
 
-![Demo Example](static/UTF-8DW_Quantum_Hashing_Infographic_Final_V4.png "Image of blockchain state uncertainty")
-
-This demo implements a quantum blockchain wherein a set of miners perform quantum experiments on a set of QPUs (and embeddings), yet arrive at a consensus on experimental outcomes and the state of the ledger. Miners are selected to use a variety of QPUs, and embeddings over those QPUs.
-After setting parameters in the browser, the blockchain is initiated with a genesis block.
-As blocks are mined and proposed they are assessed independently by miners conducting their own quantum experiments.
-Owing to sampling and control error, miners may diverge in their opinion on the validity of different blocks.
-Consensus mechanisms guarantee that such disagreements are short lived, and there is only ever uncertainty on the status of very recently proposed blocks. The interface is shown below.
-
-![Demo Example](static/demo.png "Image of demo interface")
-
-In the paper, “Blockchain with Proof of Quantum Work” [arXiv:2503.14462] D-Wave executed the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs. This demo implements the methods of the paper.
 
 ## Installation
 You can run this example without installation in cloud-based IDEs that support the
@@ -64,41 +65,51 @@ pytest -k "test"
 ```
 from the quantum-blockchian/tests directory.
 
-## Problem Description
-A set of transacting 'miners' can operate with a distributed ledger robust to tampering (blockchain).
-To iterate the ledger, miners perform independent experiments on QPUs specified by the state of the ledger.
-When experimental outcomes satisfies a work-requirement with sufficient confidence the result is broadcast, validating experiments are then conducted by other miners.
-Broadcast of a verifiable block amounts to a proof of quantum work, work verification also requires a QPU.
-This demonstration indicates how miners come to consensus on the state of the blockchain when working with diverse QPU experiments.
+
+# Problem description
+
+This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources -- with these assumptions in place the mining rate can be accelerated to on the order of seconds for a timely presentation of the evolution with reduced QPU access time on the order of seconds (in proportion to the number of miners), without impacting the structure of the blockchains presented.
+
+Miners demonstrate completion of quantum work by performing experiments parameterized the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space, a miner must find experimental parameters such that this point falls in a small subspace. This statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors.
+
+![Demo Example](static/DW_Quantum_Hashing_Infographic_Final_V3-01.png "Image of quantum hash generation")
+
+Miners present work subject to statistical uncertainty, their work is not guaranteed to be accepted by the community. Concensus mechanisms ensure that such uncertainty is resolved subject to a delay, so that the state of the ledger can be confidently asserted. An example of how probabilistic verification impacts the state of the chain is shown below. 
+Consensus mechanisms guarantee that such disagreements are short lived, and there is only ever uncertainty on the status of very recently proposed blocks.
+
+![Demo Example](static/UTF-8DW_Quantum_Hashing_Infographic_Final_V4.png "Image of blockchain state uncertainty")
+
+This demo implements a quantum blockchain wherein a set of miners perform quantum experiments on a set of QPUs (and embeddings), yet arrive at a consensus on experimental outcomes and the state of the ledger. Miners are selected to use a variety of QPUs, and embeddings over those QPUs.
+After setting parameters in the browser, the blockchain is initiated with a genesis block.
+As blocks are mined and proposed they are assessed independently by miners conducting their own quantum experiments.
+
+In the paper, “Blockchain with Proof of Quantum Work” [[1]](#arXiv:2503.14462) D-Wave executed the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs. This demo implements the methods of the paper.
+
+
+## Architectural comparison with Amin et al. Blockchain with Proof of Quantum Work
 
 For purposes of timely blockchain evolution, and code simplicity, we highlight the following restrictions: 
-* The case of unitary dynamics of 4x4x4 cubic-lattice spin glasses is used for the hash [paper2].
+* The case of unitary dynamics of 4x4x4 cubic-lattice spin glasses is used for the hash.
 * Mining is accelerated with impact only on the blockchain rate (not structure) by setting the hardness at 
 minimum
 * We also allow the option to simulate the blockchain using resampled experimental data. 
 * The hash length is fixed to 128 with confidence-based chainwork.
-These and other restrictions are compatible with the results presented in [arXiv:2503.14462].
 
-Diverging from [arXiv:2503.14462], we fix the num_reads to 600 (as opposed to the standardized 1 second of QPU access time in [] experiments) in order to accelerate blockchain evolution; to keep this from resulting in undesired extra branching, the error tolerance N_max is somewhat increased.
+Weaknesses of the particular demonstrated architecture. Cross-validation rates can be increased by use of additional experimental data (confidence-based validation). Mitigations for attacks are explained in the paper. We do not model a transaction ecosystem of transactions on top of the mining process, although this is supported by the block structure.
 
-**Objectives**: Consensus on the state of the blockchain is demonstrated (small delay, and high efficiency) where miners employ diverse experimental settings.
+### Differences from [[1]](#arXiv:2503.14462) and demonstration weaknesses:
 
-**Constraints**: Weaknesses of the particular demonstrated architecture are explained in [arXiv:2503.14462]. Cross-validation rates can be increased by use of additional experimental data (confidence-based validation). Mitigations for attacks are explained in the paper. We do not model a transaction ecosystem of transactions on top of the mining process, although this is supported by the block structure.
-
-## Model Overview
-The architecture is explained in the paper found here: [arXiv:2503.14462]
-This demo implements a simplified version of the simulation code, removing (simulated)
-transactions and fixing certain parameters.
+We fix the num_reads to 600 (as opposed to the standardized 1 second of QPU access time in [ar] experiments) in order to accelerate blockchain evolution; to keep this from resulting in undesired extra branching, the error tolerance N_max is somewhat increased.
 
 ### Parameters
 The demo defines the following parameters for the underlying proof-of-work protocol
-#TODO add these
 
+* Number of miners: The number of participating miners.
+* The length of the chain:
+* The set of QPUs used: One can select a single generally available QPU, or all available QPUs. 
 
-## Code Overview
+## Model and Code Overview
 
-
-### Set up
 The user selects a number of participating miners, a number of mining events to simulate,
 and a set of QPUs (single, or multiple). If multiple QPUs are selected, each experiment is randomized,
 selecting uniformly from the available QPUs, and supported programmings per QPU. Experimental
@@ -138,7 +149,9 @@ The code structure is designed with a view to practical generations including:
 ### Quantum unitary evolution and the quantum hash:
 
 The unitary evolution that defines "the quantum puzzle" is defined by a set of programmable couplers J.
-Implementation matches [arXiv:2503.14462].
+Each coupler is sampled uniformly at random +/- J for each edge matched to a 4x4x4 cubic lattice.
+Miners access QPUs uniformly at random from the selected set. Each access to a QPU involves a randomization of the programming,
+so as to model the enhanced level of control errors that may be expected from a larger set.
 The QPU sampling makes use of the ocean-sdk composites framework accessed in quantum_cubic_utils.py.
 Per mining or validation event the QPU is chosen at random, the realization of control errors is randomized
 (using automorphisms, and spin-reversal transforms) so as to enhance (relative) control errors,
@@ -151,14 +164,16 @@ These are precalculated for a restricted set of current solvers.
 To generate parameters for a currently unsupported solver the code examples/generate_qpu_specific_properties.py can be used. 
 
 ## References
-
+x
+<a id="arXiv:2503.14462"></a>
 Blockchain with proof of quantum work
-Mohammad H. Amin el al. (2025)
-[arXiv:2503.14462](https://arxiv.org/abs/2503.14462)
+Mohammad H. Amin el al., arXiv:2503.14462 (2025)
+https://arxiv.org/abs/2503.14462
 
+<a id="10.1126/science.ado6285"></a>
 Beyond-classical computation in quantum simulation
-Andrew D. King et al. (2025)
-[doi.org/10.1126/science.ado6285](https://doi.org/10.1126/science.ado6285)
+Andrew D. King et al., Science (2025)
+https://doi.org/10.1126/science.ado6285
 
 ## License
 
