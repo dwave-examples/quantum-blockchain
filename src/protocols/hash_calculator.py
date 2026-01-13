@@ -9,7 +9,7 @@ from enum import Enum
 from directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
-from src.values import DEFAULT_NUM_READS, ADVANTAGE4_1_MAX_NUM_READS
+from src.values import DEFAULT_NUM_READS, BOOTSTRAP_DATA_NUM_READS, DEFAULT_ANNEALING_TIME
 
 from dwave.system import DWaveSampler
 from dwave.cloud import Client
@@ -42,7 +42,7 @@ class HashSolver(ABC):
 
     @abstractmethod
     def calculate_quantum_hash(
-        self, hash_length: int, rng_seed: int
+        self, hash_length: int, rng_seed: int | None = None
     ) -> tuple[str, np.ndarray, float]:
         """Template for the method to calculate quantum hash values. Implementation will vary by solver type,
         but input and return values should stay consistent.
@@ -74,8 +74,9 @@ def initialize_solver(solver_name: str) -> HashSolver:
     """Function to allow a HashSolver of either type to be initiated from a SolverParams tuple, without
         having to check which type of solver it is and invoke either subclass directly.
     Args:
-        init_params (SolverParams): Information about each of the fields can be found in the main docstring
-                    in trials_main.py
+        solver_name: A SolverName compatible value used to initialize a QPU or bootstrap solver.
+    Returns:
+        A HashSolver
     """
 
     if solver_name not in [str(n.value) for n in SolverName]:
@@ -90,36 +91,44 @@ def initialize_solver(solver_name: str) -> HashSolver:
 
 class BootstrappingHashSolver(HashSolver):
 
-    def __init__(self, solver_name: str, dW=1.0, num_reads=600) -> None:
-        """Initializes a bootstrap solver. Does not use any of the passed parameters except the solver name,
-            which it uses to determine which bootstrapping files to draw from. These file must be in place
-            in the filesystem for the initialization to succeed.
+    def __init__(
+        self,
+        solver_name: str = None,
+        *,
+        bootstrap_path: str = BOOTSTRAP_PATH,
+        mean_witnesses: np.ndarray | None = None,
+        var_witnesses: np.ndarray | None = None,
+        var_rescaling: float | None = None,
+    ) -> None:
+        """Initializes a bootstrap solver from a source file or by provission of numpy arrays.
 
         Args:
-            init_params (SolverParams): Information about each of the fields can be found in the main docstring
-                in trials_main.py
-            dW: rescaling of witnesses. Relevant to confidence-based chainwork
-                assessments.
+            solver_name: The solver_name which specifies a lookup file for loading witness statistics.
+            bootstrap_path: Path to the directory containing the witness data.
+            mean_witnesses: A numpy array of expected witness values.
+            var_witnesses: A numpy array of expected witness variances.
+            var_rescaling: To emulate variable sampling error (or high frequency control error) we can rescale the variance.
+                Resampled witnesses are distributed as ~ N(mean, variance*variance_rescaling)).
+                If fewer/more reads are to be simulated, relative to the value used in data correction we can scale accordingly.
         """
-
-        self._solver_name = solver_name
-        assert (
-            self.solver_name in BootstrappingHashSolver.allowed_solvers()
-        ), f"BootstrappingHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
-        mean_filepath = os.path.join(BOOTSTRAP_PATH, self.solver_name + "_mean.npy")
-        var_filepath = os.path.join(BOOTSTRAP_PATH, self.solver_name + "_var.npy")
-        self.mean_witnesses = np.load(mean_filepath)
-        self.var_witnesses = np.load(var_filepath)
+        assert solver_name is not None or (
+            mean_witnesses is not None
+        ), "Witness must be provided or a solver associated to a source file specified"
+        if mean_witnesses is None:
+            self._solver_name = solver_name
+            mean_filepath = os.path.join(bootstrap_path, self.solver_name + "_mean.npy")
+            var_filepath = os.path.join(bootstrap_path, self.solver_name + "_var.npy")
+            self.mean_witnesses = np.load(mean_filepath)
+            var_witnesses = np.load(var_filepath)
+        else:
+            self._solver_name = None
+            self.mean_witnesses = mean_witnesses
+            if var_witnesses is None:
+                var_witnesses = np.zeros(shape=mean_witnesses.shape)
+        if var_rescaling is None:
+            var_rescaling = float(DEFAULT_NUM_READS) / float(BOOTSTRAP_DATA_NUM_READS)
+        self.var_witnesses = var_rescaling * var_witnesses
         self.num_witnesses = self.mean_witnesses.size
-        self.dW = dW
-        self.num_reads = num_reads
-
-    @staticmethod
-    def allowed_solvers() -> list[str]:
-        """The BootstrappingHashSolver class is specifically intended to implement bootstrapped simulations of quantum
-        measurements, rather than the real things. As such, it only uses those Solver types that work in this way, and
-        disallows the use of any of the actual QPU solvers."""
-        return [str(sn.value) for sn in SolverName if "simulated" in str(sn.value)]
 
     def calculate_quantum_hash(
         self, hash_length: int, rng_seed: int
@@ -144,8 +153,9 @@ class BootstrappingHashSolver(HashSolver):
         prng_sampling = np.random.default_rng()
         indices = prng_header.integers(self.num_witnesses, size=hash_length)
         mu = self.mean_witnesses.ravel()[indices]
-        var = ADVANTAGE4_1_MAX_NUM_READS * self.var_witnesses.ravel()[indices] / self.num_reads
-        dot_vector = (mu + np.sqrt(var) * prng_sampling.normal(size=hash_length)) / self.dW
+        var = self.var_witnesses.ravel()[indices]
+
+        dot_vector = mu + np.sqrt(var) * prng_sampling.normal(size=hash_length)
         bool_vector = dot_vector > 0
         hash_bits = bool_vector.astype(int)
         sample_end = time.time()
@@ -170,40 +180,43 @@ class QuantumHashSolver(HashSolver):
     def __init__(
         self,
         solver_name: str,
-        randomize_embedding: bool = False,
         profile: str = "defaults",
-        num_reads: int = 600,
+        num_reads: int = DEFAULT_NUM_READS,
+        reference_annealing_time: float = DEFAULT_ANNEALING_TIME,
+        energy_time_rescaling: tuple[float, float] | None = None,
     ) -> None:
         """Initializes the QuantumHashSolver object, which will create and maintain a connection to the
         indicated D-Wave Solver as long as this object in instantiated.
 
         Args:
-            init_params (SolverParams): Information about each of the fields can be found in the main docstring
-                in trials_main.py
+            solver_name: The name of the QPU solver
+            profile: client profile
+            num_reads: number of QPU reads per hash calculation
+            reference_annealing_time: targetted evolution time with respect to Advantage2_prototype2 schedule.
+            energy_time_rescaling: problem Hamiltonian and time rescaling factors required
+                 to emulate Advantage2_prototype2 dynamics with given solver.
         """
-        if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
-            raise ValueError(
-                "Unsupported {solver_name}: See examples/ for generation of energy-time rescaling values and embeddings"
-            )
+        if energy_time_rescaling is None:
+            if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
+                raise ValueError(
+                    "Unsupported {solver_name}: See examples/ for generation of energy-time rescaling values and embeddings"
+                )
+            problem_r, time_r = DEFAULT_ENERGY_TIME_RESCALING[solver_name]
+        else:
+            problem_r, time_r = energy_time_rescaling
+
         self._solver_name = solver_name
-        assert (
-            self._solver_name in QuantumHashSolver.allowed_solvers()
-        ), f"QuantumHashSolver was initialized with incompatible solver name {self.solver_name}. Allowed names are {self.allowed_solvers}"
         self.embedding_directory = EMBEDDINGS_PATH
         self.sampler_kwargs = dict(
             fast_anneal=True,
-            annealing_time=0.005 / DEFAULT_ENERGY_TIME_RESCALING[solver_name][1],
+            annealing_time=reference_annealing_time / time_r,
             auto_scale=False,
-            num_reads=DEFAULT_NUM_READS,
+            num_reads=num_reads,
         )
-        self.problem_energy_scale = DEFAULT_ENERGY_TIME_RESCALING[solver_name][0]
+        self.problem_energy_scale = problem_r
         self.profile = profile
         self.client = Client.from_config(profile=self.profile)  # TODO check if this is needed
         self.qpu = DWaveSampler(solver=self.solver_name, profile="defaults")
-
-    @staticmethod
-    def allowed_solvers() -> list[str]:
-        return [str(sn.value) for sn in SolverName if "simulated" not in str(sn.value)]
 
     def calculate_quantum_hash(
         self, hash_length: int, rng_seed: int
