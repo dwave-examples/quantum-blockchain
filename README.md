@@ -87,6 +87,8 @@ This example implements methods found in the paper, “Blockchain with Proof of 
 
 The simulations in this example execute unitary evolutions on cubic spin glasses matching the paper with simple +/- chain work, subject to changes in the generally available solvers.
 The hash length is fixed to 32 and `num_reads` to 600 in order to reduce the QPU access time and accelerate the blockchain evolution (as opposed to the standardized 1 second of QPU access time in the [[1]](#arXiv_2503_14462) experiments).
+Problem-Hamiltonian and/or annnealing rescaling allows one processor to emulate another, accommodating differences in the annealing schedules (energy scales). In both the paper and demo the target unitary evolution is defined relative to the Advantage2_prototype2 solver schedule.  Advantage systems modeled this schedule in the paper by lengthening their anneal times, to emulate the higher energy scales of Advantage2, which is also true in the demo. However, Advantage2 solvers (unavailable at the time of the original study) can have higher energy scales than the prototype system and emulation of the unitary dynamics must be achieved by scaling down of the problem Hamliltonian (since we cannot reduce annealing_time beyond the lower bound of 5 nanoseconds).
+Visualization of the blockchain in the paper placed blocks sequential on a spiral, in the demo visualization the strongest chain follows the same parametric spiral, but other (non-strongest, or rejected) branches deviate inwards from that path. Whereas the paper only included 4-color global views, the demo also allows 2-color presentations of the state from an individual miner perspective.
 
 
 ## Model and Code Overview
