@@ -1,23 +1,24 @@
-import time
-import os
-import binascii
-
 from abc import ABC, abstractmethod
+import binascii
 from collections import namedtuple
 from enum import Enum
+import os
+import time
+
+import numpy as np
+
+import dimod
+from dwave.system import DWaveSampler
+from dwave.cloud import Client
 
 from directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
-from src.values import DEFAULT_NUM_READS, BOOTSTRAP_DATA_NUM_READS, DEFAULT_ANNEALING_TIME
-
-from dwave.system import DWaveSampler
-from dwave.cloud import Client
-
-import numpy as np
-
 from src.values import (
+    BOOTSTRAP_DATA_NUM_READS,
+    DEFAULT_ANNEALING_TIME,
     DEFAULT_ENERGY_TIME_RESCALING,
+    DEFAULT_NUM_READS,
 )
 
 
@@ -179,11 +180,15 @@ class QuantumHashSolver(HashSolver):
 
     def __init__(
         self,
-        solver_name: str,
+        solver_name: str | None = None,
+        *,
         profile: str = "defaults",
         num_reads: int = DEFAULT_NUM_READS,
         reference_annealing_time: float = DEFAULT_ANNEALING_TIME,
         energy_time_rescaling: tuple[float, float] | None = None,
+        embedding_directory: str = EMBEDDINGS_PATH,
+        sampler_kwargs: dict | None = None,
+        sampler: dimod.Sampler | None = None,
     ) -> None:
         """Initializes the QuantumHashSolver object, which will create and maintain a connection to the
         indicated D-Wave Solver as long as this object in instantiated.
@@ -195,6 +200,12 @@ class QuantumHashSolver(HashSolver):
             reference_annealing_time: targetted evolution time with respect to Advantage2_prototype2 schedule.
             energy_time_rescaling: problem Hamiltonian and time rescaling factors required
                  to emulate Advantage2_prototype2 dynamics with given solver.
+            embedding_directory: Location of embeddings
+            sampler: A `dimod.Sampler`, when not specified the solver name and profile is used to select
+                a QPU with the Leap client, and a suitable embedding is loaded. non-QPU samplers
+                are used for testing.
+            sampler_kwargs: Arguments for the dimod sampler, defaulted to QPU fast annealing
+                arguments when not specified. Non defaulted arguments are used for testing.
         """
         if energy_time_rescaling is None:
             if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
@@ -206,23 +217,34 @@ class QuantumHashSolver(HashSolver):
             problem_r, time_r = energy_time_rescaling
 
         self._solver_name = solver_name
-        self.embedding_directory = EMBEDDINGS_PATH
-        self.sampler_kwargs = dict(
-            fast_anneal=True,
-            annealing_time=reference_annealing_time / time_r,
-            auto_scale=False,
-            num_reads=num_reads,
-        )
+        if sampler_kwargs is None:
+            self.sampler_kwargs = dict(
+                fast_anneal=True,
+                annealing_time=reference_annealing_time / time_r,
+                auto_scale=False,
+                num_reads=num_reads,
+            )
+        else:
+            self.sampler_kwargs = sampler_kwargs
         self.problem_energy_scale = problem_r
         self.profile = profile
-        self.client = Client.from_config(profile=self.profile)  # TODO check if this is needed
-        self.qpu = DWaveSampler(solver=self.solver_name, profile="defaults")
+
+        if sampler is None:
+            qpu = DWaveSampler(solver=self.solver_name, profile=self.profile)
+            _, source_edge_list = quantum_cubic_utils.create_lattice()
+
+            self.sampler = quantum_cubic_utils.generate_default_sampler(
+                source_edge_list,
+                qpu=qpu,
+                embedding_directory=embedding_directory,
+            )
+        else:
+            self.sampler = sampler
 
     def calculate_quantum_hash(
         self, hash_length: int, rng_seed: int
     ) -> tuple[str, np.ndarray, float]:
-        """Implementation of quantum hash calculation for solvers simulated using bootstrapping. Requires
-            Bootstrapping files for the current solver to be in place in order to function.
+        """Implementation of quantum hash calculation for QPU samplers
 
         Args:
             hash_length (int): length of the quantum hash to use, in bits
@@ -238,31 +260,17 @@ class QuantumHashSolver(HashSolver):
         h, J = quantum_cubic_utils.create_model(
             seed=rng_seed, problem_energy_scale=self.problem_energy_scale
         )
-        sampler = quantum_cubic_utils.generate_default_sampler(
-            J.keys(),
-            qpu=self.qpu,
-            embedding_directory=self.embedding_directory,
-        )
         sample_start = time.time()
-        sampler_output = sampler.sample_ising(
-            h, J, **self.sampler_kwargs
-        )  # TODO decide when and if passing sampleset info is useful
+        sampler_output = self.sampler.sample_ising(h, J, **self.sampler_kwargs)
         sample_end = time.time()
 
         stats = quantum_cubic_utils.build_stats(sampler_output, J.keys())
-        problem_id = sampler_output._info[
-            "problem_id"
-        ]  # TODO figure out where to pass through or eliminate
-        del problem_id  # Failed attempts to work around memory leak issue, can likely delete
-        del sampler_output  # Failed attempts to work around memory leak issue, can likely delete
-        del sampler  # Failed attempts to work around memory leak issue, can likely delete
 
         hv = RandomProjectionHasher(
             random_seed=rng_seed + 1, input_dimension=stats.size, nbits=hash_length
         )
 
         hash_bits, dot_vector = hv.hash_vector(stats.reshape(-1))
-        del stats
         sample_time = sample_end - sample_start
         quantum_hash = binascii.hexlify(np.packbits(hash_bits)).decode(encoding="utf-8")
 

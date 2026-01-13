@@ -11,6 +11,7 @@ from src.protocols.hash_calculator import (
     SolverName,
     initialize_solver,
     BootstrappingHashSolver,
+    QuantumHashSolver,
 )
 
 client_supported_solver_name = None
@@ -32,13 +33,8 @@ def test_SolverName():
     assert SolverName.SOLVER1 in SolverName
 
 
-@pytest.mark.skipif(client_supported_solver_name is None, reason="supported QPU client unavailable")
-def test_initialize_solver_qpu_client():
-    initialize_solver(solver_name=client_supported_solver_name)
-
-
 def test_initialize_solver_bootstrap():
-    initialize_solver(solver_name = SolverName.BOOTSTRAP1.value)
+    initialize_solver(solver_name=SolverName.BOOTSTRAP1.value)
     pass
 
 
@@ -68,3 +64,41 @@ def test_BootstrappingHashSolver():
     assert np.all(hash3 >= 0), "Values are 0. and 1 + small random, shouldn't be negative numbers"
     assert np.any(hash3 == 0.0), "Value 0. should be present with high probability"
     assert not np.any(hash3 == 1.0), "Value 1. should be absent with high probability"
+
+
+def test_QuantumHashSolver():
+    # Instantiation at defaults with client, exercising the default directory
+    # structure is already tested, here we use a MockSampler
+    sampler = dimod.RandomSampler()
+    sampler_kwargs = {"num_reads": 100}
+    qhs = QuantumHashSolver(
+        sampler=sampler,
+        energy_time_rescaling=(1.0, 1.0),
+        embedding_directory="./",
+        sampler_kwargs=sampler_kwargs,
+    )
+    assert qhs.solver_parameters.solver_name == None
+    assert qhs.solver_parameters.profile == "defaults"
+    for hash_length in [32, 64]:
+        ascii_hash, qhs_hash, t = qhs.calculate_quantum_hash(hash_length=hash_length, rng_seed=0)
+        assert t > 0
+        assert len(qhs_hash) == hash_length, "ascii_hash should be ceil(hash_length /4)"
+        assert len(ascii_hash) * 4 == hash_length, "ascii_hash should be ceil(hash_length /4)"
+
+
+@pytest.mark.skipif(client_supported_solver_name is None, reason="supported QPU client unavailable")
+def test_initialize_solver_qpu_client():
+    qhs = initialize_solver(solver_name=client_supported_solver_name)
+    hash_length = 1024
+    _, qhs_hash1a, _ = qhs.calculate_quantum_hash(hash_length=hash_length, rng_seed=0)
+    _, qhs_hash1b, _ = qhs.calculate_quantum_hash(hash_length=hash_length, rng_seed=0)
+    _, qhs_hash2, _ = qhs.calculate_quantum_hash(hash_length=hash_length, rng_seed=1)
+    overlap11 = qhs_hash1a @ qhs_hash1b
+    overlap12a = qhs_hash1a @ qhs_hash2
+    overlap12b = qhs_hash1b @ qhs_hash2
+    assert (
+        overlap11 > overlap12a
+    ), "Verification for the same problem, should be better than for random pairs, with high probability"
+    assert (
+        overlap11 > overlap12b
+    ), "Verification for the same problem, should be better than for random pairs, with high probability"
