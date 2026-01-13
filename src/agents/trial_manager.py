@@ -50,7 +50,7 @@ class TrialManager:
         self.initialize_miners(num_miners)
 
         self.max_mining_attempts = 1000000  # should definitely have some cutoff, but what's a good value depends a lot on use-case
-        self.mining_miner_id = None
+        self.mining_miner = None
         self.block_broadcast = None
         self.round_order = []
         self.round_progress = 0
@@ -114,19 +114,18 @@ class TrialManager:
             self.block_broadcast: stores the newly-mined block here, serialized in JSON format
 
         """
-        mining_miner_id = self.round_order[0]
-        self.mining_miner_id = self.miners[mining_miner_id]
-        mining_miner = self.miners[mining_miner_id]
+        self.mining_miner_id = self.round_order[0]
+        self.mining_miner = self.miners[self.mining_miner_id]
         mining_attempts = 0
         mine_success = False
         while mining_attempts <= self.max_mining_attempts and not mine_success:
             mining_attempts += 1
-            mined_block, block_score = mining_miner.attempt_mine()
+            mined_block, block_score = self.mining_miner.attempt_mine()
             if block_score > 0:
-                self.block_broadcast = mining_miner.broadcast_mined_block()
+                self.block_broadcast = self.mining_miner.broadcast_mined_block()
                 self.round_progress += 1
                 self.blocks_mined += 1
-                return mining_miner_id, block_score
+                return self.mining_miner_id, block_score
 
             # TODO figure out what to do if mining fails
 
@@ -188,8 +187,15 @@ class TrialManager:
         while self.blocks_mined < stopping_block:
             self.single_step()
 
-    def get_last_common_trunk_block(self):
+    def get_last_common_trunk_block(self) -> int:
+        """ Finds the block number of the last block that all miners have in their trunks: that is, the last
+            block that all miners consider to be a canonical part of the main chain. This is important in 
+            assessing the state of the blockchain, as once all miners agree on a block, it is effectively
+            immutable, as every new block mined will include it as a predecessor.
+            
+            Returns:
+                largest_common_block_num (int): the """
         trunk_sets = [set([blk.block_number for blk in miner.blockchain.trunk]) for miner in self.miners.values()]
         common_block_nums = set.intersection(*trunk_sets)
-        largest_common_block_num = max(list(common_block_nums))
-        return largest_common_block_num #TODO consider formatting
+        largest_common_block_num = max(list(common_block_nums)) #TODO validity check
+        return largest_common_block_num

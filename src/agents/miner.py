@@ -1,11 +1,10 @@
 import numpy as np
-import json
 from typing import Optional
 
+from src.structures.block import Block
 from src.structures.score_tree_branch import BlockNode
 from src.structures.block_score_tree import BlockScoreTree
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
-from src.structures.block import Block
 
 class Miner():
     """Intended Usage: this class is intended to encapsulate all necessary functions for running a miner

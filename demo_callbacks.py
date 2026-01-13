@@ -142,6 +142,8 @@ async def simulation(
         block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "miner_id": ""}
         current_block_dict = copy.deepcopy(block_dict_template)
 
+        print(blockchain_structure)
+
         first_empty_index = blockchain_structure.index(None)
         if first_empty_index > 0:
             print(f"Restarting trial at block {first_empty_index}")
@@ -265,8 +267,10 @@ def update_blockchain_data(block_data: dict):
 def toggle_graph_display(selected_view):
     """ """
 
+    print(f"View {selected_view} has been selected.")
     selected_view = int(selected_view)
     return_tuple = ["" if opt==selected_view else "display-none" for opt in range(4)]
+    print(f"Returning {return_tuple}")
 
     return return_tuple
 
@@ -390,7 +394,7 @@ def resume_simulation(pause_click: int):
     
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
-    Output("miner-graph-and-table", "className", allow_duplicate=True),
+    Output("miner-graph-and-table", "className", allow_duplicate=True), #TODO clear graph displays
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
