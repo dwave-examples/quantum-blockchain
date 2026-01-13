@@ -28,6 +28,8 @@ from demo_configs import (
     INTRO_TEXT,
     INTRO_SUBTEXT,
     LOADING_TEXT,
+    VIEW_OPTS,
+    GRAPH_NAMES
 )
 
 from demo_solvers import AVAILABLE_SOLVERS
@@ -166,6 +168,15 @@ def generate_run_buttons() -> html.Div:
         ],
     )
 
+def generate_graph_displays() -> list[dcc.Graph]:
+    graphs = [dcc.Graph(
+                        id=name,
+                        responsive=True,
+                        config={"displayModeBar": False},
+                        className="display-none"
+                        )
+                          for name in GRAPH_NAMES]                                      
+    return graphs
 
 def create_interface():
     """Set the application HTML."""
@@ -179,7 +190,6 @@ def create_interface():
                 className="skip-link",
             ),
             dcc.Store(id="running-status", data=False),
-            dcc.Store(id="paused-status", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
             dcc.Store(id="miner-status-data", data={}),
@@ -249,7 +259,7 @@ def create_interface():
                                         "",
                                         "view-select",
                                         generate_options_dropdown(
-                                            [MINER_NAMES[i] for i in range(3)]
+                                            VIEW_OPTS
                                         ),
                                     ),
                                     html.Div(
@@ -259,11 +269,29 @@ def create_interface():
                                                 className="graph-wrapper",
                                                 children=[
                                                     dcc.Graph(
-                                                        id="miner-graph-display",
+                                                        id=GRAPH_NAMES[VIEW_OPTS[0]],
                                                         responsive=True,
                                                         config={"displayModeBar": False},
                                                     ),
-                                                ],
+                                                    dcc.Graph(
+                                                        id=GRAPH_NAMES[VIEW_OPTS[1]],
+                                                        responsive=True,
+                                                        config={"displayModeBar": False},
+                                                        className="display-none",
+                                                    ),
+                                                    dcc.Graph(
+                                                        id=GRAPH_NAMES[VIEW_OPTS[2]],
+                                                        responsive=True,
+                                                        config={"displayModeBar": False},
+                                                        className="display-none",
+                                                    ),
+                                                    dcc.Graph(
+                                                        id=GRAPH_NAMES[VIEW_OPTS[3]],
+                                                        responsive=True,
+                                                        config={"displayModeBar": False},
+                                                        className="display-none",
+                                                    ),
+                                                ]
                                             ),
                                             html.Div(
                                                 [

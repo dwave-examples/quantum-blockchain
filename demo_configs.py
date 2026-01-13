@@ -41,8 +41,10 @@ TRUNK_POINT_COLOR = "#1458aa"
 TRUNK_EDGE_COLOR = "#6fa8ee" 
 ABANDONED_BRANCH_POINT_COLOR = "#B85103"
 ABANDONED_BRANCH_EDGE_COLOR = "#F5A86E"
-ACTIVE_BRANCH_POINT_COLOR = 4
-ACTIVE_BRANCH_EDGE_COLOR = 5
+ACTIVE_BRANCH_POINT_COLOR = "#6b6c6d"
+ACTIVE_BRANCH_EDGE_COLOR = "#babbbb"
+TRUNK_TIP_COLOR = "black"
+
 
 
 GRAPH_POINT_MIN_SIZE = 5
@@ -86,3 +88,19 @@ NUM_BLOCKS = {
 
 TRUNK_COLOR_SCALE = px.colors.sequential.Bluered
 BRANCH_COLOR_SCALE = px.colors.sequential.Aggrnyl
+
+VIEW_OPTS = [
+    "Global_View",
+    "Miner_1",
+    "Miner_2",
+    "Miner_3"
+]
+
+GRAPH_NAMES = {}
+for opt in VIEW_OPTS:
+    view_words = opt.split("_")
+    name = ""
+    for word in view_words:
+        name += word + "-"
+    name += "Graph"
+    GRAPH_NAMES.update({opt: name})

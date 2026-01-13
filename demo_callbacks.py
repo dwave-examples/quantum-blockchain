@@ -15,7 +15,6 @@
 from __future__ import annotations
 import time
 import copy
-import json
 import random
 
 import dash
@@ -31,6 +30,8 @@ from src.agents.trial_manager import TrialManager
 from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
+from demo_configs import VIEW_OPTS, GRAPH_NAMES
+
 from demo_solvers import AVAILABLE_SOLVERS
 from demo_interface import generate_options
 from src.utilities.display_update import render_miner_status
@@ -43,7 +44,7 @@ from src.protocols.hash_calculator import BootstrappingHashSolver
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
+#TODO remove if no longer necessary
 def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTree:
     tree = BlockScoreTree()
     for block_entry in node_list:
@@ -79,7 +80,7 @@ def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTr
     cancel = [Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
 )
-def simulation(
+async def simulation(
     update_current_block_data,
     running_status: bool,
     miner_slider_val: int,
@@ -170,6 +171,9 @@ def simulation(
             print("Finished all restart logic.")
 
         min_loop_time = 1.5 #TODO make a constant
+        plotter = SpiralPlotter()
+        view_miners = MINER_NAMES[:3]
+        global_miner = MINER_NAMES[num_miners-1]
 
         while(manager.blocks_mined <= num_blocks):
             iter_start_time = time.time()
@@ -185,16 +189,40 @@ def simulation(
 
             current_block_dict["scores"][miner_id] = block_score
 
-            print(f"In simulation... with {manager.blocks_mined} and {current_block_dict['scores'].keys()}")
-
-            iter_end_time = time.time()
-            iter_total_time = iter_end_time - iter_start_time
-            extra_wait_time = min_loop_time - iter_total_time
-            if extra_wait_time > 0:
-                print(f"Main loop only took {iter_total_time}, waiting {extra_wait_time} to compensate.")
-                time.sleep(extra_wait_time)
-
             update_current_block_data(current_block_dict)
+
+            await asyncio.sleep(0.1)
+
+            miner_fig = None
+
+            if miner_id == global_miner:
+                last_shared_block = manager.get_last_common_trunk_block()
+                miner_fig = plotter.create_plot_from_tree(manager.miners[global_miner].blockchain, active_block_cutoff=last_shared_block)
+                miner_graph_id = GRAPH_NAMES["Global_View"] #TODO improve binding            
+            elif miner_id in view_miners:
+                miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain)
+                miner_graph_id = GRAPH_NAMES[miner_id]
+            if miner_fig is not None:
+                miner_fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
+                    autosize=False,
+                    width=700,
+                    height=700,
+                    showlegend = False,
+                    xaxis = dict(showticklabels=False),
+                    yaxis = dict(showticklabels=False),
+                    margin=dict(
+                        l=0,
+                        r=0,
+                        b=0,
+                        t=0,
+                        pad=4
+                    ),
+                    paper_bgcolor="White",
+                    plot_bgcolor="White",
+                )
+                set_props(miner_graph_id, {"figure":miner_fig},)
+
+            await asyncio.sleep(0.1)
 
         
     return "", "display-none"
@@ -214,12 +242,8 @@ def update_blockchain_data(block_data: dict):
     """ Pass-through function to patch the single-block update from the 'simulation' callback
         into the larger blockchain data structure."""
     block_number = block_data["block_number"]
-    print(f"In update_blockchain_data.. with {block_number} and {block_data['scores'].keys()}")
-    update_start = time.time()
     to_update = Patch()
     to_update[block_number-1] = block_data
-    update_end = time.time()
-    print(f"Update took {update_end - update_start} s and ended at {update_end}")
     return to_update
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -228,46 +252,41 @@ def update_blockchain_data(block_data: dict):
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+@dash.callback(
+    Output(GRAPH_NAMES[VIEW_OPTS[0]], "className"), #TODO find a more pythonic way to do this
+    Output(GRAPH_NAMES[VIEW_OPTS[1]], "className"),
+    Output(GRAPH_NAMES[VIEW_OPTS[2]], "className"),
+    Output(GRAPH_NAMES[VIEW_OPTS[3]], "className"),
+    inputs=[
+        Input("view-select", "value"),
+    ],
+)
+def toggle_graph_display(selected_view):
+    """ """
+
+    selected_view = int(selected_view)
+    return_tuple = ["" if opt==selected_view else "display-none" for opt in range(4)]
+
+    return return_tuple
+
 @dash.callback(
     Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("prelim-text", "className"),
     Output("miner-table-head", "children", allow_duplicate=True),
     Output("miner-table-body", "children", allow_duplicate=True),
-    Output("miner-graph-display", "figure"),
     inputs = [
-        Input("blockchain-structure-data", "data"),
-        Input("view-select", "value"),
+        Input("current-block-data", "data"),
         State("miner-slider", "value"),
         ],
     prevent_initial_call=True,
 )
-def update_main_display(blockchain_structure_data: list, selected_view: int, num_miners: int):
+def update_main_display(current_block_data: dict, num_miners: int):
     """ This callback processes blockchain structure data and uses it to update the miner status
         table and the graph display."""
     
-    disp_update_start = time.time()
-    print(f"Display update started at {disp_update_start}")
-
-    selected_view = int(selected_view)
-
-    current_view = MINER_NAMES[selected_view]
-
-    #Get blockchain data
-  
-    block_number = blockchain_structure_data.index(None)
-    if block_number < 2:
-        raise PreventUpdate()
-
-    current_blockchain_data = blockchain_structure_data[:block_number]
-    current_block_data = current_blockchain_data[-1]
     mining_id = current_block_data["miner_id"]
-
-    print(f"Starting update_main_display with {block_number} and {current_block_data['scores'].keys()}")
-    print("")
-    print("")
-    print("")
-
-    #Compute miner status table
+    block_number = current_block_data["block_number"]
 
     miner_status_dict = {MINER_NAMES[i]:"" for i in range(num_miners)}
     for miner_id, score in current_block_data["scores"].items():
@@ -279,48 +298,7 @@ def update_main_display(blockchain_structure_data: list, selected_view: int, num
     miner_status_dict[mining_id] = "Mined"
     miner_table_head, miner_table_body = render_miner_status(block_number, miner_status_dict)
 
-    #Draw graph
-    #TODO add logic to check if graph update is necessary 
-
-    miner_scores_dict = current_block_data["scores"]
-    finished_miners = list(miner_scores_dict.keys())
-    last_miner = finished_miners[-1]
-    
-    if current_view == last_miner or ctx.triggered_id == "view-select": #TODO figure out how to do this reliably
-        if current_view not in finished_miners:
-            current_blockchain_data = current_blockchain_data[:-1]
-
-        miner_tree = reconstruct_score_tree(current_blockchain_data, current_view)
-        plotter = SpiralPlotter()
-        miner_fig = plotter.create_plot_from_tree(miner_tree)
-
-        miner_fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
-            autosize=False,
-            width=700,
-            height=700,
-            showlegend = False,
-            xaxis = dict(showticklabels=False),
-            yaxis = dict(showticklabels=False),
-            margin=dict(
-                l=0,
-                r=0,
-                b=0,
-                t=0,
-                pad=4
-            ),
-            paper_bgcolor="White",
-            plot_bgcolor="White",
-        )
-    elif current_view == "Global View":
-        miner_fig = dash.no_update
-        #TODO figure out how to compute global view
-    else:
-        miner_fig = dash.no_update
-
-    disp_update_end = time.time()
-    print(f"Update main display took {disp_update_end - disp_update_start} seconds.")
-
-    return "", "display-none", miner_table_head, miner_table_body, miner_fig
+    return "", "display-none", miner_table_head, miner_table_body
 
 
 

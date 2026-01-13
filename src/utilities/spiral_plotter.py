@@ -16,13 +16,8 @@ from demo_configs import (GRAPH_POINT_MIN_SIZE,
                           ABANDONED_BRANCH_EDGE_COLOR,
                           ABANDONED_BRANCH_POINT_COLOR,
                           ACTIVE_BRANCH_EDGE_COLOR,
-                          ACTIVE_BRANCH_POINT_COLOR)
-
-#TODO higher priority: used line_profiler to determine how long various tasks take. Use this to guide optimization
-
-#TODO consider how much of this can be pre-computed and stored.
-
-#TODO work carefully through branch arrangement logic to improve depth assignments
+                          ACTIVE_BRANCH_POINT_COLOR,
+                          TRUNK_TIP_COLOR)
 
 class GraphBranch(ScoreTreeBranch):
     def __init__(self, branch: ScoreTreeBranch):
@@ -36,6 +31,9 @@ class GraphBranch(ScoreTreeBranch):
         self.y_edges = []
         self.x_points = []
         self.y_points = []
+        self.point_colors = []
+        self.edge_color = ""
+        self.edge_color_cutoff = -1
         self.depth_adjustment = 0
 
     @property
@@ -92,9 +90,7 @@ class SpiralPlotter:
         self.branch_edge_color_a = ABANDONED_BRANCH_EDGE_COLOR
         self.branch_point_color_b = ACTIVE_BRANCH_POINT_COLOR
         self.branch_edge_color_b = ACTIVE_BRANCH_EDGE_COLOR
-
-        self.trunk_tip_color = "black"
-
+        self.trunk_tip_color = TRUNK_TIP_COLOR
     def create_master_size_chart(self):
         step_size = (self.max_pnt_size - self.min_pnt_size)/max(self.num_nodes-1,1)
         return [self.min_pnt_size + i*step_size for i in range(self.num_nodes + 1)]
@@ -130,8 +126,14 @@ class SpiralPlotter:
             if branch == tree_data.trunk:
                 new_graph_branch.create_size_chart(self.master_size_chart)
                 self.trunk = new_graph_branch
+                self.trunk.point_colors = [TRUNK_POINT_COLOR for _ in range(len(self.trunk))]
+                self.trunk.point_colors[-1] = TRUNK_TIP_COLOR
+                                           
+                self.trunk.edge_color = TRUNK_EDGE_COLOR
             else:
                 new_graph_branch.create_size_chart(self.master_size_chart, self.branch_pnt_scaling)
+                new_graph_branch.point_colors = [ABANDONED_BRANCH_POINT_COLOR for _ in range(len(new_graph_branch))]
+                new_graph_branch.edge_color = ABANDONED_BRANCH_EDGE_COLOR
 
             self.branches.append(new_graph_branch)
             branch_pairs.update({branch.base.hash: new_graph_branch})
@@ -266,6 +268,27 @@ class SpiralPlotter:
         for branch in self.branches:
             self.plot_spiral_curves(branch, trunk=bool(branch == self.trunk))
 
+    def color_for_global_view(self, trunk_cutoff: int):
+        cutoff_index = None
+        for idx, block in enumerate(self.trunk):
+            if block.block_number == trunk_cutoff:
+                cutoff_index = idx
+                break
+        
+        if cutoff_index is None:
+            raise Exception(f"No block number matching provided cutoff {trunk_cutoff} found in trunk")
+        elif cutoff_index == len(self.trunk)-1:
+            return #If the whole trunk is covered, no need to change anything
+        
+        self.trunk.point_colors = [TRUNK_POINT_COLOR for _ in range(cutoff_index+1)] + [ACTIVE_BRANCH_POINT_COLOR for _ in range(cutoff_index+1, len(self.trunk))]
+        self.trunk.point_colors[-1] = TRUNK_TIP_COLOR
+        self.trunk.edge_color_cutoff = trunk_cutoff*self.segs_per_point
+        for branch in self.branches:
+            if branch != self.trunk and branch.root.block_number >= trunk_cutoff:
+                branch.point_colors = [ACTIVE_BRANCH_POINT_COLOR for _ in range(len(branch))]
+                branch.point_colors[-1] = TRUNK_TIP_COLOR
+                branch.edge_color = ACTIVE_BRANCH_EDGE_COLOR
+
     def draw_radial_lines(self):
         """ Draws radial lines at the pre-defined angles at which blocks will be plotted. """
         traces = []
@@ -286,20 +309,33 @@ class SpiralPlotter:
             that are part of that branch) and one set of lines, arranged so as to connect those points in a curving spiral
             shape."""
         trunk_edge_traces =[]
-        for i in range(len(self.trunk.x_edges)-1):
-            edge = go.Scatter(x=self.trunk.x_edges[i:i+2], y=self.trunk.y_edges[i:i+2], mode="lines", line={"color":self.trunk_edge_color})
-            trunk_edge_traces.append(edge)
-        trunk_node_trace = go.Scatter(x=self.trunk.x_points, y=self.trunk.y_points, mode="markers", marker={"size": self.trunk.size_chart, "color": [self.trunk_point_color for _ in range(len(self.trunk.x_points)-1)] +[self.trunk_tip_color], "opacity":1})
+        if self.trunk.edge_color_cutoff <= 0 :
+            edge_section = go.Scatter(x=self.trunk.x_edges, y=self.trunk.y_edges, mode="lines", line={"color":self.trunk_edge_color})
+            trunk_edge_traces.append(edge_section)
+        else:
+            edge_section_1 = go.Scatter(x=self.trunk.x_edges[:self.trunk.edge_color_cutoff+1], 
+                                        y=self.trunk.y_edges[:self.trunk.edge_color_cutoff+1], 
+                                        mode="lines", 
+                                        line={"color":self.trunk_edge_color})
+            trunk_edge_traces.append(edge_section_1)
+            edge_section_2 = go.Scatter(x=self.trunk.x_edges[self.trunk.edge_color_cutoff:], 
+                                        y=self.trunk.y_edges[self.trunk.edge_color_cutoff:], 
+                                        mode="lines", 
+                                        line={"color":ACTIVE_BRANCH_EDGE_COLOR})
+            trunk_edge_traces.append(edge_section_2)
+        trunk_node_trace = go.Scatter(x=self.trunk.x_points, 
+                                      y=self.trunk.y_points, 
+                                      mode="markers", 
+                                      marker={"size": self.trunk.size_chart, "color": self.trunk.point_colors, "opacity":1})
         plot_data = trunk_edge_traces
 
         node_traces = [trunk_node_trace]
 
         for branch in self.branches:
             if branch != self.trunk:
-                for i in range(len(branch.x_edges)-1):
-                    edge = go.Scatter(x=branch.x_edges[i:i+2], y=branch.y_edges[i:i+2], mode="lines", line={"color":self.branch_edge_color_a})
-                    plot_data.append(edge)
-                branch_node_trace = go.Scatter(x=branch.x_points, y=branch.y_points, mode="markers", marker={'color': self.branch_point_color_a, "opacity":1, "size": branch.size_chart})           
+                edge_section = go.Scatter(x=branch.x_edges, y=branch.y_edges, mode="lines", line={"color":branch.edge_color})
+                plot_data.append(edge_section)
+                branch_node_trace = go.Scatter(x=branch.x_points, y=branch.y_points, mode="markers", marker={'color': branch.point_colors, "opacity":1, "size": branch.size_chart})           
                 node_traces.append(branch_node_trace)
 
         for trace in node_traces:
@@ -312,8 +348,10 @@ class SpiralPlotter:
         fig = go.Figure(plot_data)
         return fig  
     
-    def create_plot_from_tree(self, tree: BlockScoreTree):
+    def create_plot_from_tree(self, tree: BlockScoreTree, active_block_cutoff: int|None = None):
         self.import_plotting_data(tree_data=tree)
         self.plot_spiral()
+        if active_block_cutoff is not None:
+            self.color_for_global_view(trunk_cutoff=active_block_cutoff)
         plot = self.draw_spiral()
         return plot

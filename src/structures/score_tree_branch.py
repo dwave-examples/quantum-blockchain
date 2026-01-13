@@ -194,8 +194,6 @@ class ScoreTreeBranch:
         else:
             raise Exception("Attempted to link branch that was not a child.")
 
-
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
     #                             SECTION: Getters and Data Access                                       |
@@ -211,8 +209,6 @@ class ScoreTreeBranch:
     def get_score_map(self):
         score_map = [node.total_score for node in self.node_list]
         return score_map
-
-   
 
     def get_descendants_by_depth(self) -> list[list["ScoreTreeBranch"]]:
         """Compiles a list of all the descendants (children and their children and so on)

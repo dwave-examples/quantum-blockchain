@@ -187,3 +187,9 @@ class TrialManager:
 
         while self.blocks_mined < stopping_block:
             self.single_step()
+
+    def get_last_common_trunk_block(self):
+        trunk_sets = [set([blk.block_number for blk in miner.blockchain.trunk]) for miner in self.miners.values()]
+        common_block_nums = set.intersection(*trunk_sets)
+        largest_common_block_num = max(list(common_block_nums))
+        return largest_common_block_num #TODO consider formatting
