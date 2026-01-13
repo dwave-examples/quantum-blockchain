@@ -15,6 +15,7 @@ MIN_SCORE = -(
 # ===================================================================================
 #                      Unitary dynamics parameterization
 # ===================================================================================
+DEFAULT_ANNEALING_TIME = 0.005 # Microseconds of evolution for the quench as executed on Advantage2_prototype2
 DEFAULT_CUBIC_LATTICE_SHAPE = (4, 4, 4)  # Default dimensions of dimerized cubic lattice.
 DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
 # Energy time rescalings required to emulate Advantage2_system2.6 at
@@ -54,9 +55,9 @@ CSV_LOG_SEP_CHAR = ","
 MIN_SAFE_SOUNDNESS = 15  # Minimum soundness of blocks before owners will consider them "safe" to spend from: i.e. highly unlikely to be altered.
 FIRST_KNOWN_NODE_HOSTNAME = "127.0.0.1:5000"
 W_0_ALPHA = 0.0
-DELTA_W_0_ALPHA = 0.18
-DEFAULT_NUM_READS = 600
-ADVANTAGE4_1_MAX_NUM_READS = 3860
+DELTA_W_0_ALPHA = 0.18  # Reference paper value based on witness variance amongst 4 online general access solvers at hte time of the study.
+DEFAULT_NUM_READS = 600  # NB - Smaller than the reference paper.
+BOOTSTRAP_DATA_NUM_READS = 3860 # Referemnce paper value for the number of reads performed in estimation of offline witness data for Advantage_system4.1.
 GENESIS_BLOCK_TIMESTAMP = datetime.timestamp(datetime.fromisoformat("2025-01-01 00:00:00.000"))
 GENESIS_BLOCK_PREV_HASH = "begin_blockchain"
 
