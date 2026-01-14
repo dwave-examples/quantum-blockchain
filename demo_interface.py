@@ -24,12 +24,10 @@ from demo_configs import (
     NUM_BLOCKS,
     THUMBNAIL,
     MINER_SLIDER,
-    DISPLAY_REFRESH_RATE,
     INTRO_TEXT,
     INTRO_SUBTEXT,
     LOADING_TEXT,
     VIEW_OPTS,
-    GRAPH_NAMES
 )
 
 from demo_solvers import AVAILABLE_SOLVERS
@@ -168,15 +166,7 @@ def generate_run_buttons() -> html.Div:
         ],
     )
 
-def generate_graph_displays() -> list[dcc.Graph]:
-    graphs = [dcc.Graph(
-                        id=name,
-                        responsive=True,
-                        config={"displayModeBar": False},
-                        className="display-none"
-                        )
-                          for name in GRAPH_NAMES]                                      
-    return graphs
+
 
 def create_interface():
     """Set the application HTML."""
@@ -192,6 +182,7 @@ def create_interface():
             dcc.Store(id="running-status", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
+            dcc.Interval(id="rotate-view", interval=2000),
             # Header brand banner
             html.Header(className="banner", children=[html.Img(src=THUMBNAIL, alt="D-Wave logo")]),
             # Settings and results columns
@@ -257,37 +248,53 @@ def create_interface():
                                         "",
                                         "view-select",
                                         generate_options_dropdown(
-                                            VIEW_OPTS
+                                            [opt.menu_select for opt in VIEW_OPTS]
                                         ),
                                     ),
                                     html.Div(
                                         className="graph-table-wrapper",
                                         children=[
                                             html.Div(
+                                                id=VIEW_OPTS[0].wrapper_name,
                                                 className="graph-wrapper",
                                                 children=[
                                                     dcc.Graph(
-                                                        id=GRAPH_NAMES[VIEW_OPTS[0]],
+                                                        id=VIEW_OPTS[0].graph_name,
                                                         responsive=True,
                                                         config={"displayModeBar": False},
                                                     ),
+                                                ]
+                                            ),
+                                            html.Div(
+                                                id=VIEW_OPTS[1].wrapper_name,
+                                                className="graph-wrapper display-none",
+                                                children=[
                                                     dcc.Graph(
-                                                        id=GRAPH_NAMES[VIEW_OPTS[1]],
+                                                        id=VIEW_OPTS[1].graph_name,
                                                         responsive=True,
                                                         config={"displayModeBar": False},
-                                                        className="display-none",
                                                     ),
+                                                ]
+                                            ),
+                                            html.Div(
+                                                id=VIEW_OPTS[2].wrapper_name,
+                                                className="graph-wrapper display-none",
+                                                children=[
                                                     dcc.Graph(
-                                                        id=GRAPH_NAMES[VIEW_OPTS[2]],
+                                                        id=VIEW_OPTS[2].graph_name,
                                                         responsive=True,
                                                         config={"displayModeBar": False},
-                                                        className="display-none",
                                                     ),
+                                                ]
+                                            ),
+                                            html.Div(
+                                                id=VIEW_OPTS[3].wrapper_name,
+                                                className="graph-wrapper display-none",
+                                                children=[
                                                     dcc.Graph(
-                                                        id=GRAPH_NAMES[VIEW_OPTS[3]],
+                                                        id=VIEW_OPTS[3].graph_name,
                                                         responsive=True,
                                                         config={"displayModeBar": False},
-                                                        className="display-none",
                                                     ),
                                                 ]
                                             ),

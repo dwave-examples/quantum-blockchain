@@ -166,8 +166,7 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     Returns:
         hash_comparison (str): a hexidecimal string encoding the bits where the two hashes match and those where they don't.
     """
-    print(first_hash)
-    print(second_hash)
+
     hash_bytes = [
         binascii.unhexlify(hash_bits)#.encode(encoding="utf-8"))
         for hash_bits in (first_hash, second_hash)
@@ -182,7 +181,4 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     for i in range(len(numpy_bits1)):
         if numpy_bits1[i] == numpy_bits2[i]:
             comparison_vector[i] = 1
-    print(numpy_bits1)
-    print(numpy_bits2)
-    print(comparison_vector)
     return comparison_vector

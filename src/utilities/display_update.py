@@ -7,7 +7,6 @@ from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
 from demo_objects import TEST_TREE
 from src.values import MINER_NAMES
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.utilities.graph_processor import generate_graph_data
 
 
 def render_miner_status(block_number: int, miner_status: dict):
@@ -44,42 +43,3 @@ def render_miner_status(block_number: int, miner_status: dict):
 
     return table_header, table_rows
 
-def render_graphs(graph_data: dict):
-    """Updates the display for the miner tab, showing the graph
-        of the current chain state if it is available.
-
-
-        Args:
-            miner-graph-update: interval set to check if there is anything to update
-            run-status: if run status alters, display should alter
-            tabs: should automatically render on switching tabs.
-
-        Returns:
-            graph-file"""
-   
-
-    plotter = SpiralPlotter()
-    graph_data = generate_graph_data(graph_data)
-    plotter.import_plotting_data(tree_data=graph_data, num_nodes=8)
-    plot_data = plotter.plot_spiral()
-    fig = go.Figure(plot_data)
-
-    fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
-        autosize=False,
-        width=700,
-        height=700,
-        showlegend = False,
-        xaxis = dict(showticklabels=False),
-        yaxis = dict(showticklabels=False),
-        margin=dict(
-            l=0,
-            r=0,
-            b=0,
-            t=0,
-            pad=4
-            ),
-        paper_bgcolor="White",
-        plot_bgcolor="White",
-        )
-
-    return fig

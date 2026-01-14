@@ -34,9 +34,7 @@ class Miner():
         self.blockchain = BlockScoreTree(genesis_block=genesis_block_node)
         self.pow = PoW_protocol
 
-        self.mining_block = (
-            None  # Holds block that is currently being mined but not yet finalized or broadcast.
-        )
+        self.mining_block = None  # Holds block that is currently being mined but not yet finalized or broadcast.
         self.mined_block = None
         self.mined_block_score = None
 
@@ -58,9 +56,7 @@ class Miner():
                                   prev_block_hash=block.previous_hash,
                                   block_score=block_score)
 
-        if self.blockchain.score_predicate( #TODO revisit
-            block_score
-        ):  # Only need to update on blocks that are good and not already in trunk
+        if self.blockchain.score_predicate(block_score):  #Only need to update on blocks that are good and not already in trunk
             self.update_blockchain_beliefs()
 
     def update_blockchain_beliefs(self):

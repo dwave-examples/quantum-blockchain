@@ -16,6 +16,7 @@
 
 import os
 import plotly.express as px
+from collections import namedtuple
 
 # THEME_COLOR is used for the button, text, and banner and should be dark
 # and pass accessibility checks with white: https://webaim.org/resources/contrastchecker/
@@ -86,18 +87,11 @@ NUM_BLOCKS = {
     "value": 10
 }
 
-VIEW_OPTS = [
-    "Global_View",
-    "Miner_1",
-    "Miner_2",
-    "Miner_3"
-]
+ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"] )
 
-GRAPH_NAMES = {}
-for opt in VIEW_OPTS:
-    view_words = opt.split("_")
-    name = ""
-    for word in view_words:
-        name += word + "-"
-    name += "Graph"
-    GRAPH_NAMES.update({opt: name})
+VIEW_OPTS = [
+    ViewOption(menu_select="Global View", graph_name="global_view_graph", wrapper_name="global_view_wrapper", miner_number=-1),
+    ViewOption(menu_select="Miner 1 View", graph_name="miner_1_view_graph", wrapper_name="miner_1_view_wrapper", miner_number=0),
+    ViewOption(menu_select="Miner 2 View", graph_name="miner_2_view_graph", wrapper_name="miner_2_view_wrapper", miner_number=1),
+    ViewOption(menu_select="Miner 3 View", graph_name="miner_3_view_graph", wrapper_name="miner_3_view_wrapper", miner_number=2),
+]

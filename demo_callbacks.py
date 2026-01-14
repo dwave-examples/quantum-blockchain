@@ -30,7 +30,7 @@ from src.agents.trial_manager import TrialManager
 from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
 
-from demo_configs import VIEW_OPTS, GRAPH_NAMES
+from demo_configs import VIEW_OPTS
 
 from demo_solvers import AVAILABLE_SOLVERS
 from demo_interface import generate_options
@@ -80,7 +80,7 @@ def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTr
     cancel = [Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
 )
-async def simulation(
+def simulation(
     update_current_block_data,
     running_status: bool,
     miner_slider_val: int,
@@ -174,8 +174,7 @@ async def simulation(
 
         min_loop_time = 1.5 #TODO make a constant
         plotter = SpiralPlotter()
-        view_miners = MINER_NAMES[:3]
-        global_miner = MINER_NAMES[num_miners-1]
+        view_miners = {MINER_NAMES[(opt.miner_number)%num_miners]:opt.graph_name for opt in VIEW_OPTS}
 
         while(manager.blocks_mined <= num_blocks):
             iter_start_time = time.time()
@@ -195,18 +194,19 @@ async def simulation(
 
             update_current_block_data(current_block_dict)
 
-            await asyncio.sleep(0.1)
+            time.sleep(0.2)
 
             miner_fig = None
 
-            if miner_id == global_miner:
-                last_shared_block = manager.get_last_common_trunk_block()
-                miner_fig = plotter.create_plot_from_tree(manager.miners[global_miner].blockchain, active_block_cutoff=last_shared_block)
-                miner_graph_id = GRAPH_NAMES["Global_View"] #TODO improve binding            
-            elif miner_id in view_miners:
-                miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain)
-                miner_graph_id = GRAPH_NAMES[miner_id]
-            if miner_fig is not None:
+            if miner_id in view_miners:
+                if "global" in view_miners[miner_id]:
+                    last_shared_block = manager.get_last_common_trunk_block()
+                    miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain, active_block_cutoff=last_shared_block)
+                else:
+                    miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain)
+
+                miner_graph_name = view_miners[miner_id]
+
                 miner_fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
                     autosize=False,
                     width=700,
@@ -224,9 +224,9 @@ async def simulation(
                     paper_bgcolor="White",
                     plot_bgcolor="White",
                 )
-                set_props(miner_graph_id, {"figure":miner_fig},)
+                set_props(miner_graph_name, {"figure":miner_fig},)
 
-            await asyncio.sleep(0.1)
+            time.sleep(0.2)
 
         
     return "", "display-none"
@@ -258,15 +258,13 @@ def update_blockchain_data(block_data: dict):
 
 
 @dash.callback(
-    Output(GRAPH_NAMES[VIEW_OPTS[0]], "className"), #TODO find a more pythonic way to do this
-    Output(GRAPH_NAMES[VIEW_OPTS[1]], "className"),
-    Output(GRAPH_NAMES[VIEW_OPTS[2]], "className"),
-    Output(GRAPH_NAMES[VIEW_OPTS[3]], "className"),
+    [Output(opt.wrapper_name, "className") for opt in VIEW_OPTS],
     inputs=[
         Input("view-select", "value"),
     ],
+    prevent_initial_call=True,
 )
-def toggle_graph_display(selected_view):
+def toggle_graph_display(selected_view): #TODO check binding between this and view dropdown options
     """ """
 
     print(f"View {selected_view} has been selected.")
@@ -275,6 +273,7 @@ def toggle_graph_display(selected_view):
     print(f"Returning {return_tuple}")
 
     return return_tuple
+
 
 @dash.callback(
     Output("miner-graph-and-table", "className", allow_duplicate=True),
