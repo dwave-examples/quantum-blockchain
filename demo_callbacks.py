@@ -179,6 +179,8 @@ async def simulation(
 
         while(manager.blocks_mined <= num_blocks):
             iter_start_time = time.time()
+            if manager.round_progress == 0 and manager.blocks_mined == num_blocks:
+                break #TODO simplify if possible
             mined, miner_id, block_score = manager.single_step()
             if mined:
                 current_block_dict = copy.deepcopy(block_dict_template)

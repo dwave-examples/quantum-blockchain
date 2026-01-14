@@ -80,14 +80,11 @@ MINER_SLIDER = {
 }
 
 NUM_BLOCKS = {
-    "min": 2,
-    "max": 200,
+    "min": 3,
+    "max": 300,
     "step": 1,
     "value": 10
 }
-
-TRUNK_COLOR_SCALE = px.colors.sequential.Bluered
-BRANCH_COLOR_SCALE = px.colors.sequential.Aggrnyl
 
 VIEW_OPTS = [
     "Global_View",
