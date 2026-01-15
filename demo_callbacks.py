@@ -18,49 +18,23 @@ import copy
 import random
 
 import dash
-import asyncio
-from dash import MATCH, ctx, html, Patch, set_props
+from dash import MATCH, ctx, Patch, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-import plotly.express as px
 
 from src.utilities.spiral_plotter import SpiralPlotter
 from src.agents.trial_manager import TrialManager
-from src.structures.block import Block
 from src.values import MINER_NAMES #TODO move to DemoConstants
-
 from demo_configs import VIEW_OPTS
-
-from demo_solvers import AVAILABLE_SOLVERS
-from demo_interface import generate_options
+from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
 from src.utilities.display_update import render_miner_status
-from src.structures.block_score_tree import BlockScoreTree, BlockNode
-from src.protocols.hash_calculator import BootstrappingHashSolver
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
 #                             SECTION: Mining Round Steps                                             |
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#TODO remove if no longer necessary
-def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTree:
-    tree = BlockScoreTree()
-    for block_entry in node_list:
-        try: #TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining 
-            scores = block_entry["scores"] #how much of the tree a particular miner has completed
-            score = scores[miner_id]
-            block = Block.from_json(block_entry["block_json"])
-            tree.add_block(block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=score)
-        except: #If we hit an error, then this miner has accessed as much of the tree as able.
-            break
-
-    if tree.high_score > tree.trunk.tip.total_score:
-        strongest_branch = tree.hash_to_branch_lookup[tree.strongest_block_hash]
-        tree.promote_to_trunk(strongest_branch)
-
-    return tree
 
 @dash.callback(
 
@@ -72,7 +46,9 @@ def reconstruct_score_tree(node_list: list[dict], miner_id: str) -> BlockScoreTr
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
-        State("solver-select", "value"),
+        State("qpu-solver-select", "value"),
+        State("bootstrap-solver-select", "value"),
+        State("solver-mode-select", "value"),
     ],
     progress=[
         Output("current-block-data", "data"),
@@ -86,7 +62,9 @@ def simulation(
     miner_slider_val: int,
     block_input_val: int,
     blockchain_structure: list,
-    solver_select_val: str,
+    qpu_solver_select_val: str,
+    bootstrap_solver_select_val: str,
+    solver_mode_val: str,
 ):
     """Manages a single run of the blockchain simulation.
 
@@ -125,21 +103,24 @@ def simulation(
         num_blocks = block_input_val
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
+        print(solver_mode_val)
 
-        simulated_qpu_solvers = [solver for solver in AVAILABLE_SOLVERS if isinstance(solver, BootstrappingHashSolver)]
-        qpu_solvers = set(AVAILABLE_SOLVERS).difference(simulated_qpu_solvers)
-        dropdown_idx = int(solver_select_val)
-
-        if dropdown_idx == 0:
-            solvers = list(qpu_solvers)
-        elif dropdown_idx == 1:
-            solvers = simulated_qpu_solvers
+        if solver_mode_val == "QPU Solver": #TODO make enum
+            solvers = [solver for solver in AVAILABLE_QPU_SOLVERS]
+            dropdown_idx = int(qpu_solver_select_val)
+        elif solver_mode_val == "Bootstrapping Solver":
+            dropdown_idx = int(bootstrap_solver_select_val)
+            solvers = [solver for solver in BOOTSTRAP_SOLVERS]
         else:
-            solvers = [AVAILABLE_SOLVERS[dropdown_idx - 2]]
+            raise Exception("Fix mode select")
+        
+
+        if dropdown_idx > 0:
+            solvers = [solvers[dropdown_idx]]
 
         manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solvers=solvers)
 
-        block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "miner_id": ""}
+        block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "solvers": {}, "miner_id": ""}
         current_block_dict = copy.deepcopy(block_dict_template)
 
         print(blockchain_structure)
@@ -148,6 +129,7 @@ def simulation(
         if first_empty_index > 0:
             print(f"Restarting trial at block {first_empty_index}")
             current_blockchain = blockchain_structure[:first_empty_index]
+            short_blockchain = current_blockchain[:-1]
             manager.blocks_mined = first_empty_index
             last_block = current_blockchain[-1]
             finished_miners = []
@@ -155,14 +137,11 @@ def simulation(
 
             for miner_id, miner in manager.miners.items():
                 if miner_id in last_block["scores"]:
-                    miner_blockchain = reconstruct_score_tree(current_blockchain, miner_id)
+                    miner.re_initialize_blockchain(current_blockchain)
                     finished_miners.append(miner_id)
                 else:
-                    short_blockchain = current_blockchain[:-1]
-                    miner_blockchain = reconstruct_score_tree(short_blockchain, miner_id)
+                    miner.re_initialize_blockchain(short_blockchain)
                     unfinished_miners.append(miner_id)
-
-                miner.blockchain = miner_blockchain
 
             print("Finished resetting miners")
             manager.round_progress = len(finished_miners)
@@ -172,15 +151,14 @@ def simulation(
             current_block_dict = last_block
             print("Finished all restart logic.")
 
-        min_loop_time = 1.5 #TODO make a constant
-        plotter = SpiralPlotter()
+        min_loop_time = 1.1 #TODO make a constant
         view_miners = {MINER_NAMES[(opt.miner_number)%num_miners]:opt.graph_name for opt in VIEW_OPTS}
 
         while(manager.blocks_mined <= num_blocks):
             iter_start_time = time.time()
             if manager.round_progress == 0 and manager.blocks_mined == num_blocks:
                 break #TODO simplify if possible
-            mined, miner_id, block_score = manager.single_step()
+            mined, miner_id, block_score, solver = manager.single_step()
             if mined:
                 current_block_dict = copy.deepcopy(block_dict_template)
                 current_block_dict["block_number"] = manager.blocks_mined
@@ -191,6 +169,7 @@ def simulation(
                 current_block_dict["new"] = False
 
             current_block_dict["scores"][miner_id] = block_score
+            current_block_dict["solvers"][miner_id] = solver
 
             update_current_block_data(current_block_dict)
 
@@ -199,6 +178,7 @@ def simulation(
             miner_fig = None
 
             if miner_id in view_miners:
+                plotter = SpiralPlotter()
                 if "global" in view_miners[miner_id]:
                     last_shared_block = manager.get_last_common_trunk_block()
                     miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain, active_block_cutoff=last_shared_block)
@@ -226,14 +206,17 @@ def simulation(
                 )
                 set_props(miner_graph_name, {"figure":miner_fig},)
 
-            time.sleep(0.2)
+            iter_end_time = time.time()
+            iter_total_time = iter_end_time - iter_start_time
+            if iter_total_time < min_loop_time:
+                time.sleep(min_loop_time-iter_total_time)
+                print(f"Loop completed in only {iter_total_time} seconds. Slept for {min_loop_time-iter_total_time} to compensate.")
 
         
     return "", "display-none"
 
 
-#==========================================================================================
-
+#======================================================================================================
 
 @dash.callback(
     Output("blockchain-structure-data", "data"),
@@ -250,30 +233,7 @@ def update_blockchain_data(block_data: dict):
     to_update[block_number-1] = block_data
     return to_update
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# =====================================================================================================
-#                             SECTION: Display Updates                                                |
-# =====================================================================================================
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-@dash.callback(
-    [Output(opt.wrapper_name, "className") for opt in VIEW_OPTS],
-    inputs=[
-        Input("view-select", "value"),
-    ],
-    prevent_initial_call=True,
-)
-def toggle_graph_display(selected_view): #TODO check binding between this and view dropdown options
-    """ """
-
-    print(f"View {selected_view} has been selected.")
-    selected_view = int(selected_view)
-    return_tuple = ["" if opt==selected_view else "display-none" for opt in range(4)]
-    print(f"Returning {return_tuple}")
-
-    return return_tuple
-
+#======================================================================================================
 
 @dash.callback(
     Output("miner-graph-and-table", "className", allow_duplicate=True),
@@ -283,34 +243,50 @@ def toggle_graph_display(selected_view): #TODO check binding between this and vi
     inputs = [
         Input("current-block-data", "data"),
         State("miner-slider", "value"),
+        State("solver-mode-select", "value"),
+        State("qpu-solver-select", "value"),
+        State("bootstrap-solver-select", "value"),
         ],
     prevent_initial_call=True,
 )
-def update_main_display(current_block_data: dict, num_miners: int):
+def update_miner_display(current_block_data: dict, num_miners: int, solver_mode_select: str, qpu_select: str, bootstrap_select: str):
     """ This callback processes blockchain structure data and uses it to update the miner status
         table and the graph display."""
     
     mining_id = current_block_data["miner_id"]
     block_number = current_block_data["block_number"]
+    if solver_mode_select == "QPU Solver" and int(qpu_select) == 0:
+        show_solvers = True
+    elif solver_mode_select == "Bootstrapping Solver" and int(bootstrap_select) == 0:
+        show_solvers = True
+    else:
+        show_solvers = False
 
-    miner_status_dict = {MINER_NAMES[i]:"" for i in range(num_miners)}
+    miner_status_dict = {MINER_NAMES[i]: ["",""] for i in range(num_miners)}
     for miner_id, score in current_block_data["scores"].items():
         if score > 0:
             status = "Validated"
         else:
             status = "Rejected"
-        miner_status_dict[miner_id] = status
-    miner_status_dict[mining_id] = "Mined"
-    miner_table_head, miner_table_body = render_miner_status(block_number, miner_status_dict)
+        miner_status_dict[miner_id][0] = status
+    miner_status_dict[mining_id][0] = "Mined"
+
+    for miner_id, solver in current_block_data["solvers"].items():
+        if "simulated_" in solver:
+            solver_str = solver.replace("simulated_","")
+        else:
+            solver_substrings = solver.split("_system")
+            solver_str = f"{solver_substrings[0]} {solver_substrings[1]}"
+        miner_status_dict[miner_id][1] = solver_str
+
+    miner_table_head, miner_table_body = render_miner_status(block_number, miner_status_dict, show_solvers=show_solvers)
 
     return "", "display-none", miner_table_head, miner_table_body
 
 
-
-#=======================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
-#                             SECTION: Button Triggers                                                |
+#                             SECTION: User Controls                                                |
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -322,7 +298,8 @@ def update_main_display(current_block_data: dict, num_miners: int):
     Output("blockchain-structure-data", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
-    Output("solver-select", "disabled", allow_duplicate=True),
+    Output("qpu-solver-select", "disabled", allow_duplicate=True),
+    Output("bootstrap-solver-select", "disabled", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
         State("blocks-input", "value"),
@@ -333,7 +310,7 @@ def update_main_display(current_block_data: dict, num_miners: int):
 def run_simulation(run_click: int, num_blocks: int, num_miners: int):
     """ Runs a simulation with the selected number of miners and blocks."""
     blockchain_init = [None for _ in range(num_blocks+3)]
-    return "display-none", "", True, "display-none", blockchain_init, True, True, True #TODO break into lines and label
+    return "display-none", "", True, "display-none", blockchain_init, True, True, True, True #TODO break into lines and label
 
 #========================================================================================
 
@@ -402,14 +379,20 @@ def resume_simulation(pause_click: int):
     Output("running-status", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
-    Output("solver-select", "disabled", allow_duplicate=True),
-    inputs=[ #TODO add blockchain structure
+    Output("qpu-solver-select", "disabled", allow_duplicate=True),
+    Output("bootstrap-solver-select", "disabled", allow_duplicate=True),
+    Output(VIEW_OPTS[0].graph_name, "figure"),
+    Output(VIEW_OPTS[1].graph_name, "figure"),
+    Output(VIEW_OPTS[2].graph_name, "figure"),
+    Output(VIEW_OPTS[3].graph_name, "figure"),
+    inputs=[ 
         Input("reset-button", "n_clicks"),
     ],
     prevent_initial_call = True
 )
 def reset_simulation(reset_click: int):
     """ Resets the simulation, allowing a new simulation to be started."""
+    empty_fig = go.Figure()
     return (
         "", #Intro text
         "display-none", #Loading text
@@ -420,10 +403,53 @@ def reset_simulation(reset_click: int):
         False, #Running Status
         False, #miner-slider 'disabled' prop
         False, #blocks-input 'disabled' prop
-        False, #solver-select 'disabled' prop
+        False, #qpu-solver-select 'disabled' prop
+        False, #bootstrap-solver-select 'disabled' prop
+        empty_fig, #Graph figures
+        empty_fig,
+        empty_fig,
+        empty_fig
     )
 
 #=======================================================================================
+
+@dash.callback(
+    [Output(opt.wrapper_name, "className") for opt in VIEW_OPTS],
+    inputs=[
+        Input("view-select", "value"),
+    ],
+    prevent_initial_call=True,
+)
+def toggle_graph_display(selected_view): #TODO check binding between this and view dropdown options
+    """ Toggles the visibility of the four different graph displays. Will default to showing the Global
+        View graph. When triggered, will hide three of the graph displays and make the selected one visible."""
+
+    print(f"View {selected_view} has been selected.")
+    selected_view = int(selected_view)
+    return_tuple = ["" if opt==selected_view else "display-none" for opt in range(4)]
+    print(f"Returning {return_tuple}")
+
+    return return_tuple
+
+#=========================================================================================
+
+@dash.callback(
+    Output("QPU-dropdown", "className"),
+    Output("bootstrap-dropdown", "className"),
+    inputs=[
+        Input("solver-mode-select", "value"),
+    ],
+)
+def toggle_solver_mode(selected_mode): 
+    """ Toggles between QPU Solver mode and Boostrapping Solver Mode"""
+
+    print(f"Doing the thing with mode opt {selected_mode}")
+    if selected_mode == "QPU Solver":
+        return "", "display-none"
+    elif selected_mode == "Bootstrapping Solver":
+        return "display-none", ""
+    else:
+        raise Exception("Invalid solver select option")
 
 @dash.callback(
     Output({"type": "to-collapse-class", "index": MATCH}, "className"),

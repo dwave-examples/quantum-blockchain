@@ -11,7 +11,7 @@ import dimod
 from dwave.system import DWaveSampler
 from dwave.cloud import Client
 
-from src.directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH #Somehow this won't throw an error if "src" is omitted, but it will cause errors elsewhere
+from directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH #Somehow this won't throw an error if "src" is omitted, but it will cause errors elsewhere
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
 from src.values import (

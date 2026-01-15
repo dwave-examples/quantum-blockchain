@@ -103,7 +103,7 @@ class TrialManager:
         self.round_order = miner_order
         return self.round_order
 
-    def mining_step(self) -> tuple[str, float]:
+    def mining_step(self) -> tuple[str, float, str]:
         """Executes the mining step for the single round of the trial. Miner mines a single block (or times
         out after exceeding the maximum number of attempts) and stores it serialized form in self.block_broadcast.
 
@@ -120,18 +120,18 @@ class TrialManager:
         mine_success = False
         while mining_attempts <= self.max_mining_attempts and not mine_success:
             mining_attempts += 1
-            mined_block, block_score = self.mining_miner.attempt_mine()
+            mined_block, block_score, solver = self.mining_miner.attempt_mine()
             if block_score > 0:
                 self.block_broadcast = self.mining_miner.broadcast_mined_block()
                 self.round_progress += 1
                 self.blocks_mined += 1
-                return self.mining_miner_id, block_score
+                return self.mining_miner_id, block_score, solver
 
             # TODO figure out what to do if mining fails
 
-        return "failed", -1.0
+        return "failed", -1.0, "none"
 
-    def validation_step(self) -> tuple[str, float]:
+    def validation_step(self) -> tuple[str, float, str]:
         """Chooses the next miner in validation order to perform validation for the mined block.
 
         Args:
@@ -143,10 +143,10 @@ class TrialManager:
 
         validator_id = self.round_order[self.round_progress]
         validator = self.miners[validator_id]
-        block_score = validator.receive_block(self.block_broadcast)
+        block_score, solver = validator.receive_block(self.block_broadcast)
         self.round_progress += 1
 
-        return validator_id, block_score
+        return validator_id, block_score, solver
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -154,16 +154,16 @@ class TrialManager:
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def single_step(self) -> tuple[bool, str, float]:
+    def single_step(self) -> tuple[bool, str, float, str]:
         """Executes a single, atomic step of the simulation algorithm. Logging and recovery can capture"""
         if self.round_progress == 0 or self.round_progress >= self.num_miners:  # TODO reconsider
             mined = True
             self.reset_round()
-            miner_id, block_score = self.mining_step()
+            miner_id, block_score, solver = self.mining_step()
         else:
             mined = False
-            miner_id, block_score = self.validation_step()
-        return mined, miner_id, block_score
+            miner_id, block_score, solver = self.validation_step()
+        return mined, miner_id, block_score, solver
 
     def run_trial(self, num_blocks: int = None):
         """Runs the trial through some number of complete block mining and validation events. By default it will run until the

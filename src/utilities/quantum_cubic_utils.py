@@ -21,7 +21,7 @@ from dwave.system.composites import ParallelEmbeddingComposite
 from dwave.system import DWaveSampler
 from minorminer.utils.parallel_embeddings import find_multiple_embeddings
 
-from src.directory_paths import (
+from directory_paths import (
     EMBEDDINGS_PATH,
 )
 from src.values import (

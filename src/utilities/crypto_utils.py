@@ -1,19 +1,23 @@
 import binascii
 import sys
 import numpy as np
+from enum import Enum
 
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import RIPEMD160, SHA256
 
+class HashFunction(Enum):
+    SHA256 = "sha256"
+    RIPEMD160 = "ripemd160"
 
-def calculate_hash(data_in: str, hash_function: str = "sha256") -> str:
+def calculate_hash(data_in: str, hash_function: HashFunction = HashFunction.SHA256) -> str:
     """Basic function for calculating the two types of hash functions currently
     used in the blockchain. Validates both data type and hash function name.
 
     Args:
         data_in (str): the data to be hashed, formatted as a hexidecimal string
-        hash_function (str): name of the hash function to use #TODO replace with enum
+        hash_function (HashFunction): name of the hash function to use 
 
     Returns:
         output_hash (str): the hash of the passed data, formatted as a hex string.
@@ -21,11 +25,11 @@ def calculate_hash(data_in: str, hash_function: str = "sha256") -> str:
     if type(data_in) != str:
         raise Exception(f"Passed non-string data {data_in} of type {type(data_in)}")
     data = bytearray(data_in, "utf-8")
-    if hash_function == "sha256":
+    if hash_function == HashFunction.SHA256:
         h = SHA256.new()
         h.update(data)
         output = h.hexdigest()
-    elif hash_function == "ripemd160":
+    elif hash_function == HashFunction.RIPEMD160:
         h = RIPEMD160.new()
         h.update(data)
         output = h.hexdigest()
@@ -100,7 +104,7 @@ def get_key_set(private_key_string: str = None, hexlify_private=False) -> tuple[
     public_key = private_key.publickey().export_key("DER")
     public_key_hex = binascii.hexlify(public_key).decode("utf-8")
     public_key_hash = calculate_hash(
-        calculate_hash(public_key_hex, hash_function="sha256"), hash_function="ripemd160"
+        calculate_hash(public_key_hex, hash_function=HashFunction.SHA256), hash_function=HashFunction.RIPEMD160
     )
 
     if hexlify_private:

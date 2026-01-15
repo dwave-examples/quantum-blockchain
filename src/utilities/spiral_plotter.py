@@ -1,11 +1,8 @@
 import math
-from typing import Optional
 import plotly.graph_objects as go
-import plotly.express as px
 
-from src.structures.score_tree_branch import ScoreTreeBranch, BlockNode
+from src.structures.score_tree_branch import ScoreTreeBranch
 from src.structures.block_score_tree import BlockScoreTree
-
 from demo_configs import (GRAPH_POINT_MIN_SIZE, 
                           GRAPH_POINT_MAX_SIZE, 
                           GRAPH_MAX_POINTS_PER_REV, 
@@ -17,10 +14,30 @@ from demo_configs import (GRAPH_POINT_MIN_SIZE,
                           ABANDONED_BRANCH_POINT_COLOR,
                           ACTIVE_BRANCH_EDGE_COLOR,
                           ACTIVE_BRANCH_POINT_COLOR,
-                          TRUNK_TIP_COLOR)
+                          TRUNK_TIP_COLOR,
+                          GRAPH_RADIAL_LINE_COLOR,
+                          GRAPH_RADIAL_LINE_WIDTH,
+                          GRAPH_LOOP_SCALING,
+                          GRAPH_MAX_RADIUS,
+                          GRAPH_MAX_BRANCH_DISTANCE,
+                          GRAPH_BRANCH_POINT_SCALING)
 
 class GraphBranch(ScoreTreeBranch):
-    def __init__(self, branch: ScoreTreeBranch):
+    """ This class holds a single branch of a BlockScore tree object, storing necessary
+        data to plot that branch in a spiral plot alongside the standard branch data from
+        the ScoreTreeBranch class. Coordinates for points and edge sections will initialize
+        to empty lists: the must be computed and appended by the relevant methods from
+        the SpiralPlotter class."""
+    
+    def __init__(self, branch: ScoreTreeBranch, 
+                 point_color: str = ABANDONED_BRANCH_POINT_COLOR, 
+                 edge_color: str = ABANDONED_BRANCH_EDGE_COLOR):
+        """ Initializes the graph branch.
+        
+        Args:
+            branch (ScoreTreeBranch): the branch to be graphed
+            point_color (str): the color assigned to the branch's points
+            edge_color (str): the color assigned to the branch's edges"""
 
         super().__init__()
         for node in branch.node_list:
@@ -31,8 +48,8 @@ class GraphBranch(ScoreTreeBranch):
         self.y_edges = []
         self.x_points = []
         self.y_points = []
-        self.point_colors = []
-        self.edge_color = ""
+        self.point_colors = [point_color for _ in range(len(self.node_list))]
+        self.edge_color = edge_color
         self.edge_color_cutoff = -1
         self.depth_adjustment = 0
 
@@ -46,17 +63,37 @@ class GraphBranch(ScoreTreeBranch):
     @property
     def final_idx(self):
         return self.tip.block_number
+    
+    @property
+    def adjusted_depth(self):
+        return self.depth + self.depth_adjustment
 
     def create_size_chart(self, master_size_chart: list, size_scale: float=1.0):
+        """ Creates a size chart, assigning a size to each point in the branch. This
+            must be based on a master size chart, which defines the size progression:
+            this method merely allows all the points in the branch to be proportionally
+            scaled down.
+            
+            Args:
+                master_size_chart (list): size chart for the trunk. Branch size charts are computed relative
+                    to the trunk.
+                size_scale (float): Defaults to 1.0. Factor by which to scale the points in the branch.
+                    In general, non-trunk branches should be passed values less than 1, so they are drawn
+                    smaller than the points on the trunk."""
+        
         self.size_chart = [size_scale*size for idx, size 
                            in enumerate(master_size_chart) 
                            if idx in [b.block_number for b in self]]
 
-    def assign_depth_adjustment(self, parent_depth_adjustment: int, depth_limits: list[int]):
+    def assign_depth_adjustment(self, parent_adjusted_depth: int, depth_limits: list[int]):
+        """ Assigns a depth adjustment to the branch, indicating how far away from the trunk
+            it must be drawn so as not to collide with any other branches. This function is
+            called recursively on all the children of the branch, as the children of a branch
+            should not be assigned independently of one-another: optimal assignment depends on
+            assigning them in order. """
 
         local_depth_adjustment = None
-        base_depth = self.depth + parent_depth_adjustment 
-        for depth in range(base_depth, len(depth_limits)): 
+        for depth in range(parent_adjusted_depth, len(depth_limits)): 
             bound = depth_limits[depth]
             if self.tip.block_number < bound:
                 local_depth_adjustment = depth - self.depth
@@ -71,29 +108,23 @@ class GraphBranch(ScoreTreeBranch):
         sorted_children = [x for x in self.children]
         sorted_children.sort(key=lambda x: len(self) - x.root.block_number)
         for child in sorted_children:
-            child.assign_depth_adjustment(self.depth_adjustment, depth_limits)
+            child.assign_depth_adjustment(self.adjusted_depth, depth_limits)
  
 class SpiralPlotter:
+    """ This class facilitates plotting blockchain graphs as a collection of concentric spiral sections,
+        with the longest chain (the "trunk") extending from the center to the edge of the plot and smaller,
+        soft forks paralleling the main spiral to the inside. """
     def __init__(self):
         self.fig_width = 1
         self.center = (self.fig_width/2,self.fig_width/2)
-        self.min_pnt_size = GRAPH_POINT_MIN_SIZE 
-        self.max_pnt_size = GRAPH_POINT_MAX_SIZE
-        self.branch_pnt_scaling = 0.65
-        self.max_point_per_rev = GRAPH_MAX_POINTS_PER_REV
-        self.min_points_per_rev = GRAPH_MIN_POINTS_PER_REV
-        self.segs_per_rev = GRAPH_SEGS_PER_REV
         self.coord_dict = {}
-        self.trunk_point_color = TRUNK_POINT_COLOR
-        self.trunk_edge_color = TRUNK_EDGE_COLOR
-        self.branch_point_color_a = ABANDONED_BRANCH_POINT_COLOR
-        self.branch_edge_color_a = ABANDONED_BRANCH_EDGE_COLOR
-        self.branch_point_color_b = ACTIVE_BRANCH_POINT_COLOR
-        self.branch_edge_color_b = ACTIVE_BRANCH_EDGE_COLOR
-        self.trunk_tip_color = TRUNK_TIP_COLOR
-    def create_master_size_chart(self):
-        step_size = (self.max_pnt_size - self.min_pnt_size)/max(self.num_nodes-1,1)
-        return [self.min_pnt_size + i*step_size for i in range(self.num_nodes + 1)]
+
+    def _create_master_size_chart(self):
+        """ Creates a size chart for the points in the trunk, which determines how large each point will
+            appear on the chart. Points closer to the center will appear smaller, points closer to the tip
+            will appear larger."""
+        step_size = (GRAPH_POINT_MAX_SIZE- GRAPH_POINT_MIN_SIZE)/max(self.num_nodes-1,1)
+        return [GRAPH_POINT_MIN_SIZE + i*step_size for i in range(self.num_nodes + 1)]
 
 
     def import_plotting_data(self, tree_data: BlockScoreTree): 
@@ -101,44 +132,34 @@ class SpiralPlotter:
 
         tree_data.refactor_branches()
         self.num_nodes = tree_data.num_nodes
-        self.master_size_chart = self.create_master_size_chart()
-        self.points_per_rev = min(self.max_point_per_rev, max(self.min_points_per_rev, self.num_nodes+1))
+        self.master_size_chart = self._create_master_size_chart()
+        self.points_per_rev = self.calculate_points_per_rev()
         self.num_revs = (self.num_nodes+1)/self.points_per_rev
-        self.segs_per_point = math.ceil(self.segs_per_rev/self.points_per_rev)
-        self.loop_scaling = 2/3
-        self.max_r = 0.999
+        self.segs_per_point = math.ceil(GRAPH_SEGS_PER_REV/self.points_per_rev)
         
         angle_step = 2*math.pi/self.points_per_rev
         self.angles = [i*angle_step for i in range(1, self.points_per_rev + 1)]
         self.fractional_angles = [[(i+j/self.segs_per_point)*angle_step for j in range(1, self.segs_per_point)] for i in range(1, self.points_per_rev+1)]
-        self.radii = [self.calculate_r(i) for i in range(self.num_nodes+1)]
-        self.fractional_radii = [[self.calculate_r(i+j/self.segs_per_point) for j in range(1, self.segs_per_point)] for i in range(self.num_nodes)]
-        
-
-        self.min_branch_adjustment = 0.78
-        self.loop_spacing = 0.99*(self.fig_width/(2*self.num_revs)) #Farthest edge should stop just short of the edge of the figure
+        self.radii = [self._calculate_r(i) for i in range(self.num_nodes+1)]
+        self.fractional_radii = [[self._calculate_r(i+j/self.segs_per_point) for j in range(1, self.segs_per_point)] for i in range(self.num_nodes)]
 
         self.branches = []
-        branch_pairs = {}
+        branch_pairs = {} 
         for branch in tree_data.branches:
-            new_graph_branch = GraphBranch(branch)
-
             if branch == tree_data.trunk:
+                new_graph_branch = GraphBranch(branch, point_color=TRUNK_POINT_COLOR, edge_color=TRUNK_EDGE_COLOR)
                 new_graph_branch.create_size_chart(self.master_size_chart)
                 self.trunk = new_graph_branch
-                self.trunk.point_colors = [TRUNK_POINT_COLOR for _ in range(len(self.trunk))]
                 self.trunk.point_colors[-1] = TRUNK_TIP_COLOR
                                            
-                self.trunk.edge_color = TRUNK_EDGE_COLOR
             else:
-                new_graph_branch.create_size_chart(self.master_size_chart, self.branch_pnt_scaling)
-                new_graph_branch.point_colors = [ABANDONED_BRANCH_POINT_COLOR for _ in range(len(new_graph_branch))]
-                new_graph_branch.edge_color = ABANDONED_BRANCH_EDGE_COLOR
+                new_graph_branch = GraphBranch(branch)
+                new_graph_branch.create_size_chart(self.master_size_chart, GRAPH_BRANCH_POINT_SCALING)
 
             self.branches.append(new_graph_branch)
             branch_pairs.update({branch.base.hash: new_graph_branch})
 
-        for base_hash, new_branch in branch_pairs.items():
+        for base_hash, new_branch in branch_pairs.items(): #Need to link parent and child branches to match original tree structure
             base_branch = tree_data.hash_to_branch_lookup[base_hash]
             if base_branch.parent is not None:
                 new_branch.parent = branch_pairs[base_branch.parent.base.hash]
@@ -146,14 +167,33 @@ class SpiralPlotter:
                 new_branch.child = branch_pairs[child.base.hash]
 
     def calculate_points_per_rev(self):
-        allowed_vals = [2**i for i in range(8) if 2**i <= GRAPH_MAX_POINTS_PER_REV and 2**i >= GRAPH_MIN_POINTS_PER_REV]
-        assert len(allowed_vals) > 0, f"Allowed range of points per revolution is {GRAPH_MIN_POINTS_PER_REV} to {GRAPH_MAX_POINTS_PER_REV}, which does not allow any valid choices."
-        if self.num_nodes <= allowed_vals[0]:
+        """ Calculates how many points will be drawn in a single turn of the spiral. This changes
+            dynamically so that graphs with small numbers of points will still have a distinctly 
+            spiral shape, but graphs with large numbers will be compressed enough to display data
+            efficiently. The specific algorithm is intended to change the view relatively smoothly,
+            not making too many adjustments to the spacing, but still ensuring that each adjustment
+            is not too big of a change from the previous graph.
+            
+            Returns:
+                points_per_rev (int): the number of points that will be drawn in a single revolution."""
+        allowed_vals = [i for i in range(GRAPH_MIN_POINTS_PER_REV, GRAPH_MAX_POINTS_PER_REV+1,4)]
+        if self.num_nodes <= GRAPH_MIN_POINTS_PER_REV*1.5:
             return GRAPH_MIN_POINTS_PER_REV
-        #TODO finish conditional
+        elif self.num_nodes >= GRAPH_MAX_POINTS_PER_REV*1.5:
+            return GRAPH_MAX_POINTS_PER_REV
+        else:
+            allowed_index = 0
+            for idx, val in enumerate(allowed_vals):
+                if self.num_nodes < val*1.5:
+                    break
+                else:
+                    allowed_index = idx
+
+            print(f"Returning {allowed_vals[allowed_index]} for allowed values {allowed_vals}")
+            return allowed_vals[allowed_index]
 
 
-    def calculate_r(self, node_num: int|float):
+    def _calculate_r(self, node_num: int|float):
         """ Calculates the distance from the center at which a point should be drawn. The logic
             is chosen such that the furthest-out turn of the spiral will take up 1/3 of the total
             radius, while the next turn in will take up 1/3 of the remainder. A correction factor
@@ -164,17 +204,21 @@ class SpiralPlotter:
             Args:
                 node_num (int or float): the block number (order in the blockchain) of the node
                     being computed. Allows for fractional node numbers to assist in drawing
-                    graph lines, which requires plotting points in between the actual graph nodes."""
+                    graph lines, which requires plotting points in between the actual graph nodes.
+                    
+            Returns:
+                radius: distance from the center at which this graph point should be drawn."""
+        
         if node_num == 0:
             r_exp = -math.inf
         else:
             node_rev_num = node_num/self.points_per_rev
             r_exp = node_rev_num - 1/node_rev_num
 
-        r_scale = self.loop_scaling**(self.num_revs-r_exp)
-        return self.max_r*r_scale
+        r_scale = GRAPH_LOOP_SCALING**(self.num_revs-r_exp)
+        return GRAPH_MAX_RADIUS*r_scale
 
-    def arrange_branches(self):
+    def _arrange_branches(self):
         """ Queries the overall structure of the tree, and modifies the depth_adjustment
             attribute of branches as necessary to allow every branch to be graphed on the
             tree without any crossing or overlapping. This relies partially on the
@@ -194,15 +238,18 @@ class SpiralPlotter:
 
         self.max_branch_depth = max(len(depth_limits)-1, 3)
 
-    def calculate_depth_adjustment(self, branch_depth: int):
-        adjustment_fraction = branch_depth*(1 - self.min_branch_adjustment)
+    def _calculate_depth_adjustment(self, branch_depth: int):
+        adjustment_fraction = branch_depth*(1 - GRAPH_MAX_BRANCH_DISTANCE)
         return (self.max_branch_depth - adjustment_fraction)/self.max_branch_depth
 
-    def plot_spiral_points(self, branch):
+    def _plot_spiral_points(self, branch: GraphBranch):
         """ Computes and records the x and y coordinates for each node on a particular branch.
+
+            Args:
+                branch (GraphBranch): the GraphBranch object to be plotted
             """
 
-        adjustment = self.calculate_depth_adjustment(branch.depth + branch.depth_adjustment)
+        adjustment = self._calculate_depth_adjustment(branch.depth + branch.depth_adjustment)
 
         for node in branch:
             r_node = self.radii[node.block_number]*adjustment
@@ -213,7 +260,7 @@ class SpiralPlotter:
             branch.y_points.append(y_node)
             self.coord_dict.update({node.block_number: (x_node, y_node)})
 
-    def plot_spiral_curves(self, branch: GraphBranch, trunk: bool = True):
+    def _plot_spiral_curves(self, branch: GraphBranch, trunk: bool = True):
         """ For a given branch, adds the points defining the 'curves' connecting the points
             on that branch. Each such 'curve' will be made up of a number of line segments 
             defined by the self.segs_per_point attribute. Plotly accepts these as lists
@@ -236,7 +283,7 @@ class SpiralPlotter:
 
         start_idx = branch.start_idx
         stop_idx = branch.tip.block_number
-        adjustment = self.calculate_depth_adjustment(branch.depth + branch.depth_adjustment)
+        adjustment = self._calculate_depth_adjustment(branch.depth + branch.depth_adjustment)
         for i in range(start_idx, stop_idx+1):
             r_i = self.radii[i]*adjustment
             theta_i = self.angles[i%self.points_per_rev]
@@ -256,19 +303,16 @@ class SpiralPlotter:
                 branch.y_edges.append(y_ij)
 
 
-    def plot_spiral(self):
-        """ Plots all the points and edges for every branch in the current tree."""
-
-        self.arrange_branches()
-
-        self.plot_spiral_points(self.trunk)
-        for branch in self.branches:
-            self.plot_spiral_points(branch)
-
-        for branch in self.branches:
-            self.plot_spiral_curves(branch, trunk=bool(branch == self.trunk))
-
-    def color_for_global_view(self, trunk_cutoff: int):
+    def _color_for_global_view(self, trunk_cutoff: int):
+        """ Performs the necessary computations to recolor the graph according to
+            the global view coloring scheme. In this scheme, the trunk is divided into
+            two different colors, and active branches are also recolored to match the second trunk
+            color. Finally, the terminal points of active branches are colored to match the
+            trunk tip.
+            
+            Args:
+                trunk_cutoff (int): the block number of the last shared block in all miner's trunks. This
+                    will determine the point at which the trunk is recolored."""
         cutoff_index = None
         for idx, block in enumerate(self.trunk):
             if block.block_number == trunk_cutoff:
@@ -293,30 +337,50 @@ class SpiralPlotter:
         """ Draws radial lines at the pre-defined angles at which blocks will be plotted. """
         traces = []
         for angle in self.angles:
-            x_end = self.center[0] + self.max_r*math.cos(angle)
-            y_end = self.center[1] + self.max_r*math.sin(angle)
+            x_end = self.center[0] + GRAPH_MAX_RADIUS*math.cos(angle)
+            y_end = self.center[1] + GRAPH_MAX_RADIUS*math.sin(angle)
             x_edge = [self.center[0], x_end]
             y_edge = [self.center[1], y_end]
-            new_trace = go.Scatter(x=x_edge, y=y_edge, mode="lines", line={"color": "grey", "width":0.5})
+            new_trace = go.Scatter(x=x_edge, y=y_edge, mode="lines", line={"color": GRAPH_RADIAL_LINE_COLOR, "width":GRAPH_RADIAL_LINE_WIDTH})
             traces.append(new_trace)
 
         return traces
     
-    def draw_spiral(self):
+    def draw_spiral(self, active_block_cutoff: int|None = None):
         """ Assuming all the points and edges have been plotted, draws them on the figure, coloring and sizing them
             according to the pre-defined color and size schema. This will draw two distinct sorts of elements onto the
             graph area: points and lines. Each branch of the graph will have one set of points (indicating the blocks
             that are part of that branch) and one set of lines, arranged so as to connect those points in a curving spiral
-            shape."""
+            shape.
+
+            active_block_cutoff (int): the block number of the last shared block in all miner's trunks. If a value
+                is passed, this will cause the _color_for_global_view() function to be called with that value,
+                recoloring the graph to represent a global view
+            
+            Returns:
+                fig: The Plotly figure with the spiral graphed as determined by the data stored in the branches."""
+        
+        self._arrange_branches()
+
+        self._plot_spiral_points(self.trunk)
+        for branch in self.branches:
+            self._plot_spiral_points(branch)
+
+        for branch in self.branches:
+            self._plot_spiral_curves(branch, trunk=bool(branch == self.trunk))
+        
+        if active_block_cutoff is not None:
+            self._color_for_global_view(active_block_cutoff)
+
         trunk_edge_traces =[]
-        if self.trunk.edge_color_cutoff <= 0 :
-            edge_section = go.Scatter(x=self.trunk.x_edges, y=self.trunk.y_edges, mode="lines", line={"color":self.trunk_edge_color})
+        if active_block_cutoff is None :
+            edge_section = go.Scatter(x=self.trunk.x_edges, y=self.trunk.y_edges, mode="lines", line={"color":self.trunk.edge_color})
             trunk_edge_traces.append(edge_section)
         else:
             edge_section_1 = go.Scatter(x=self.trunk.x_edges[:self.trunk.edge_color_cutoff+1], 
                                         y=self.trunk.y_edges[:self.trunk.edge_color_cutoff+1], 
                                         mode="lines", 
-                                        line={"color":self.trunk_edge_color})
+                                        line={"color":self.trunk.edge_color})
             trunk_edge_traces.append(edge_section_1)
             edge_section_2 = go.Scatter(x=self.trunk.x_edges[self.trunk.edge_color_cutoff:], 
                                         y=self.trunk.y_edges[self.trunk.edge_color_cutoff:], 
@@ -349,9 +413,16 @@ class SpiralPlotter:
         return fig  
     
     def create_plot_from_tree(self, tree: BlockScoreTree, active_block_cutoff: int|None = None):
+        """ Given a BlockScoreTree object, creates a spiral plot displaying that tree. Calls 
+            all the necessary SpiralPlotter functions in order. For typical usage, this should
+            be the only method that's necessary to call outside the class.
+            
+            Args:
+                tree (BlockScoreTree): the BlockScoreTree object you wish to plot.
+                active_block_cutoff (int). Optional. Defaults to None. The block number
+                    of the last block that all miners have in their trunk. Used to recolor
+                    the graph as a global view."""
+        
         self.import_plotting_data(tree_data=tree)
-        self.plot_spiral()
-        if active_block_cutoff is not None:
-            self.color_for_global_view(trunk_cutoff=active_block_cutoff)
-        plot = self.draw_spiral()
+        plot = self.draw_spiral(active_block_cutoff=active_block_cutoff)
         return plot

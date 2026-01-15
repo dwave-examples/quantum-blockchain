@@ -38,6 +38,17 @@ class Miner():
         self.mined_block = None
         self.mined_block_score = None
 
+    def re_initialize_blockchain(self, node_list: list[dict]):
+       
+        for block_entry in node_list:
+            try: #TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining 
+                scores = block_entry["scores"] #how much of the tree a particular miner has completed
+                score = scores[self.id]
+                block = Block.from_json(block_entry["block_json"])
+                self.add_block_to_chain(block=block, block_score=score)
+            except: #If we hit an error, then this miner has accessed as much of the tree as able.
+                break
+
     def add_block_to_chain(self, block: Block, block_score: float=0.0):
         """Adds a block to the blockchain memory stored in self.blockchain, which also
         adds its info to the score tree. Updates blockchain beliefs based on the logic of
@@ -96,7 +107,7 @@ class Miner():
             )
         return new_block
 
-    def attempt_mine(self, mining_block: Optional[Block] = None) -> tuple[Block, float]:
+    def attempt_mine(self, mining_block: Optional[Block] = None) -> tuple[Block, float, str]:
         """Attempts to mine a new block, choosing the nonce at random, calculating the quantum hash
             and the block hash and validating against the PoW requirement.
 
@@ -112,14 +123,14 @@ class Miner():
                 mining_block = self.mining_block
                 mining_block.nonce += 1
  
-        new_block, block_score = self.pow.mine_block(mining_block)
+        new_block, block_score, solver = self.pow.mine_block(mining_block)
         new_block.lock()
         self.mined_block = new_block
         self.mined_block_score = block_score
         self.mining_block = None
-        return new_block, block_score
+        return new_block, block_score, solver
     
-    def receive_block(self, new_block_str) -> float: 
+    def receive_block(self, new_block_str) -> tuple[float, str]: 
         """ Processes a new block that has been received as a broadcast. This includes logging the broadcast in the Owner's 
             broadcast log, reconstructing the json data into a Block object, and adding the new block to the Owner's queue of
             received blocks. This will not add the block to the Owner's blockchain: that should be done by calling 
@@ -132,11 +143,11 @@ class Miner():
             score: the score assigned to the block."""
         
         new_block = Block.from_json(new_block_str)
-        score = self.validate_block(new_block)
+        score, solver = self.validate_block(new_block)
         self.add_block_to_chain(new_block, score)
-        return score
+        return score, solver
 
-    def validate_block(self, block: Block) -> float:
+    def validate_block(self, block: Block) -> tuple[float, str]:
         """Validates the Block's compliance with the Proof of Work protocol. The Miner's ProofOfWork Object
             calls its own validate_block function to check the main block hash, the N_zeroes requirement,
             the Merkle root and the quantum hash, with the later assigning a float-values score rather
@@ -153,14 +164,14 @@ class Miner():
                 scores are presumed invalid and will create a secondary branch if their predecessor is in the trunk.
                 (Or be added to an existing branch otherwise)."""
 
-        passes, score, validation_bits, sample_time = self.pow.validate_block(block)
+        passes, score, validation_bits, solver = self.pow.validate_block(block)
 
         if not passes:
             raise Exception(
                 f"Block {block.hash} failed required protocol validation checks for miner {self.id}"
             )
         else:
-            return score
+            return score, solver
 
     def broadcast_mined_block(self) -> str:
         """Stores a copy of the Miner's most recently mined block in the Miner's own blockchain before serializing

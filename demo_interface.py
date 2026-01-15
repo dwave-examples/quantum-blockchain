@@ -28,9 +28,10 @@ from demo_configs import (
     INTRO_SUBTEXT,
     LOADING_TEXT,
     VIEW_OPTS,
+    HIDE_BOOTSTRAP_SOLVERS,
 )
 
-from demo_solvers import AVAILABLE_SOLVERS
+from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
 from demo_constants import EMPTY_BLOCK_DICT
 from src.values import MINER_NAMES
 
@@ -73,6 +74,8 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
         id: A unique selector for this element.
         options: A list of dictionaries of labels and values.
     """
+
+
     return html.Div(
         className="dropdown-wrapper",
         children=[
@@ -82,6 +85,30 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
                 data=options,
                 value=options[0]["value"],
                 allowDeselect=False,
+            ),
+        ],
+    )
+
+def radio(label: str, id: str, options: list, value: str, inline: bool = True) -> html.Div:
+    """Radio element for option selection.
+
+    Args:
+        label: The title that goes above the radio.
+        id: A unique selector for this element.
+        options: A list of dictionaries of labels and values.
+        value: The value of the radio that should be preselected.
+        inline: Whether the options are displayed beside or below each other.
+    """
+    return html.Div(
+        className="radio-wrapper",
+        children=[
+            html.Label(label, htmlFor=id),
+            dcc.RadioItems(
+                id=id,
+                className=f"radio{' radio--inline' if inline else ''}",
+                inline=inline,
+                options=options,
+                value=value,
             ),
         ],
     )
@@ -116,21 +143,32 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    solver_opts = ["All QPUs", "All simulated QPUs"]
-    solver_opts += [slvr.solver_name for slvr in AVAILABLE_SOLVERS]
+    qpu_solver_opts = ["Randomized QPU"]
+    qpu_solver_opts += [slvr.solver_name for slvr in AVAILABLE_QPU_SOLVERS]
 
-    return html.Div(
-        className="settings",
-        children=[
-            slider(
-                "Number of Miners",
-                "miner-slider",
-                MINER_SLIDER,
-            ),
-            input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
-            dropdown("Solver", "solver-select", generate_options_dropdown(solver_opts)),
-        ],
-    )
+    bootstrap_solver_opts = ["Randomized Bootstrap Solver"]
+    bootstrap_solver_opts += [slvr.solver_name for slvr in BOOTSTRAP_SOLVERS]
+
+    if HIDE_BOOTSTRAP_SOLVERS:
+        return html.Div(
+            className="settings",
+            children=[
+                slider("Number of Miners","miner-slider", MINER_SLIDER,),
+                input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
+                dropdown("Solver", "solver-select", generate_options_dropdown(qpu_solver_opts)),
+                ]
+        )
+    else:
+        return html.Div(
+            className="settings",
+            children=[
+                slider("Number of Miners","miner-slider", MINER_SLIDER,),
+                input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
+                radio("Solver Mode", "solver-mode-select", ["QPU Solver", "Bootstrapping Solver"], "QPU Solver"),
+                html.Div(id="QPU-dropdown", children = dropdown("Solver", "qpu-solver-select", generate_options_dropdown(qpu_solver_opts))),
+                html.Div(id= "bootstrap-dropdown", className="display-none", children = dropdown("Solver", "bootstrap-solver-select", generate_options_dropdown(bootstrap_solver_opts))),
+                ]
+        )
 
 
 def generate_run_buttons() -> html.Div:
@@ -308,7 +346,7 @@ def create_interface():
                                                                 html.Tr(
                                                                     [
                                                                         html.Th("Miner"),
-                                                                        html.Th("Status"),
+                                                                        html.Th("Status"), #TODO figure out how to add conditional 3rd element
                                                                     ],
                                                                 )
                                                             ),
