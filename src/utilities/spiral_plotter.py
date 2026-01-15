@@ -188,8 +188,7 @@ class SpiralPlotter:
                     break
                 else:
                     allowed_index = idx
-
-            print(f"Returning {allowed_vals[allowed_index]} for allowed values {allowed_vals}")
+                    
             return allowed_vals[allowed_index]
 
 
