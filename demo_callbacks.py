@@ -103,7 +103,6 @@ def simulation(
         num_blocks = block_input_val
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
-        print(solver_mode_val)
 
         if solver_mode_val == "QPU Solver": #TODO make enum
             solvers = [solver for solver in AVAILABLE_QPU_SOLVERS]
@@ -122,8 +121,6 @@ def simulation(
 
         block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "solvers": {}, "miner_id": ""}
         current_block_dict = copy.deepcopy(block_dict_template)
-
-        print(blockchain_structure)
 
         first_empty_index = blockchain_structure.index(None)
         if first_empty_index > 0:
@@ -210,9 +207,7 @@ def simulation(
             iter_total_time = iter_end_time - iter_start_time
             if iter_total_time < min_loop_time:
                 time.sleep(min_loop_time-iter_total_time)
-                print(f"Loop completed in only {iter_total_time} seconds. Slept for {min_loop_time-iter_total_time} to compensate.")
 
-        
     return "", "display-none"
 
 
