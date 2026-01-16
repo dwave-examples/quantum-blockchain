@@ -35,7 +35,7 @@ class SolverName(Enum):
 SolverParams = namedtuple(
     "SolverParams",
     ["solver_name", "profile"],
-    defaults=(None, "defaults"),
+    defaults=(None, None),
 )
 
 
@@ -182,7 +182,7 @@ class QuantumHashSolver(HashSolver):
         self,
         solver_name: str | None = None,
         *,
-        profile: str = "defaults",
+        profile: str = None,
         num_reads: int = DEFAULT_NUM_READS,
         reference_annealing_time: float = DEFAULT_ANNEALING_TIME,
         energy_time_rescaling: tuple[float, float] | None = None,
