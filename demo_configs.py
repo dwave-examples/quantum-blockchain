@@ -29,7 +29,7 @@ THUMBNAIL = "static/dwave_logo.svg"
 APP_TITLE = "Quantum Blockchain"
 MAIN_HEADER = "Quantum Blockchain"
 DESCRIPTION = """\
-A simulated blockchain using a Proof of Quantum Work algorithm run on a D-Wave Quantum Annealer
+A simulated Proof of Quantum Work blockchain algorithm run on D-Wave Quantum Annealers
 """
 INTRO_TEXT = "Select a number of miners and blocks and press \"Begin Simulation\"."
 INTRO_SUBTEXT = "Results will display here while simulation is running."
