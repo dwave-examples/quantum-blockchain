@@ -1,16 +1,19 @@
+import json
+import os
+import sys
+
 import pytest
-import os, sys, json
 
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 
-from tests.data_generation.block_generation import BlockGenerator
 from src.utilities.crypto_utils import get_key_set
+from tests.data_generation.block_generation import BlockGenerator
 from tests.data_generation.tree_generation import (
-    generate_tree_from_dicts,
-    generate_random_tree,
-    generate_binary_layered_tree_dicts,
-    generate_simple_tree_dicts,
     append_scores,
+    generate_binary_layered_tree_dicts,
+    generate_random_tree,
+    generate_simple_tree_dicts,
+    generate_tree_from_dicts,
 )
 
 

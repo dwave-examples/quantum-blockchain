@@ -2,32 +2,26 @@
 # Delete non-default code branches, and remove arguments associated to non-default branches.
 # See also # Improvements comments.
 
-from itertools import product
-import pickle
-import os
-
 import hashlib
-import networkx as nx
-import numpy as np
+import os
+import pickle
+from itertools import product
 
 import dimod
 import dwave
 import dwave_networkx as dnx
+import networkx as nx
+import numpy as np
 from dwave.experimental.automorphism import (
     AutomorphismComposite,
 )  # Module location within dwave-ocean-sdk could be subject to change.
 from dwave.preprocessing.composites import SpinReversalTransformComposite
-from dwave.system.composites import ParallelEmbeddingComposite
 from dwave.system import DWaveSampler
+from dwave.system.composites import ParallelEmbeddingComposite
 from minorminer.utils.parallel_embeddings import find_multiple_embeddings
 
-from directory_paths import (
-    EMBEDDINGS_PATH,
-)
-from src.values import (
-    DEFAULT_CUBIC_BOUNDARY_CONDITIONS,
-    DEFAULT_CUBIC_LATTICE_SHAPE,
-)
+from directory_paths import EMBEDDINGS_PATH
+from src.values import DEFAULT_CUBIC_BOUNDARY_CONDITIONS, DEFAULT_CUBIC_LATTICE_SHAPE
 
 
 def get_embeddings(
@@ -351,8 +345,8 @@ def generate_default_sampler(
     Returns:
         tuple: A sampler aggregating samplesets from random parallel QPU embeddings
     """
-    #TO DO: Move into embedding generation example:
-    
+    # TO DO: Move into embedding generation example:
+
     node_labels = (
         source_dimer_orientation(set(n for e in source_edge_list for n in e)),
         target_dimer_orientation(qpu),

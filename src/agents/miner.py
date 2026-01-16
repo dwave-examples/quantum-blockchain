@@ -1,15 +1,17 @@
-import numpy as np
 from typing import Optional
 
-from src.structures.block import Block
-from src.structures.score_tree_branch import BlockNode
-from src.structures.block_score_tree import BlockScoreTree
-from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
+import numpy as np
 
-class Miner():
+from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
+from src.structures.block import Block
+from src.structures.block_score_tree import BlockScoreTree
+from src.structures.score_tree_branch import BlockNode
+
+
+class Miner:
     """Intended Usage: this class is intended to encapsulate all necessary functions for running a miner
-        on the blockchain network. Current ownership status is a bit of a mess, should consolidate some other
-        classes and give more of their functions to this class."""
+    on the blockchain network. Current ownership status is a bit of a mess, should consolidate some other
+    classes and give more of their functions to this class."""
 
     def __init__(self, miner_id: str, PoW_protocol: ProofOfWorkProtocol, genesis_block: Block):
         """Instantiates a new miner at the given hostname. The subdir is the
@@ -24,32 +26,37 @@ class Miner():
         self.id = miner_id
 
         genesis_block_node = BlockNode(
-            hash=genesis_block.hash, 
-            prev_hash=genesis_block.previous_hash, 
-            block_score=1.0, 
-            total_score=1.0, 
-            block_height=0, 
-            block_number=0)
+            hash=genesis_block.hash,
+            prev_hash=genesis_block.previous_hash,
+            block_score=1.0,
+            total_score=1.0,
+            block_height=0,
+            block_number=0,
+        )
 
         self.blockchain = BlockScoreTree(genesis_block=genesis_block_node)
         self.pow = PoW_protocol
 
-        self.mining_block = None  # Holds block that is currently being mined but not yet finalized or broadcast.
+        self.mining_block = (
+            None  # Holds block that is currently being mined but not yet finalized or broadcast.
+        )
         self.mined_block = None
         self.mined_block_score = None
 
     def re_initialize_blockchain(self, node_list: list[dict]):
-       
+
         for block_entry in node_list:
-            try: #TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining 
-                scores = block_entry["scores"] #how much of the tree a particular miner has completed
+            try:  # TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining
+                scores = block_entry[
+                    "scores"
+                ]  # how much of the tree a particular miner has completed
                 score = scores[self.id]
                 block = Block.from_json(block_entry["block_json"])
                 self.add_block_to_chain(block=block, block_score=score)
-            except: #If we hit an error, then this miner has accessed as much of the tree as able.
+            except:  # If we hit an error, then this miner has accessed as much of the tree as able.
                 break
 
-    def add_block_to_chain(self, block: Block, block_score: float=0.0):
+    def add_block_to_chain(self, block: Block, block_score: float = 0.0):
         """Adds a block to the blockchain memory stored in self.blockchain, which also
         adds its info to the score tree. Updates blockchain beliefs based on the logic of
         the update_blockchain_beliefs function. Writes the block data and its score to file.
@@ -63,11 +70,13 @@ class Miner():
             self.blockchain: the miner's blockchain
         """
 
-        self.blockchain.add_block(block_hash=block.hash, 
-                                  prev_block_hash=block.previous_hash,
-                                  block_score=block_score)
+        self.blockchain.add_block(
+            block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=block_score
+        )
 
-        if self.blockchain.score_predicate(block_score):  #Only need to update on blocks that are good and not already in trunk
+        if self.blockchain.score_predicate(
+            block_score
+        ):  # Only need to update on blocks that are good and not already in trunk
             self.update_blockchain_beliefs()
 
     def update_blockchain_beliefs(self):
@@ -88,8 +97,8 @@ class Miner():
             ]
             self.blockchain.promote_to_trunk(best_branch)
 
-    def assemble_new_block(self, previous_block_hash: Optional[str]= None) -> Block:
-        """Assembles a new block 
+    def assemble_new_block(self, previous_block_hash: Optional[str] = None) -> Block:
+        """Assembles a new block
 
         Args:
             None
@@ -97,14 +106,12 @@ class Miner():
         Returns:
             new_block (Block): a new block that is assembled with a random nonce, but has not yet had its quantum hash
                 or block hash set."""
-        
+
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2**32)  # TODO check how to make non-arcitechture specific
-        new_block = Block(
-             miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce
-            )
+        nonce = np.random.randint(0, 2 ** 32)  # TODO check how to make non-arcitechture specific
+        new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
     def attempt_mine(self, mining_block: Optional[Block] = None) -> tuple[Block, float, str]:
@@ -122,26 +129,26 @@ class Miner():
             else:
                 mining_block = self.mining_block
                 mining_block.nonce += 1
- 
+
         new_block, block_score, solver = self.pow.mine_block(mining_block)
         new_block.lock()
         self.mined_block = new_block
         self.mined_block_score = block_score
         self.mining_block = None
         return new_block, block_score, solver
-    
-    def receive_block(self, new_block_str) -> tuple[float, str]: 
-        """ Processes a new block that has been received as a broadcast. This includes logging the broadcast in the Owner's 
+
+    def receive_block(self, new_block_str) -> tuple[float, str]:
+        """Processes a new block that has been received as a broadcast. This includes logging the broadcast in the Owner's
             broadcast log, reconstructing the json data into a Block object, and adding the new block to the Owner's queue of
-            received blocks. This will not add the block to the Owner's blockchain: that should be done by calling 
+            received blocks. This will not add the block to the Owner's blockchain: that should be done by calling
             append_block_to_chain().
-            
+
         Args:
-            new_block_str (str): A new block, serialized into a JSON-formatted string. 
-            
+            new_block_str (str): A new block, serialized into a JSON-formatted string.
+
         Returns:
             score: the score assigned to the block."""
-        
+
         new_block = Block.from_json(new_block_str)
         score, solver = self.validate_block(new_block)
         self.add_block_to_chain(new_block, score)
@@ -178,8 +185,8 @@ class Miner():
             a mined block into a JSON-formatted string, which is returned.
 
         Returns:
-            block_data (str): the mined block serialized as a JSON-formatted string """
-        
+            block_data (str): the mined block serialized as a JSON-formatted string"""
+
         if self.mined_block is None:
             raise Exception(f"Miner {self.id} attempted to broadcast with no block ready")
 
@@ -195,4 +202,3 @@ class Miner():
         self.mined_block_score = None
 
         return block_data
-

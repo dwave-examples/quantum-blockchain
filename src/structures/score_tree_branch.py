@@ -63,7 +63,6 @@ class ScoreTreeBranch:
         self.hash_to_index_lookup.update({base_block.hash: 0})
         self.root_hash = base_block.prev_hash
 
-
     @property
     def tip(self) -> BlockNode:
         """Returns the last entry in the node list (i.e. the 'tip' of the branch)."""
@@ -95,7 +94,7 @@ class ScoreTreeBranch:
     @property
     def high_score(self) -> float:
         """Returns the highest total_score of any block currently stored in
-        this branch """ #TODO check logic to make sure this isn't broken by change
+        this branch"""  # TODO check logic to make sure this isn't broken by change
         return max([node.total_score for node in self.node_list])
 
     def __getitem__(self, index: int) -> BlockNode:
@@ -205,7 +204,7 @@ class ScoreTreeBranch:
             return self.node_list[self.hash_to_index_lookup[block_hash]]
         else:
             return None
-        
+
     def get_score_map(self):
         score_map = [node.total_score for node in self.node_list]
         return score_map

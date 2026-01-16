@@ -1,11 +1,13 @@
 import math
 
 from dash import html
-from demo_configs import MAX_MINER_ROWS, MAX_MINER_COLUMNS
+
+from demo_configs import MAX_MINER_COLUMNS, MAX_MINER_ROWS
+
 
 def render_miner_status(block_number: int, miner_status: dict, show_solvers=False):
-    """ Renders the status of the miners in the current trial. Each miner will be named
-        "Miner n" where n is one more than their ID in TrialManager (because numbering 
+    """Renders the status of the miners in the current trial. Each miner will be named
+        "Miner n" where n is one more than their ID in TrialManager (because numbering
         starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
         Validating, Valid" if they've started acting this round, or "..." if not.
 
@@ -18,11 +20,12 @@ def render_miner_status(block_number: int, miner_status: dict, show_solvers=Fals
 
     num_miners = len(miner_status)
 
-
     table_header = f" Block {block_number}"
 
     if show_solvers:
-        miner_entries = [(miner_id, status[0], status[1]) for miner_id, status in miner_status.items()]
+        miner_entries = [
+            (miner_id, status[0], status[1]) for miner_id, status in miner_status.items()
+        ]
     else:
         miner_entries = [(miner_id, status[0]) for miner_id, status in miner_status.items()]
     columns = min(math.ceil(num_miners / MAX_MINER_ROWS), MAX_MINER_COLUMNS)
@@ -34,11 +37,10 @@ def render_miner_status(block_number: int, miner_status: dict, show_solvers=Fals
         new_row.append(html.Td(miner_entries[i][1]))
         if show_solvers:
             new_row.append(html.Td(miner_entries[i][2]))
-        if len(new_row) >= 2*columns:
+        if len(new_row) >= 2 * columns:
             table_rows.append(html.Tr(new_row))
             new_row = []
     if len(new_row) > 0:
         table_rows.append(html.Tr(new_row))
 
     return table_header, table_rows
-

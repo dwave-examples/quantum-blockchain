@@ -1,8 +1,8 @@
 import random
-
 from datetime import datetime
 
 from src.structures.block import Block
+
 
 class BlockGenerator:
     """Uses a transaction generator to generate blocks for addition to
@@ -26,12 +26,11 @@ class BlockGenerator:
             prev_hash = self.genesis_block.hash
 
         timestamp = datetime.timestamp(datetime.now())
-        nonce = random.randint(1, 2**30)
-        new_block = Block( miner_id= "test_miner",
-            previous_block_hash=prev_hash,
-            timestamp=timestamp,
-            nonce=nonce)
-        
+        nonce = random.randint(1, 2 ** 30)
+        new_block = Block(
+            miner_id="test_miner", previous_block_hash=prev_hash, timestamp=timestamp, nonce=nonce
+        )
+
         new_block.set_quantum_hash()
         new_block.set_hash()
         new_block.lock()

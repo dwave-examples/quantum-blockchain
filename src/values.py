@@ -9,13 +9,15 @@ MAX_BLOCK_SIZE = 128  # Currently unused as all our trial blocks are small. But 
 EMPTY_QUANTUM_HASH = ""
 TRANSACTION_MAX_PRECISION = 8  # Good practice to define some maximum precision (i.e. some smallest unit of currency) to avoid validation problems due to rounding errors.
 MIN_SCORE = -(
-    2**14
+    2 ** 14
 )  # Large enough to outweigh any legitimate score, small enough to work on essentially all platforms.
 
 # ===================================================================================
 #                      Unitary dynamics parameterization
 # ===================================================================================
-DEFAULT_ANNEALING_TIME = 0.005 # Microseconds of evolution for the quench as executed on Advantage2_prototype2
+DEFAULT_ANNEALING_TIME = (
+    0.005  # Microseconds of evolution for the quench as executed on Advantage2_prototype2
+)
 DEFAULT_CUBIC_LATTICE_SHAPE = (4, 4, 4)  # Default dimensions of dimerized cubic lattice.
 DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
 # Energy time rescalings required to emulate Advantage2_system2.6 at
@@ -57,7 +59,7 @@ FIRST_KNOWN_NODE_HOSTNAME = "127.0.0.1:5000"
 W_0_ALPHA = 0.0
 DELTA_W_0_ALPHA = 0.18  # Reference paper value based on witness variance amongst 4 online general access solvers at hte time of the study.
 DEFAULT_NUM_READS = 600  # NB - Smaller than the reference paper.
-BOOTSTRAP_DATA_NUM_READS = 3860 # Referemnce paper value for the number of reads performed in estimation of offline witness data for Advantage_system4.1.
+BOOTSTRAP_DATA_NUM_READS = 3860  # Referemnce paper value for the number of reads performed in estimation of offline witness data for Advantage_system4.1.
 GENESIS_BLOCK_TIMESTAMP = datetime.timestamp(datetime.fromisoformat("2025-01-01 00:00:00.000"))
 GENESIS_BLOCK_PREV_HASH = "begin_blockchain"
 

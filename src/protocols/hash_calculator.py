@@ -1,17 +1,19 @@
-from abc import ABC, abstractmethod
 import binascii
-from collections import namedtuple
-from enum import Enum
 import os
 import time
-
-import numpy as np
+from abc import ABC, abstractmethod
+from collections import namedtuple
+from enum import Enum
 
 import dimod
-from dwave.system import DWaveSampler
+import numpy as np
 from dwave.cloud import Client
+from dwave.system import DWaveSampler
 
-from directory_paths import BOOTSTRAP_PATH, EMBEDDINGS_PATH #Somehow this won't throw an error if "src" is omitted, but it will cause errors elsewhere
+from directory_paths import (  # Somehow this won't throw an error if "src" is omitted, but it will cause errors elsewhere
+    BOOTSTRAP_PATH,
+    EMBEDDINGS_PATH,
+)
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
 from src.values import (
@@ -40,7 +42,6 @@ SolverParams = namedtuple(
 
 
 class HashSolver(ABC):
-
     @abstractmethod
     def calculate_quantum_hash(
         self, hash_length: int, rng_seed: int | None = None
@@ -91,7 +92,6 @@ def initialize_solver(solver_name: str) -> HashSolver:
 
 
 class BootstrappingHashSolver(HashSolver):
-
     def __init__(
         self,
         solver_name: str = None,

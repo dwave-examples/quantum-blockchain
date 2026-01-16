@@ -1,17 +1,19 @@
 import random
+
 import numpy as np
 from scipy.special import erf
 
-from demo_configs import QUANTUM_HASH_LENGTH, ALLOWABLE_ERR, N_ZEROES
-from src.structures.block import Block
-from src.utilities.crypto_utils import basic_compound_hash, validate_zeroes, compare_hashes
+from demo_configs import ALLOWABLE_ERR, N_ZEROES, QUANTUM_HASH_LENGTH
 from src.protocols.hash_calculator import HashSolver
-from src.values import W_0_ALPHA, DELTA_W_0_ALPHA, MIN_SCORE
+from src.structures.block import Block
+from src.utilities.crypto_utils import basic_compound_hash, compare_hashes, validate_zeroes
+from src.values import DELTA_W_0_ALPHA, MIN_SCORE, W_0_ALPHA
+
 
 class ProofOfWorkProtocol:
     """This class implements the Proof of Work Protocol for a node on the blockchain. In practice, that means the
     class manages mining, scoring and those aspects of Block assembly that require resources outside the scope
-    of the Block class, such as anything needing QPU access. 
+    of the Block class, such as anything needing QPU access.
     """
 
     def __init__(
@@ -104,7 +106,7 @@ class ProofOfWorkProtocol:
                 using confidence_based scoring, the miner might score their block low enough to no longer consider
                 it good, requiring another mining attempt.
             sample_time: the sampling time for the QPU call."""
-        
+
         new_quantum_hash, dot_vector, sample_time = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
         validation_bits = [1 for i in range(QUANTUM_HASH_LENGTH)]
@@ -112,7 +114,9 @@ class ProofOfWorkProtocol:
         assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
 
         if validate_zeroes(block.hash, N_ZEROES):
-            block_score = self.calculate_confidence_score(validation_bits, ALLOWABLE_ERR, dot_vector)
+            block_score = self.calculate_confidence_score(
+                validation_bits, ALLOWABLE_ERR, dot_vector
+            )
         else:
             block_score = MIN_SCORE
 
@@ -148,10 +152,10 @@ class ProofOfWorkProtocol:
         block_score = self.calculate_confidence_score(validation_bits, ALLOWABLE_ERR, dot_vector)
         del dot_vector
         return block_score, validation_bits, sample_time
-    
+
     def calculate_confidence_score(
-            self, valid_bits: np.ndarray, allowable_err: int, dot_vector: np.ndarray
-            ) -> float:
+        self, valid_bits: np.ndarray, allowable_err: int, dot_vector: np.ndarray
+    ) -> float:
         """Confidence-based scoring, as defined in the paper. In practice this is quite sensitive to quantum_hash_length,
         allowable_err, solver schemas and num_reads. Some trial and error is required to find sets of values that
         allow for reasonable validation rates."""
@@ -169,7 +173,9 @@ class ProofOfWorkProtocol:
             if confidence == 0:
                 return min_confidence
             elif confidence < 0:
-                raise Exception(f"Invalid confidence value {confidence} at index {idx} from bit {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}")
+                raise Exception(
+                    f"Invalid confidence value {confidence} at index {idx} from bit {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}"
+                )
             else:
                 log_confidence += np.log2(confidence)
 
@@ -195,7 +201,7 @@ class ProofOfWorkProtocol:
             dot_vector: a np vector encoding the hyperplane distance for each bit (that is, the dot product of the
                         hash vector and the hyperplane's normal vector)
             sample_time: the time required by the sampler to generate the sampler_output"""
-        
+
         random_seed = int(block.hash_seed, 16)
         self.set_random_solver()
 

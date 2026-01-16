@@ -2,10 +2,10 @@ import random
 import time
 
 from src.agents.miner import Miner
+from src.protocols.hash_calculator import HashSolver
+from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.values import MINER_NAMES
-from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
-from src.protocols.hash_calculator import HashSolver
 
 
 class TrialManager:
@@ -188,14 +188,17 @@ class TrialManager:
             self.single_step()
 
     def get_last_common_trunk_block(self) -> int:
-        """ Finds the block number of the last block that all miners have in their trunks: that is, the last
-            block that all miners consider to be a canonical part of the main chain. This is important in 
-            assessing the state of the blockchain, as once all miners agree on a block, it is effectively
-            immutable, as every new block mined will include it as a predecessor.
-            
-            Returns:
-                largest_common_block_num (int): the """
-        trunk_sets = [set([blk.block_number for blk in miner.blockchain.trunk]) for miner in self.miners.values()]
+        """Finds the block number of the last block that all miners have in their trunks: that is, the last
+        block that all miners consider to be a canonical part of the main chain. This is important in
+        assessing the state of the blockchain, as once all miners agree on a block, it is effectively
+        immutable, as every new block mined will include it as a predecessor.
+
+        Returns:
+            largest_common_block_num (int): the"""
+        trunk_sets = [
+            set([blk.block_number for blk in miner.blockchain.trunk])
+            for miner in self.miners.values()
+        ]
         common_block_nums = set.intersection(*trunk_sets)
-        largest_common_block_num = max(list(common_block_nums)) #TODO validity check
+        largest_common_block_num = max(list(common_block_nums))  # TODO validity check
         return largest_common_block_num

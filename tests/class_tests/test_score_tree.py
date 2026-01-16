@@ -1,6 +1,8 @@
-import pytest
-import os, sys
+import os
+import sys
 from pathlib import Path
+
+import pytest
 
 from src.structures.block_score_tree import BlockScoreTree
 

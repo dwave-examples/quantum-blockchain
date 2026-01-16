@@ -1,17 +1,14 @@
-import pytest
-
-import numpy as np
-
 import dimod
+import numpy as np
+import pytest
 from dwave.system import DWaveSampler
 from dwave.system.testing import MockDWaveSampler
 
-
 from src.protocols.hash_calculator import (
-    SolverName,
-    initialize_solver,
     BootstrappingHashSolver,
     QuantumHashSolver,
+    SolverName,
+    initialize_solver,
 )
 
 client_supported_solver_name = None

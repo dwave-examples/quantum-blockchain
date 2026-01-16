@@ -16,7 +16,9 @@ for name in SolverName:
             next_solver = initialize_solver(name)
             solver_list.append(next_solver)
         except:
-            print(f"Initialization failed for a parameterized solver, likely unavailable through the client: {name}")
+            print(
+                f"Initialization failed for a parameterized solver, likely unavailable through the client: {name}"
+            )
 
 if len(solver_list) <= 0:
     raise Exception("Cannot connect to any solvers. Unable to run.")

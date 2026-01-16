@@ -15,22 +15,11 @@
 """This file stores the Dash HTML layout for the app."""
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_mantine_components as dmc
+from dash import dcc, html
 
-from demo_configs import (
-    DESCRIPTION,
-    MAIN_HEADER,
-    NUM_BLOCKS,
-    THUMBNAIL,
-    MINER_SLIDER,
-    INTRO_TEXT,
-    INTRO_SUBTEXT,
-    LOADING_TEXT,
-    VIEW_OPTS,
-    HIDE_BOOTSTRAP_SOLVERS,
-)
-
+from demo_configs import (DESCRIPTION, HIDE_BOOTSTRAP_SOLVERS, INTRO_SUBTEXT, INTRO_TEXT,
+                          LOADING_TEXT, MAIN_HEADER, MINER_SLIDER, NUM_BLOCKS, THUMBNAIL, VIEW_OPTS)
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
 
 THEME_COLOR = "#2d4376"

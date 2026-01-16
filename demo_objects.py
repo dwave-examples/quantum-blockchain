@@ -1,7 +1,6 @@
 from src.agents.miner import Miner
 from src.structures.block_score_tree import BlockScoreTree
 
-
 #TODO eliminate this from the final code. Leaving it in for now in case it's useful for future debugging.
 
 test_tree = BlockScoreTree()

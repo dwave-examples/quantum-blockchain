@@ -1,6 +1,8 @@
-import pytest
-import os, sys
+import os
 import random
+import sys
+
+import pytest
 
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -73,11 +75,13 @@ def test_creation():
         len(blocks) == NUM_BLOCKS
     ), f"Wrong number of blocks. Expected {NUM_BLOCKS}, received {len(blocks)}"
 
+
 def test_validation():
     for idx, block in enumerate(blocks):
         assert block.validate_hash(), f"Block {idx+1} failed to validate its hash."
         assert block.current_quantum_hash, f"Block {idx+1} is missing quantum hash."
         assert block.current_block_hash, f"Block {idx+1} is missing block hash"
+
 
 def test_data_protection():
     """This function tests the data protection functionality of Block, specifically checking that certain operations

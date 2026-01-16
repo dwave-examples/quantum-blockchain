@@ -13,22 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
-import time
+
 import copy
 import random
+import time
 
 import dash
-from dash import MATCH, ctx, Patch, set_props
+import plotly.graph_objects as go
+from dash import MATCH, Patch, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-import plotly.graph_objects as go
 
-from src.utilities.spiral_plotter import SpiralPlotter
-from src.agents.trial_manager import TrialManager
-from src.values import MINER_NAMES #TODO move to DemoConstants
 from demo_configs import VIEW_OPTS
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
+from src.agents.trial_manager import TrialManager
 from src.utilities.display_update import render_miner_status
+from src.utilities.spiral_plotter import SpiralPlotter
+from src.values import MINER_NAMES  # TODO move to DemoConstants
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -36,8 +37,8 @@ from src.utilities.display_update import render_miner_status
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@dash.callback(
 
+@dash.callback(
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
     background=True,
@@ -53,7 +54,7 @@ from src.utilities.display_update import render_miner_status
     progress=[
         Output("current-block-data", "data"),
     ],
-    cancel = [Input("pause-button", "n_clicks")],
+    cancel=[Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def simulation(
@@ -99,12 +100,12 @@ def simulation(
 
     if running_status == False or ctx.triggered_id != "running-status":
         raise PreventUpdate
-    else: 
+    else:
         num_blocks = block_input_val
         num_miners = miner_slider_val
         print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
-        if solver_mode_val == "QPU Solver": #TODO make enum
+        if solver_mode_val == "QPU Solver":  # TODO make enum
             solvers = [solver for solver in AVAILABLE_QPU_SOLVERS]
             dropdown_idx = int(qpu_solver_select_val)
         elif solver_mode_val == "Bootstrapping Solver":
@@ -112,14 +113,19 @@ def simulation(
             solvers = [solver for solver in BOOTSTRAP_SOLVERS]
         else:
             raise Exception("Fix mode select")
-        
 
         if dropdown_idx > 0:
             solvers = [solvers[dropdown_idx]]
 
         manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solvers=solvers)
 
-        block_dict_template = {"block_json":"", "block_number": 0, "scores": {}, "solvers": {}, "miner_id": ""}
+        block_dict_template = {
+            "block_json": "",
+            "block_number": 0,
+            "scores": {},
+            "solvers": {},
+            "miner_id": "",
+        }
         current_block_dict = copy.deepcopy(block_dict_template)
 
         first_empty_index = blockchain_structure.index(None)
@@ -148,20 +154,24 @@ def simulation(
             current_block_dict = last_block
             print("Finished all restart logic.")
 
-        min_loop_time = 1.1 #TODO make a constant
-        view_miners = {MINER_NAMES[(opt.miner_number)%num_miners]:opt.graph_name for opt in VIEW_OPTS}
+        min_loop_time = 1.1  # TODO make a constant
+        view_miners = {
+            MINER_NAMES[(opt.miner_number) % num_miners]: opt.graph_name for opt in VIEW_OPTS
+        }
 
-        while(manager.blocks_mined <= num_blocks):
+        while manager.blocks_mined <= num_blocks:
             iter_start_time = time.time()
             if manager.round_progress == 0 and manager.blocks_mined == num_blocks:
-                break #TODO simplify if possible
+                break  # TODO simplify if possible
             mined, miner_id, block_score, solver = manager.single_step()
             if mined:
                 current_block_dict = copy.deepcopy(block_dict_template)
                 current_block_dict["block_number"] = manager.blocks_mined
                 current_block_dict["block_json"] = manager.block_broadcast
                 current_block_dict["miner_id"] = miner_id
-                print(f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined.")
+                print(
+                    f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined."
+                )
             else:
                 current_block_dict["new"] = False
 
@@ -178,76 +188,84 @@ def simulation(
                 plotter = SpiralPlotter()
                 if "global" in view_miners[miner_id]:
                     last_shared_block = manager.get_last_common_trunk_block()
-                    miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain, active_block_cutoff=last_shared_block)
+                    miner_fig = plotter.create_plot_from_tree(
+                        manager.miners[miner_id].blockchain, active_block_cutoff=last_shared_block
+                    )
                 else:
                     miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain)
 
                 miner_graph_name = view_miners[miner_id]
 
-                miner_fig.update_layout( #TODO move to configs and figure out how to use relative units for graph size
+                miner_fig.update_layout(  # TODO move to configs and figure out how to use relative units for graph size
                     autosize=False,
                     width=700,
                     height=700,
-                    showlegend = False,
-                    xaxis = dict(showticklabels=False),
-                    yaxis = dict(showticklabels=False),
-                    margin=dict(
-                        l=0,
-                        r=0,
-                        b=0,
-                        t=0,
-                        pad=4
-                    ),
+                    showlegend=False,
+                    xaxis=dict(showticklabels=False),
+                    yaxis=dict(showticklabels=False),
+                    margin=dict(l=0, r=0, b=0, t=0, pad=4),
                     paper_bgcolor="White",
                     plot_bgcolor="White",
                 )
-                set_props(miner_graph_name, {"figure":miner_fig},)
+                set_props(
+                    miner_graph_name,
+                    {"figure": miner_fig},
+                )
 
             iter_end_time = time.time()
             iter_total_time = iter_end_time - iter_start_time
             if iter_total_time < min_loop_time:
-                time.sleep(min_loop_time-iter_total_time)
+                time.sleep(min_loop_time - iter_total_time)
 
     return "", "display-none"
 
 
-#======================================================================================================
+# ======================================================================================================
+
 
 @dash.callback(
     Output("blockchain-structure-data", "data"),
-    inputs = [
+    inputs=[
         Input("current-block-data", "data"),
     ],
     prevent_initial_call=True,
 )
 def update_blockchain_data(block_data: dict):
-    """ Pass-through function to patch the single-block update from the 'simulation' callback
-        into the larger blockchain data structure."""
+    """Pass-through function to patch the single-block update from the 'simulation' callback
+    into the larger blockchain data structure."""
     block_number = block_data["block_number"]
     to_update = Patch()
-    to_update[block_number-1] = block_data
+    to_update[block_number - 1] = block_data
     return to_update
 
-#======================================================================================================
+
+# ======================================================================================================
+
 
 @dash.callback(
     Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("prelim-text", "className"),
     Output("miner-table-head", "children", allow_duplicate=True),
     Output("miner-table-body", "children", allow_duplicate=True),
-    inputs = [
+    inputs=[
         Input("current-block-data", "data"),
         State("miner-slider", "value"),
         State("solver-mode-select", "value"),
         State("qpu-solver-select", "value"),
         State("bootstrap-solver-select", "value"),
-        ],
+    ],
     prevent_initial_call=True,
 )
-def update_miner_display(current_block_data: dict, num_miners: int, solver_mode_select: str, qpu_select: str, bootstrap_select: str):
-    """ This callback processes blockchain structure data and uses it to update the miner status
-        table and the graph display."""
-    
+def update_miner_display(
+    current_block_data: dict,
+    num_miners: int,
+    solver_mode_select: str,
+    qpu_select: str,
+    bootstrap_select: str,
+):
+    """This callback processes blockchain structure data and uses it to update the miner status
+    table and the graph display."""
+
     mining_id = current_block_data["miner_id"]
     block_number = current_block_data["block_number"]
     if solver_mode_select == "QPU Solver" and int(qpu_select) == 0:
@@ -257,7 +275,7 @@ def update_miner_display(current_block_data: dict, num_miners: int, solver_mode_
     else:
         show_solvers = False
 
-    miner_status_dict = {MINER_NAMES[i]: ["",""] for i in range(num_miners)}
+    miner_status_dict = {MINER_NAMES[i]: ["", ""] for i in range(num_miners)}
     for miner_id, score in current_block_data["scores"].items():
         if score > 0:
             status = "Validated"
@@ -268,13 +286,15 @@ def update_miner_display(current_block_data: dict, num_miners: int, solver_mode_
 
     for miner_id, solver in current_block_data["solvers"].items():
         if "simulated_" in solver:
-            solver_str = solver.replace("simulated_","")
+            solver_str = solver.replace("simulated_", "")
         else:
             solver_substrings = solver.split("_system")
             solver_str = f"{solver_substrings[0]} {solver_substrings[1]}"
         miner_status_dict[miner_id][1] = solver_str
 
-    miner_table_head, miner_table_body = render_miner_status(block_number, miner_status_dict, show_solvers=show_solvers)
+    miner_table_head, miner_table_body = render_miner_status(
+        block_number, miner_status_dict, show_solvers=show_solvers
+    )
 
     return "", "display-none", miner_table_head, miner_table_body
 
@@ -284,6 +304,7 @@ def update_miner_display(current_block_data: dict, num_miners: int, solver_mode_
 #                             SECTION: User Controls                                                |
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 @dash.callback(
     Output("reset-button", "className", allow_duplicate=True),
@@ -298,16 +319,28 @@ def update_miner_display(current_block_data: dict, num_miners: int, solver_mode_
     inputs=[
         Input("run-button", "n_clicks"),
         State("blocks-input", "value"),
-        State("miner-slider", "value")
+        State("miner-slider", "value"),
     ],
-    prevent_initial_call = True
+    prevent_initial_call=True,
 )
 def run_simulation(run_click: int, num_blocks: int, num_miners: int):
-    """ Runs a simulation with the selected number of miners and blocks."""
-    blockchain_init = [None for _ in range(num_blocks+3)]
-    return "display-none", "", True, "display-none", blockchain_init, True, True, True, True #TODO break into lines and label
+    """Runs a simulation with the selected number of miners and blocks."""
+    blockchain_init = [None for _ in range(num_blocks + 3)]
+    return (
+        "display-none",
+        "",
+        True,
+        "display-none",
+        blockchain_init,
+        True,
+        True,
+        True,
+        True,
+    )  # TODO break into lines and label
 
-#========================================================================================
+
+# ========================================================================================
+
 
 @dash.callback(
     Output("reset-button", "className", allow_duplicate=True),
@@ -316,26 +349,28 @@ def run_simulation(run_click: int, num_blocks: int, num_miners: int):
     inputs=[
         Input("pause-button", "n_clicks"),
     ],
-    prevent_initial_call = True
+    prevent_initial_call=True,
 )
 def pause_simulation(pause_click: int):
-    """ This callback will pause the current, in-progress simulation. In reality, the
-        'simulation' callback is cancelled, but the data defining its current state is
-        still stored in the blockchain_structure_data dcc.Store object, so the simulation
-        can be restarted by reconstructing the state.
-        
-        Args:
-            pause_click (int): Unused. The pause button just needs to trigger the callback,
-                its value is irrelevant.
-                
-        Returns:
-            reset-button (str): makes visible
-            resume-button (str): makes visible
-            pause-button (str): hides"""
+    """This callback will pause the current, in-progress simulation. In reality, the
+    'simulation' callback is cancelled, but the data defining its current state is
+    still stored in the blockchain_structure_data dcc.Store object, so the simulation
+    can be restarted by reconstructing the state.
 
-    return "","", "display-none"
+    Args:
+        pause_click (int): Unused. The pause button just needs to trigger the callback,
+            its value is irrelevant.
 
-#========================================================================================
+    Returns:
+        reset-button (str): makes visible
+        resume-button (str): makes visible
+        pause-button (str): hides"""
+
+    return "", "", "display-none"
+
+
+# ========================================================================================
+
 
 @dash.callback(
     Output("reset-button", "className", allow_duplicate=True),
@@ -345,29 +380,29 @@ def pause_simulation(pause_click: int):
     inputs=[
         Input("resume-button", "n_clicks"),
     ],
-    prevent_initial_call = True
+    prevent_initial_call=True,
 )
 def resume_simulation(pause_click: int):
-    """ Resumes a paused simulation. In practice, this means starting a new instance of the
-        'simulation' callback, but without resetting the blockchain data. The simulation 
-        will then reconstruct its previous state and pick up where it left off.
-        
-        Args:
-            pause_click (int): Unused.
-            
-        Returns:
-            reset-button (str): hides
-            resume-button (str): hides
-            pause-button (str): makes visible
-            running-status (bool): sets to 'True', indicating that simulation should resume."""
+    """Resumes a paused simulation. In practice, this means starting a new instance of the
+    'simulation' callback, but without resetting the blockchain data. The simulation
+    will then reconstruct its previous state and pick up where it left off.
+
+    Args:
+        pause_click (int): Unused.
+
+    Returns:
+        reset-button (str): hides
+        resume-button (str): hides
+        pause-button (str): makes visible
+        running-status (bool): sets to 'True', indicating that simulation should resume."""
     return "display-none", "display-none", "", True
 
-#========================================================================================
+
+# ========================================================================================
 @dash.callback(
-    
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
-    Output("miner-graph-and-table", "className", allow_duplicate=True), #TODO clear graph displays
+    Output("miner-graph-and-table", "className", allow_duplicate=True),  # TODO clear graph displays
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
@@ -380,33 +415,35 @@ def resume_simulation(pause_click: int):
     Output(VIEW_OPTS[1].graph_name, "figure"),
     Output(VIEW_OPTS[2].graph_name, "figure"),
     Output(VIEW_OPTS[3].graph_name, "figure"),
-    inputs=[ 
+    inputs=[
         Input("reset-button", "n_clicks"),
     ],
-    prevent_initial_call = True
+    prevent_initial_call=True,
 )
 def reset_simulation(reset_click: int):
-    """ Resets the simulation, allowing a new simulation to be started."""
+    """Resets the simulation, allowing a new simulation to be started."""
     empty_fig = go.Figure()
     return (
-        "", #Intro text
-        "display-none", #Loading text
-        "display-none", #Miner Graph
-        "",             #Run Button
-        "display-none", #Reset Button
-        "display-none", #Resume Button
-        False, #Running Status
-        False, #miner-slider 'disabled' prop
-        False, #blocks-input 'disabled' prop
-        False, #qpu-solver-select 'disabled' prop
-        False, #bootstrap-solver-select 'disabled' prop
-        empty_fig, #Graph figures
+        "",  # Intro text
+        "display-none",  # Loading text
+        "display-none",  # Miner Graph
+        "",  # Run Button
+        "display-none",  # Reset Button
+        "display-none",  # Resume Button
+        False,  # Running Status
+        False,  # miner-slider 'disabled' prop
+        False,  # blocks-input 'disabled' prop
+        False,  # qpu-solver-select 'disabled' prop
+        False,  # bootstrap-solver-select 'disabled' prop
+        empty_fig,  # Graph figures
         empty_fig,
         empty_fig,
-        empty_fig
+        empty_fig,
     )
 
-#=======================================================================================
+
+# =======================================================================================
+
 
 @dash.callback(
     [Output(opt.wrapper_name, "className") for opt in VIEW_OPTS],
@@ -415,18 +452,22 @@ def reset_simulation(reset_click: int):
     ],
     prevent_initial_call=True,
 )
-def toggle_graph_display(selected_view): #TODO check binding between this and view dropdown options
-    """ Toggles the visibility of the four different graph displays. Will default to showing the Global
-        View graph. When triggered, will hide three of the graph displays and make the selected one visible."""
+def toggle_graph_display(
+    selected_view,
+):  # TODO check binding between this and view dropdown options
+    """Toggles the visibility of the four different graph displays. Will default to showing the Global
+    View graph. When triggered, will hide three of the graph displays and make the selected one visible."""
 
     print(f"View {selected_view} has been selected.")
     selected_view = int(selected_view)
-    return_tuple = ["" if opt==selected_view else "display-none" for opt in range(4)]
+    return_tuple = ["" if opt == selected_view else "display-none" for opt in range(4)]
     print(f"Returning {return_tuple}")
 
     return return_tuple
 
-#=========================================================================================
+
+# =========================================================================================
+
 
 @dash.callback(
     Output("QPU-dropdown", "className"),
@@ -435,8 +476,8 @@ def toggle_graph_display(selected_view): #TODO check binding between this and vi
         Input("solver-mode-select", "value"),
     ],
 )
-def toggle_solver_mode(selected_mode): 
-    """ Toggles between QPU Solver mode and Boostrapping Solver Mode"""
+def toggle_solver_mode(selected_mode):
+    """Toggles between QPU Solver mode and Boostrapping Solver Mode"""
 
     if selected_mode == "QPU Solver":
         return "", "display-none"
@@ -444,6 +485,7 @@ def toggle_solver_mode(selected_mode):
         return "display-none", ""
     else:
         raise Exception("Invalid solver select option")
+
 
 @dash.callback(
     Output({"type": "to-collapse-class", "index": MATCH}, "className"),

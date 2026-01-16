@@ -1,13 +1,8 @@
 import json
 from datetime import datetime
 
-from src.utilities.crypto_utils import (
-    calculate_hash,
-    basic_compound_hash,
-)
-
+from src.utilities.crypto_utils import basic_compound_hash, calculate_hash
 from src.values import EMPTY_QUANTUM_HASH
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -88,7 +83,6 @@ class Block:
         except AssertionError:
             return False
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
     #                             SECTION: Core Property Definitions                                     |
@@ -124,7 +118,7 @@ class Block:
     @property
     def nonce(self) -> int:
         return self._header["nonce"]
-    
+
     @property
     def miner_id(self) -> str:
         return self._header["miner_id"]
@@ -134,9 +128,7 @@ class Block:
         """This property defines the data fields and ordering used to calculate both quantum and classical
         hashes. Important that this be consistent across all users or they will not calculate
         comparable hash values."""
-        seed_string = (
-            f"{self.previous_hash}{self.merkle_root}{self.timestamp}{self.merkle_root}{self.miner_id}{self.nonce}"
-        )
+        seed_string = f"{self.previous_hash}{self.merkle_root}{self.timestamp}{self.merkle_root}{self.miner_id}{self.nonce}"
         return calculate_hash(seed_string)
 
     @property
@@ -158,14 +150,11 @@ class Block:
         else:
             return False
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
     #                             SECTION: Public Mutators                                               |
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 
     @nonce.setter
     def nonce(self, value: int):
@@ -210,7 +199,7 @@ class Block:
     def set_hash(self):
         """Calculates the block hash, storing the result in the 'hash' entry of self._header. This will overwrite
             any existing hash, though the result will be identical if the data has not been altered since the last
-            time this function was called. 
+            time this function was called.
 
         Args:
             None
@@ -251,7 +240,7 @@ class Block:
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _reset_hashes(self):
-        """Removes both the block hash and the quantum hash. This method is called internally when any operation 
+        """Removes both the block hash and the quantum hash. This method is called internally when any operation
         is performed that alters block data and would invalidate the hashes."""
 
         if self.current_quantum_hash:
@@ -268,13 +257,11 @@ class Block:
             self._header["timestamp"] = datetime.timestamp(datetime.now())
             self._reset_hashes()
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
     #                             SECTION: Public Data Access and I/O                                    |
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
     @property
     def locked(self):

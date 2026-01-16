@@ -1,6 +1,6 @@
 import json
 
-from src.structures.score_tree_branch import ScoreTreeBranch, BlockNode
+from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -105,7 +105,7 @@ class BlockScoreTree:
     @property
     def high_score(self):
         return self.get_block(self.strongest_block_hash).total_score
-    
+
     @property
     def num_nodes(self):
         return sum([len(branch) for branch in self.branches])
@@ -166,8 +166,8 @@ class BlockScoreTree:
             new_block = BlockNode(
                 hash=block_hash,
                 prev_hash=prev_block_hash,
-                block_score=round(block_score,3),
-                total_score=round(block_score,3),
+                block_score=round(block_score, 3),
+                total_score=round(block_score, 3),
                 block_number=block_number,
                 block_height=0,
             )
@@ -186,8 +186,8 @@ class BlockScoreTree:
             new_block = BlockNode(
                 hash=block_hash,
                 prev_hash=prev_block_hash,
-                block_score=round(block_score,3),
-                total_score=round(block_score + prev_block.total_score,3),
+                block_score=round(block_score, 3),
+                total_score=round(block_score + prev_block.total_score, 3),
                 block_number=block_number,
                 block_height=prev_block.block_height + 1,
             )
@@ -528,11 +528,17 @@ class BlockScoreTree:
             json.dump(branches, f)
 
     @staticmethod
-    def from_node_and_score_list(node_list: list[tuple[str, str]], score_list: list[float]) -> 'BlockScoreTree':
-        assert len(node_list) == len(score_list), f"Passed lists of incompatible sizes {len(node_list)} and {len(score_list)} respectively."
+    def from_node_and_score_list(
+        node_list: list[tuple[str, str]], score_list: list[float]
+    ) -> "BlockScoreTree":
+        assert len(node_list) == len(
+            score_list
+        ), f"Passed lists of incompatible sizes {len(node_list)} and {len(score_list)} respectively."
         new_tree = BlockScoreTree()
         for hash_pair, score in zip(node_list, score_list):
-            new_tree.add_block(block_hash=hash_pair[0], prev_block_hash=hash_pair[1], block_score=score)
+            new_tree.add_block(
+                block_hash=hash_pair[0], prev_block_hash=hash_pair[1], block_score=score
+            )
         return new_tree
 
     @staticmethod

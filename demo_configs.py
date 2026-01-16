@@ -15,8 +15,9 @@
 """This file stores input parameters for the app."""
 
 import os
-import plotly.express as px
 from collections import namedtuple
+
+import plotly.express as px
 
 # THEME_COLOR is used for the button, text, and banner and should be dark
 # and pass accessibility checks with white: https://webaim.org/resources/contrastchecker/
@@ -31,7 +32,7 @@ MAIN_HEADER = "Quantum Blockchain"
 DESCRIPTION = """\
 A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
 """
-INTRO_TEXT = "Select a number of miners and blocks and press \"Begin Simulation\"."
+INTRO_TEXT = 'Select a number of miners and blocks and press "Begin Simulation".'
 INTRO_SUBTEXT = "Results will display here while simulation is running."
 LOADING_TEXT = "Generating graphs..."
 
@@ -39,7 +40,7 @@ LOADING_TEXT = "Generating graphs..."
 # Graph Visual Elements              #
 #######################################
 TRUNK_POINT_COLOR = "#1458aa"
-TRUNK_EDGE_COLOR = "#6fa8ee" 
+TRUNK_EDGE_COLOR = "#6fa8ee"
 ABANDONED_BRANCH_POINT_COLOR = "#B85103"
 ABANDONED_BRANCH_EDGE_COLOR = "#F5A86E"
 ACTIVE_BRANCH_POINT_COLOR = "#6b6c6d"
@@ -50,19 +51,25 @@ GRAPH_RADIAL_LINE_WIDTH = 0.5
 
 GRAPH_POINT_MIN_SIZE = 5
 GRAPH_POINT_MAX_SIZE = 15
-GRAPH_BRANCH_POINT_SCALING = 0.65 #Determines how large the branch points are relative to the trunk points. 
-GRAPH_MAX_POINTS_PER_REV = 36 #Only set to a multiple of 4 to keep dynamic adjustments nice
+GRAPH_BRANCH_POINT_SCALING = (
+    0.65  # Determines how large the branch points are relative to the trunk points.
+)
+GRAPH_MAX_POINTS_PER_REV = 36  # Only set to a multiple of 4 to keep dynamic adjustments nice
 GRAPH_MIN_POINTS_PER_REV = 8
-GRAPH_SEGS_PER_REV = GRAPH_MAX_POINTS_PER_REV*2 
+GRAPH_SEGS_PER_REV = GRAPH_MAX_POINTS_PER_REV * 2
 
-GRAPH_LOOP_SCALING = 2/3 #Value to multiply each successive loop (in from the outermost one) of the spiral graph.
-GRAPH_MAX_RADIUS = 0.999 #Furthest out on the chart area that points will be drawn. Value of 1 is the very edge.
-GRAPH_MAX_BRANCH_DISTANCE = 0.78 #How far in towards the next trunk section a branch can extend. Value of 1 is all the way to the trunk.
+GRAPH_LOOP_SCALING = (
+    2 / 3
+)  # Value to multiply each successive loop (in from the outermost one) of the spiral graph.
+GRAPH_MAX_RADIUS = (
+    0.999  # Furthest out on the chart area that points will be drawn. Value of 1 is the very edge.
+)
+GRAPH_MAX_BRANCH_DISTANCE = 0.78  # How far in towards the next trunk section a branch can extend. Value of 1 is all the way to the trunk.
 #######################################
 # Sliders, buttons and option entries #
 #######################################
 
-MIN_MINERS = 3 
+MIN_MINERS = 3
 
 MAX_MINERS = 28
 
@@ -74,31 +81,41 @@ DEFAULT_TABLE_HEADER = "Initializing..."
 
 DEFAULT_TABLE_BODY = ""
 
-GRAPH_WIDTH = 1000 #width of graph and load screen elements
+GRAPH_WIDTH = 1000  # width of graph and load screen elements
 
 HIDE_BOOTSTRAP_SOLVERS = False
 
-MINER_SLIDER = {
-    "min": MIN_MINERS,
-    "max": MAX_MINERS,
-    "step": 1,
-    "value": 7
-}
+MINER_SLIDER = {"min": MIN_MINERS, "max": MAX_MINERS, "step": 1, "value": 7}
 
-NUM_BLOCKS = {
-    "min": 3,
-    "max": 300,
-    "step": 1,
-    "value": 10
-}
+NUM_BLOCKS = {"min": 3, "max": 300, "step": 1, "value": 10}
 
-ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"] )
+ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
 
 VIEW_OPTS = [
-    ViewOption(menu_select="Global View", graph_name="global_view_graph", wrapper_name="global_view_wrapper", miner_number=-1),
-    ViewOption(menu_select="Miner 1 View", graph_name="miner_1_view_graph", wrapper_name="miner_1_view_wrapper", miner_number=0),
-    ViewOption(menu_select="Miner 2 View", graph_name="miner_2_view_graph", wrapper_name="miner_2_view_wrapper", miner_number=1),
-    ViewOption(menu_select="Miner 3 View", graph_name="miner_3_view_graph", wrapper_name="miner_3_view_wrapper", miner_number=2),
+    ViewOption(
+        menu_select="Global View",
+        graph_name="global_view_graph",
+        wrapper_name="global_view_wrapper",
+        miner_number=-1,
+    ),
+    ViewOption(
+        menu_select="Miner 1 View",
+        graph_name="miner_1_view_graph",
+        wrapper_name="miner_1_view_wrapper",
+        miner_number=0,
+    ),
+    ViewOption(
+        menu_select="Miner 2 View",
+        graph_name="miner_2_view_graph",
+        wrapper_name="miner_2_view_wrapper",
+        miner_number=1,
+    ),
+    ViewOption(
+        menu_select="Miner 3 View",
+        graph_name="miner_3_view_graph",
+        wrapper_name="miner_3_view_wrapper",
+        miner_number=2,
+    ),
 ]
 
 

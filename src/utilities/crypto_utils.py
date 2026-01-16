@@ -1,15 +1,17 @@
 import binascii
 import sys
-import numpy as np
 from enum import Enum
 
+import numpy as np
+from Crypto.Hash import RIPEMD160, SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
-from Crypto.Hash import RIPEMD160, SHA256
+
 
 class HashFunction(Enum):
     SHA256 = "sha256"
     RIPEMD160 = "ripemd160"
+
 
 def calculate_hash(data_in: str, hash_function: HashFunction = HashFunction.SHA256) -> str:
     """Basic function for calculating the two types of hash functions currently
@@ -17,7 +19,7 @@ def calculate_hash(data_in: str, hash_function: HashFunction = HashFunction.SHA2
 
     Args:
         data_in (str): the data to be hashed, formatted as a hexidecimal string
-        hash_function (HashFunction): name of the hash function to use 
+        hash_function (HashFunction): name of the hash function to use
 
     Returns:
         output_hash (str): the hash of the passed data, formatted as a hex string.
@@ -104,7 +106,8 @@ def get_key_set(private_key_string: str = None, hexlify_private=False) -> tuple[
     public_key = private_key.publickey().export_key("DER")
     public_key_hex = binascii.hexlify(public_key).decode("utf-8")
     public_key_hash = calculate_hash(
-        calculate_hash(public_key_hex, hash_function=HashFunction.SHA256), hash_function=HashFunction.RIPEMD160
+        calculate_hash(public_key_hex, hash_function=HashFunction.SHA256),
+        hash_function=HashFunction.RIPEMD160,
     )
 
     if hexlify_private:
@@ -172,7 +175,7 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     """
 
     hash_bytes = [
-        binascii.unhexlify(hash_bits)#.encode(encoding="utf-8"))
+        binascii.unhexlify(hash_bits)  # .encode(encoding="utf-8"))
         for hash_bits in (first_hash, second_hash)
     ]
     numpy_bytes = [np.frombuffer(np.array(q_hash_bytes), dtype="B") for q_hash_bytes in hash_bytes]

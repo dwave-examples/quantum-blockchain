@@ -3,13 +3,13 @@ from dwave.system import DWaveSampler
 from dwave.system.testing import MockDWaveSampler
 
 from src.utilities.quantum_cubic_utils import (
-    dimerize_coupling_3d,
-    get_embeddings,
-    displace_n_by_c,
+    build_stats,
     create_lattice,
     create_model,
-    build_stats,
+    dimerize_coupling_3d,
+    displace_n_by_c,
     generate_default_sampler,
+    get_embeddings,
     source_dimer_orientation,
     target_dimer_orientation,
 )
@@ -86,7 +86,7 @@ def test_create_lattice():
             assert len(node_list) == L * L * L * 2
             simple_num_edges = 3 * L * L * (L - 1) + int(dim_periodicity[2]) * L * L
             assert (
-                len(edge_list) == simple_num_edges + L**3
+                len(edge_list) == simple_num_edges + L ** 3
             ), "Expected simple-lattice edges plus one additional edge per dimer"
 
 
@@ -131,7 +131,7 @@ def test_source_dimer_orientation():
 
 
 def test_generate_default_sampler():
-    source_edge_list = [((0,0,0,0), (0,0,0,1))]
+    source_edge_list = [((0, 0, 0, 0), (0, 0, 0, 1))]
     t = 4
     qpu = MockDWaveSampler(topology_type="chimera", topology_shape=[1, 1, t])
     sampler = generate_default_sampler(
