@@ -438,7 +438,6 @@ def toggle_graph_display(selected_view): #TODO check binding between this and vi
 def toggle_solver_mode(selected_mode): 
     """ Toggles between QPU Solver mode and Boostrapping Solver Mode"""
 
-    print(f"Doing the thing with mode opt {selected_mode}")
     if selected_mode == "QPU Solver":
         return "", "display-none"
     elif selected_mode == "Bootstrapping Solver":

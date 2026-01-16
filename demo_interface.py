@@ -32,8 +32,6 @@ from demo_configs import (
 )
 
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
-from demo_constants import EMPTY_BLOCK_DICT
-from src.values import MINER_NAMES
 
 THEME_COLOR = "#2d4376"
 
