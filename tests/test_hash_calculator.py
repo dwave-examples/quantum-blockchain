@@ -18,7 +18,7 @@ client_supported_solver_name = None
 
 for sv in SolverName:
     try:
-        DWaveSampler(solver=sv.value, profile="defaults")
+        DWaveSampler(solver=sv.value)
         client_supported_solver_name = sv.value
         print(sv.value)
         break
@@ -78,7 +78,7 @@ def test_QuantumHashSolver():
         sampler_kwargs=sampler_kwargs,
     )
     assert qhs.solver_parameters.solver_name == None
-    assert qhs.solver_parameters.profile == "defaults"
+    assert qhs.solver_parameters.profile == None
     for hash_length in [32, 64]:
         ascii_hash, qhs_hash, t = qhs.calculate_quantum_hash(hash_length=hash_length, rng_seed=0)
         assert t > 0
