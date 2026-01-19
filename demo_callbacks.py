@@ -63,8 +63,8 @@ from src.values import MINER_NAMES  # TODO move to DemoConstants
 def simulation(
     update_current_block_data,
     is_running: bool,
-    miner_slider_val: int,
-    block_input_val: int,
+    num_miners: int,
+    num_blocks: int,
     blockchain_structure: list,
     qpu_solver_select_val: str,
     simulated_solver_select_val: str,
@@ -83,8 +83,8 @@ def simulation(
         is_running (bool): flag to signal that the 'run' button has been clicked. Passing it this way
             (instead of the 'run' button itself being used as an input), allows certain UI updates (such as
             disabling/hiding components) to be processed immediately on clicking 'run', before the simulation starts
-        miner_slider_val (int): the value of the the miner slider: determines how many miners the trial has.
-        block_input_val (int): the value of the blocks input. Determines how many blocks the simulation will run for.
+        num_miners (int): the value of the the miner slider: determines how many miners the trial has.
+        num_blocks (int): the value of the blocks input. Determines how many blocks the simulation will run for.
         blockchain_structure (list): The data structure storing the current blockchain data. If starting a trial,
             this will simply be a list with 'None' in every field. But if resuming after a pause, this will hold
             the data needed to reconstruct the blockchain
@@ -105,8 +105,6 @@ def simulation(
         raise PreventUpdate
 
     solver_mode = SolverMode(solver_mode)
-    num_blocks = block_input_val
-    num_miners = miner_slider_val
     print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
     mode_config = {

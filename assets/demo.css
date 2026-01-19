@@ -149,6 +149,10 @@ custom CSS can be added below.
     height: 100%;
 }
 
+.graph-loading .graph-loading > div:not(.display-none) {
+    height: 100%;
+}
+
 .graph-table-wrapper {
     display: flex;
     height: 100%;
