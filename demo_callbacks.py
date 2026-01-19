@@ -46,7 +46,7 @@ from src.values import MINER_NAMES  # TODO move to DemoConstants
     Output("block-status", "className", allow_duplicate=True),
     background=True,
     inputs=[
-        Input("running-status", "data"),
+        Input("is-running-status", "data"),
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
@@ -62,7 +62,7 @@ from src.values import MINER_NAMES  # TODO move to DemoConstants
 )
 def simulation(
     update_current_block_data,
-    running_status: bool,
+    is_running: bool,
     miner_slider_val: int,
     block_input_val: int,
     blockchain_structure: list,
@@ -80,7 +80,7 @@ def simulation(
 
     Args:
         update_current_block_data: the progress function for providing updates while the callback is running
-        running_status (bool): flag to signal that the 'run' button has been clicked. Passing it this way
+        is_running (bool): flag to signal that the 'run' button has been clicked. Passing it this way
             (instead of the 'run' button itself being used as an input), allows certain UI updates (such as
             disabling/hiding components) to be processed immediately on clicking 'run', before the simulation starts
         miner_slider_val (int): the value of the the miner slider: determines how many miners the trial has.
@@ -101,7 +101,7 @@ def simulation(
         pause-button: hides the 'pause' button
     """
 
-    if running_status == False or ctx.triggered_id != "running-status":
+    if not is_running or ctx.triggered_id != "is-running-status":
         raise PreventUpdate
 
     solver_mode = SolverMode(solver_mode)
@@ -109,17 +109,14 @@ def simulation(
     num_miners = miner_slider_val
     print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
-    if solver_mode is SolverMode.QPU:
-        solvers = [solver for solver in AVAILABLE_QPU_SOLVERS]
-        dropdown_idx = int(qpu_solver_select_val)
-    elif solver_mode is SolverMode.SIMULATED:
-        dropdown_idx = int(simulated_solver_select_val)
-        solvers = [solver for solver in BOOTSTRAP_SOLVERS]
-    else:
-        raise Exception("Fix mode select")
+    mode_config = {
+        SolverMode.QPU: (int(qpu_solver_select_val), AVAILABLE_QPU_SOLVERS),
+        SolverMode.SIMULATED: (int(simulated_solver_select_val), BOOTSTRAP_SOLVERS),
+    }
+    dropdown_idx, solvers = mode_config[solver_mode]
 
     if dropdown_idx > 0:
-        solvers = [solvers[dropdown_idx]]
+        solvers = [solvers[dropdown_idx-1]]
 
     manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solvers=solvers)
 
@@ -311,7 +308,7 @@ class RunSimulationReturn(NamedTuple):
     run_button_classname: str = "display-none"
     reset_button_classname: str = "display-none"
     pause_button_classname: str = ""
-    running_status: bool = True
+    is_running: bool = True
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
     qpu_solver_select_disabled: bool = True
@@ -323,7 +320,7 @@ class RunSimulationReturn(NamedTuple):
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("running-status", "data", allow_duplicate=True),
+    Output("is-running-status", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
@@ -377,7 +374,7 @@ def pause_simulation(pause_click: int):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("running-status", "data", allow_duplicate=True),
+    Output("is-running-status", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
     ],
@@ -395,7 +392,7 @@ def resume_simulation(pause_click: int):
         reset-button (str): hides
         resume-button (str): hides
         pause-button (str): makes visible
-        running-status (bool): sets to 'True', indicating that simulation should resume."""
+        is-running-status (bool): sets to 'True', indicating that simulation should resume."""
     return "display-none", "display-none", "", True
 
 
@@ -410,7 +407,7 @@ class ResetSimulationReturn(NamedTuple):
     reset_button_classname: str = "display-none"
     resume_button_classname: str = "display-none"
     prelim_text_classname: str = ""
-    running_status: bool = False
+    is_running: bool = False
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
     qpu_solver_select_disabled: bool = False
@@ -429,7 +426,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
-    Output("running-status", "data", allow_duplicate=True),
+    Output("is-running-status", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),

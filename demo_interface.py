@@ -236,7 +236,7 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-            dcc.Store(id="running-status", data=False),
+            dcc.Store(id="is-running-status", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
             dcc.Interval(id="rotate-view", interval=2000),
