@@ -9,7 +9,7 @@ MAX_BLOCK_SIZE = 128  # Currently unused as all our trial blocks are small. But 
 EMPTY_QUANTUM_HASH = ""
 TRANSACTION_MAX_PRECISION = 8  # Good practice to define some maximum precision (i.e. some smallest unit of currency) to avoid validation problems due to rounding errors.
 MIN_SCORE = -(
-    2 ** 14
+    2**14
 )  # Large enough to outweigh any legitimate score, small enough to work on essentially all platforms.
 
 # ===================================================================================

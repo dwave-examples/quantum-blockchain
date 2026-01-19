@@ -110,7 +110,7 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2 ** 32)  # TODO check how to make non-arcitechture specific
+        nonce = np.random.randint(0, 2**32)  # TODO check how to make non-arcitechture specific
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 

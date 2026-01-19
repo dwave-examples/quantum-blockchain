@@ -81,7 +81,8 @@ def test_validate_zeroes():
 def test_signature_functions():
     """Tests the cryptographic signature functions by creating two key sets, and ensuring that validate_signature
     returns true iff and only iff it is passed a message that has been signed with a valid public-private key pair,
-    along with the correct signature block and public key corresponding to that message and key pair."""
+    along with the correct signature block and public key corresponding to that message and key pair.
+    """
 
     message = "My hovercraft is full of eels!"
     wrong_message = "He's pining for the fjords."

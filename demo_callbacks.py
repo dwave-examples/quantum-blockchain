@@ -272,9 +272,8 @@ def update_miner_display(
     mining_id = current_block_data["miner_id"]
     block_number = current_block_data["block_number"]
 
-    show_solvers = (
-        (solver_mode is SolverMode.QPU and int(qpu_select) == 0)
-        or (solver_mode is SolverMode.SIMULATED and int(simulated_select) == 0)
+    show_solvers = (solver_mode is SolverMode.QPU and int(qpu_select) == 0) or (
+        solver_mode is SolverMode.SIMULATED and int(simulated_select) == 0
     )
 
     miner_status_dict = {MINER_NAMES[i]: ["", ""] for i in range(num_miners)}
@@ -305,6 +304,7 @@ def update_miner_display(
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 class RunSimulationReturn(NamedTuple):
     """Return type for the ``run_simulation`` callback function."""
 
@@ -317,6 +317,7 @@ class RunSimulationReturn(NamedTuple):
     qpu_solver_select_disabled: bool = True
     simulated_solver_select_disabled: bool = True
     blockchain_structure_data: list = dash.no_update
+
 
 @dash.callback(
     Output("run-button", "className", allow_duplicate=True),
@@ -336,7 +337,7 @@ class RunSimulationReturn(NamedTuple):
 )
 def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
     """Runs a simulation with the selected number of miners and blocks."""
-    return RunSimulationReturn(blockchain_structure_data=[None]*(num_blocks+3))
+    return RunSimulationReturn(blockchain_structure_data=[None] * (num_blocks + 3))
 
 
 # ========================================================================================
@@ -419,6 +420,7 @@ class ResetSimulationReturn(NamedTuple):
     graph_2: go.Figure = go.Figure()
     graph_3: go.Figure = go.Figure()
 
+
 @dash.callback(
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
@@ -461,7 +463,8 @@ def toggle_graph_display(
     selected_view,
 ):  # TODO check binding between this and view dropdown options
     """Toggles the visibility of the four different graph displays. Will default to showing the Global
-    View graph. When triggered, will hide three of the graph displays and make the selected one visible."""
+    View graph. When triggered, will hide three of the graph displays and make the selected one visible.
+    """
 
     print(f"View {selected_view} has been selected.")
     selected_view = int(selected_view)

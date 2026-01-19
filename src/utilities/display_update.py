@@ -32,9 +32,8 @@ def render_miner_status(
     )
 
     miner_entries = [
-        (
-            miner_id.replace("_", " "), *status[: 2 if show_solvers else 1]
-        ) for miner_id, status in miner_status.items()
+        (miner_id.replace("_", " "), *status[: 2 if show_solvers else 1])
+        for miner_id, status in miner_status.items()
     ]
 
     table_rows = []

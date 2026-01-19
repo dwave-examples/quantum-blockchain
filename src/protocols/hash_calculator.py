@@ -88,7 +88,9 @@ def initialize_solver(solver_name: str) -> HashSolver:
     elif "simulated" in solver_name:
         return BootstrappingHashSolver(solver_name)
     else:
-        return QuantumHashSolver(solver_name, sampler_kwargs={"label": f"Examples - Quantum Blockchain"})
+        return QuantumHashSolver(
+            solver_name, sampler_kwargs={"label": f"Examples - Quantum Blockchain"}
+        )
 
 
 class BootstrappingHashSolver(HashSolver):

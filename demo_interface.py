@@ -13,13 +13,24 @@
 # limitations under the License.
 
 """This file stores the Dash HTML layout for the app."""
+
 from __future__ import annotations
 
 import dash_mantine_components as dmc
 from dash import dcc, html
 
-from demo_configs import (DESCRIPTION, HIDE_BOOTSTRAP_SOLVERS, INTRO_SUBTEXT, INTRO_TEXT,
-                          LOADING_TEXT, MAIN_HEADER, MINER_SLIDER, NUM_BLOCKS, THUMBNAIL, VIEW_OPTS)
+from demo_configs import (
+    DESCRIPTION,
+    HIDE_BOOTSTRAP_SOLVERS,
+    INTRO_SUBTEXT,
+    INTRO_TEXT,
+    LOADING_TEXT,
+    MAIN_HEADER,
+    MINER_SLIDER,
+    NUM_BLOCKS,
+    THUMBNAIL,
+    VIEW_OPTS,
+)
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
 from src.demo_enums import SolverMode
 
@@ -63,7 +74,6 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
         options: A list of dictionaries of labels and values.
     """
 
-
     return html.Div(
         className="dropdown-wrapper",
         children=[
@@ -76,6 +86,7 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
             ),
         ],
     )
+
 
 def radio(label: str, id: str, options: list, value: int, inline: bool = True) -> html.Div:
     """Radio element for option selection.
@@ -157,7 +168,7 @@ def generate_settings_form() -> html.Div:
                 id="qpu-dropdown",
                 children=dropdown(
                     "Solver", "qpu-solver-select", generate_options_dropdown(qpu_solver_opts)
-                )
+                ),
             ),
             html.Div(
                 id="simulated-dropdown",
@@ -165,8 +176,8 @@ def generate_settings_form() -> html.Div:
                 children=dropdown(
                     "Solver",
                     "simulated-solver-select",
-                    generate_options_dropdown(simulated_solver_opts)
-                )
+                    generate_options_dropdown(simulated_solver_opts),
+                ),
             ),
         )
 
@@ -176,8 +187,9 @@ def generate_settings_form() -> html.Div:
             slider("Number of Miners", "miner-slider", MINER_SLIDER),
             input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
             *solver_settings,
-        ]
+        ],
     )
+
 
 def generate_run_buttons() -> html.Div:
     """Run, Pause, Reset and Resume buttons for the simulation"""
@@ -211,7 +223,6 @@ def generate_run_buttons() -> html.Div:
             ),
         ],
     )
-
 
 
 def create_interface():
@@ -305,30 +316,35 @@ def create_interface():
                                     html.Div(
                                         className="graph-table-wrapper",
                                         children=[
-                                            html.Div([
-                                                dcc.Loading(
-                                                    parent_className="graph-loading",
-                                                    overlay_style={
-                                                        "visibility": "visible",
-                                                        "opacity": "0.5",
-                                                    },
-                                                    type="circle",
-                                                    color=THEME_COLOR,
-                                                    children=[
-                                                        html.Div(
-                                                            id=view.wrapper_name,
-                                                            className=f"graph-wrapper {'display-none' if i > 0 else ''}",
-                                                            children=[
-                                                                dcc.Graph(
-                                                                    id=view.graph_name,
-                                                                    responsive=True,
-                                                                    config={"displayModeBar": False},
-                                                                ),
-                                                            ]
-                                                        ) for i, view in enumerate(VIEW_OPTS)
-                                                    ],
-                                                ),
-                                            ]),
+                                            html.Div(
+                                                [
+                                                    dcc.Loading(
+                                                        parent_className="graph-loading",
+                                                        overlay_style={
+                                                            "visibility": "visible",
+                                                            "opacity": "0.5",
+                                                        },
+                                                        type="circle",
+                                                        color=THEME_COLOR,
+                                                        children=[
+                                                            html.Div(
+                                                                id=view.wrapper_name,
+                                                                className=f"graph-wrapper {'display-none' if i > 0 else ''}",
+                                                                children=[
+                                                                    dcc.Graph(
+                                                                        id=view.graph_name,
+                                                                        responsive=True,
+                                                                        config={
+                                                                            "displayModeBar": False
+                                                                        },
+                                                                    ),
+                                                                ],
+                                                            )
+                                                            for i, view in enumerate(VIEW_OPTS)
+                                                        ],
+                                                    ),
+                                                ]
+                                            ),
                                             html.Div(html.Table(id="miner-status-table")),
                                         ],
                                     ),

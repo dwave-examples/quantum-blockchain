@@ -26,7 +26,7 @@ class BlockGenerator:
             prev_hash = self.genesis_block.hash
 
         timestamp = datetime.timestamp(datetime.now())
-        nonce = random.randint(1, 2 ** 30)
+        nonce = random.randint(1, 2**30)
         new_block = Block(
             miner_id="test_miner", previous_block_hash=prev_hash, timestamp=timestamp, nonce=nonce
         )

@@ -25,4 +25,3 @@ class SolverMode(Enum):
             SolverMode.QPU: "QPU Solver",
             SolverMode.SIMULATED: "Simulated Solver",
         }[self]
-

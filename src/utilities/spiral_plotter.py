@@ -391,7 +391,8 @@ class SpiralPlotter:
             recoloring the graph to represent a global view
 
         Returns:
-            fig: The Plotly figure with the spiral graphed as determined by the data stored in the branches."""
+            fig: The Plotly figure with the spiral graphed as determined by the data stored in the branches.
+        """
 
         self._arrange_branches()
 
