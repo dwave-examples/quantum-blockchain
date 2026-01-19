@@ -48,7 +48,7 @@ def test_BootstrappingHashSolver():
     ), "0. and 1. should be only resampled values. Both occurring with high probability"
 
     bhs2 = BootstrappingHashSolver(
-        mean_witnesses=mean_witnesses, var_witnesses=var_witnesses, var_rescaling=0.0
+        mean_witnesses=mean_witnesses, var_witnesses=var_witnesses, var_rescaling_factor=0.0
     )
     _, hash2a, _ = bhs2.calculate_quantum_hash(hash_length, rng_seed=0)
     assert np.array_equal(hash1, hash2a), "Same seed, but not same result"

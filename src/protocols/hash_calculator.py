@@ -10,7 +10,7 @@ import numpy as np
 from dwave.cloud import Client
 from dwave.system import DWaveSampler
 
-from directory_paths import (  # Somehow this won't throw an error if "src" is omitted, but it will cause errors elsewhere
+from directory_paths import (
     BOOTSTRAP_PATH,
     EMBEDDINGS_PATH,
 )
@@ -88,9 +88,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
     elif "simulated" in solver_name:
         return BootstrappingHashSolver(solver_name)
     else:
-        return QuantumHashSolver(
-            solver_name, sampler_kwargs={"label": f"Examples - Quantum Blockchain"}
-        )
+        return QuantumHashSolver(solver_name)
 
 
 class BootstrappingHashSolver(HashSolver):
@@ -101,9 +99,9 @@ class BootstrappingHashSolver(HashSolver):
         bootstrap_path: str = BOOTSTRAP_PATH,
         mean_witnesses: np.ndarray | None = None,
         var_witnesses: np.ndarray | None = None,
-        var_rescaling: float | None = None,
+        var_rescaling_factor: float | None = None,
     ) -> None:
-        """Initializes a simulated solver from a source file or by provission of numpy arrays.
+        """Initializes a simulated solver from a source file or by provision of numpy arrays.
 
         Args:
             solver_name: The solver_name which specifies a lookup file for loading witness statistics.
@@ -128,9 +126,9 @@ class BootstrappingHashSolver(HashSolver):
             self.mean_witnesses = mean_witnesses
             if var_witnesses is None:
                 var_witnesses = np.zeros(shape=mean_witnesses.shape)
-        if var_rescaling is None:
-            var_rescaling = float(DEFAULT_NUM_READS) / float(BOOTSTRAP_DATA_NUM_READS)
-        self.var_witnesses = var_rescaling * var_witnesses
+        if var_rescaling_factor is None:
+            var_rescaling_factor = float(BOOTSTRAP_DATA_NUM_READS)/float(DEFAULT_NUM_READS)
+        self.var_witnesses = var_rescaling_factor * var_witnesses
         self.num_witnesses = self.mean_witnesses.size
 
     def calculate_quantum_hash(
@@ -225,6 +223,7 @@ class QuantumHashSolver(HashSolver):
                 annealing_time=reference_annealing_time / time_r,
                 auto_scale=False,
                 num_reads=num_reads,
+                label=f"Examples - Quantum Blockchain",
             )
         else:
             self.sampler_kwargs = sampler_kwargs

@@ -126,6 +126,8 @@ class BlockScoreTree:
 
     def initialize_first_block(self, initial_block: BlockNode) -> None:
         """Adds an initial block to the empty tree"""
+        if self.num_nodes != 0:
+            raise Exception("Attempted to initialize non-empty tree.")
 
         self.trunk.append_block(initial_block)
         self.strongest_block_hash = initial_block.hash
@@ -397,18 +399,12 @@ class BlockScoreTree:
         for base_branch in base_branches:
             branch_descendants = base_branch.get_descendants_by_depth()
 
-            for i in range(
-                len(branch_descendants) - 1, 0, -1
-            ):  # Working from the highest depth to the lowest lets us make only one pass
+            for i in range(len(branch_descendants) - 1, 0, -1):  # Working from the highest depth to the lowest lets us make only one pass
                 layer = branch_descendants[i]
                 layer_remaining = {
-                    bch.base.hash for bch in layer
+                    branch.base.hash for branch in layer
                 }  # We'll create the longest (by last block number) branch at that layer we can
-                for (
-                    branch
-                ) in (
-                    layer
-                ):  # Which will ensure that one pass over the next lowest layer is also optimal
+                for (branch) in (layer):  # Which will ensure that one pass over the next lowest layer is also optimal
                     if branch.depth <= 1:  # Want to stop just short of the bottom branch.
                         break
                     if branch.base.hash in layer_remaining:
@@ -416,16 +412,12 @@ class BlockScoreTree:
                         best_child = branch
                         best_block_num = branch.tip.block_number
                         for child in parent.children:
-                            layer_remaining.remove(
-                                child.base.hash
-                            )  # Remove each child as we check it
+                            layer_remaining.remove(child.base.hash)  # Remove each child as we check it
                             if child.tip.block_number > best_block_num:
                                 best_child = child
                                 best_block_num = child.tip.block_number
-                        if (
-                            best_block_num > parent.tip.block_number
-                        ):  # If any children have a higher block number than the parent
-                            self.promote_branch(best_child)  # Promote the
+                        if (best_block_num > parent.tip.block_number):  # If any children have a higher block number than the parent
+                            self.promote_branch(best_child)  # Promote them
                     if len(layer_remaining) == 0:
                         break
 

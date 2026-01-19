@@ -347,19 +347,22 @@ class SpiralPlotter:
             raise Exception(
                 f"No block number matching provided cutoff {trunk_cutoff} found in trunk"
             )
-        elif cutoff_index == len(self.trunk) - 1:
-            return  # If the whole trunk is covered, no need to change anything
+        
+        for branch in self.branches:
+            if branch != self.trunk and branch.root.block_number >= trunk_cutoff:
+                branch.point_colors = [ACTIVE_BRANCH_POINT_COLOR for _ in range(len(branch))]
+                branch.point_colors[-1] = TRUNK_TIP_COLOR
+                branch.edge_color = ACTIVE_BRANCH_EDGE_COLOR
+
+        if cutoff_index == len(self.trunk) - 1:
+            return 
 
         self.trunk.point_colors = [TRUNK_POINT_COLOR for _ in range(cutoff_index + 1)] + [
             ACTIVE_BRANCH_POINT_COLOR for _ in range(cutoff_index + 1, len(self.trunk))
         ]
         self.trunk.point_colors[-1] = TRUNK_TIP_COLOR
         self.trunk.edge_color_cutoff = trunk_cutoff * self.segs_per_point
-        for branch in self.branches:
-            if branch != self.trunk and branch.root.block_number >= trunk_cutoff:
-                branch.point_colors = [ACTIVE_BRANCH_POINT_COLOR for _ in range(len(branch))]
-                branch.point_colors[-1] = TRUNK_TIP_COLOR
-                branch.edge_color = ACTIVE_BRANCH_EDGE_COLOR
+
 
     def draw_radial_lines(self):
         """Draws radial lines at the pre-defined angles at which blocks will be plotted."""
@@ -407,7 +410,7 @@ class SpiralPlotter:
             self._color_for_global_view(active_block_cutoff)
 
         trunk_edge_traces = []
-        if active_block_cutoff is None:
+        if active_block_cutoff is None or active_block_cutoff >= self.trunk.tip.block_number:
             edge_section = go.Scatter(
                 x=self.trunk.x_edges,
                 y=self.trunk.y_edges,

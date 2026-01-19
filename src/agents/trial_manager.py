@@ -121,7 +121,7 @@ class TrialManager:
         while mining_attempts <= self.max_mining_attempts and not mine_success:
             mining_attempts += 1
             mined_block, block_score, solver = self.mining_miner.attempt_mine()
-            if block_score > 0:
+            if block_score > 0:  #Deviates from paper methodology (for confidence-based scoring)
                 self.block_broadcast = self.mining_miner.broadcast_mined_block()
                 self.round_progress += 1
                 self.blocks_mined += 1
