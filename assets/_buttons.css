@@ -43,11 +43,11 @@ button:hover {
 }
 
 #cancel-button {
-    background-color: var(--red-light);
+    background-color: var(--red-dark);
 }
 
 #cancel-button:hover {
-    background-color: var(--red-dark);
+    filter: brightness(80%);
 }
 
 button:disabled {

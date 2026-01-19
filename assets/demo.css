@@ -49,12 +49,12 @@ custom CSS can be added below.
 
 #reset-button,
 #pause-button {
-    background-color: var(--red-light);
+    background-color: var(--red-dark);
 }
 
 #reset-button:hover,
 #pause-button:hover {
-    background-color: var(--red-dark);
+    filter: brightness(80%);
 }
 
 #reset-resume-buttons {
@@ -78,6 +78,7 @@ custom CSS can be added below.
 }
 
 #intro-text,
+#prelim-text,
 #loading-text {
     text-align: center;
     display: flex;
@@ -89,7 +90,10 @@ custom CSS can be added below.
 #miner-status-table {
     width: 100%;
     margin: 0.5%;
-    min-width: 12rem;
+    background-color: white;
+    display: inline-block;
+    overflow-y: auto;
+    max-height: calc(50vw - var(--left-col-width)/2);
 }
 
 #miner-table-title {
@@ -103,36 +107,63 @@ custom CSS can be added below.
 #miner-status-table td {
     padding: 0.15rem 0.5rem;
     border: 1px solid var(--grey-medium);
-    width: 50%;
+    white-space: nowrap;
+}
+
+#miner-status-table td:first-child {
+    font-weight: bold;
+}
+
+#miner-status-table td.mined-cell {
+    background-color: hsl(26, 100%, 80%);
+}
+
+#miner-status-table td.validated-cell {
+    background-color: hsl(176, 75%, 80%);
+}
+
+#miner-status-table td.rejected-cell {
+    background-color: hsl(360, 86%, 81%);
 }
 
 #miner-status-table thead {
     background-color: var(--blue-dark);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 #miner-status-table th {
     font-weight: 600;
     color: white;
+    font-size: 1.125rem;
+    text-align: left;
+    border: 1px solid var(--blue-dark);
 }
 
 .right-column {
     padding: 2rem;
 }
 
+.graph-loading {
+    height: 100%;
+}
+
 .graph-table-wrapper {
     display: flex;
     height: 100%;
-    margin-top: 2rem;
+    margin-top: 1rem;
+}
+
+.graph-table-wrapper > div:first-child {
+    height: calc(50vw - var(--left-col-width)/2);
+    width: calc(50vw - var(--left-col-width)/2);
+    margin-right: 2rem;
 }
 
 .graph-wrapper {
-    margin-right: 2rem;
     width: 100%;
-}
-
-.graph-table-wrapper > div:last-child {
-    flex: 1;
-    padding-left: 0;
+    height: 100%;
 }
 
 #miner-graph-and-table {
@@ -144,4 +175,15 @@ custom CSS can be added below.
 #miner-graph-and-table .dropdown-wrapper {
     display: inline-block;
     width: 12rem;
+    margin-right: 1rem;
+}
+
+#miner-graph-and-table > div:first-child {
+    display: flex;
+    align-items: center;
+}
+
+#block-status {
+    font-style: italic;
+    margin-bottom: 0;
 }

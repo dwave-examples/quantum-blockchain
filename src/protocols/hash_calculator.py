@@ -54,7 +54,7 @@ class HashSolver(ABC):
             rng_seed (int): For the case of sampling from QPUs the random seed
                 sets the unitary evolution parameters
                 (for quantum experiments) and random projections defining witnesses.
-                For the case of bootstrap sampling, it initiates the pseudorandom
+                For the case of simulated sampling, it initiates the pseudorandom
                 sampling of offline data models.
 
         Returns:
@@ -76,7 +76,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
     """Function to allow a HashSolver of either type to be initiated from a SolverParams tuple, without
         having to check which type of solver it is and invoke either subclass directly.
     Args:
-        solver_name: A SolverName compatible value used to initialize a QPU or bootstrap solver.
+        solver_name: A SolverName compatible value used to initialize a QPU or simulated solver.
     Returns:
         A HashSolver
     """
@@ -88,7 +88,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
     elif "simulated" in solver_name:
         return BootstrappingHashSolver(solver_name)
     else:
-        return QuantumHashSolver(solver_name)
+        return QuantumHashSolver(solver_name, sampler_kwargs={"label": f"Examples - Quantum Blockchain"})
 
 
 class BootstrappingHashSolver(HashSolver):
@@ -101,7 +101,7 @@ class BootstrappingHashSolver(HashSolver):
         var_witnesses: np.ndarray | None = None,
         var_rescaling: float | None = None,
     ) -> None:
-        """Initializes a bootstrap solver from a source file or by provission of numpy arrays.
+        """Initializes a simulated solver from a source file or by provission of numpy arrays.
 
         Args:
             solver_name: The solver_name which specifies a lookup file for loading witness statistics.

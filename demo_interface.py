@@ -21,6 +21,7 @@ from dash import dcc, html
 from demo_configs import (DESCRIPTION, HIDE_BOOTSTRAP_SOLVERS, INTRO_SUBTEXT, INTRO_TEXT,
                           LOADING_TEXT, MAIN_HEADER, MINER_SLIDER, NUM_BLOCKS, THUMBNAIL, VIEW_OPTS)
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
+from src.demo_enums import SolverMode
 
 THEME_COLOR = "#2d4376"
 
@@ -76,7 +77,7 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
         ],
     )
 
-def radio(label: str, id: str, options: list, value: str, inline: bool = True) -> html.Div:
+def radio(label: str, id: str, options: list, value: int, inline: bool = True) -> html.Div:
     """Radio element for option selection.
 
     Args:
@@ -116,7 +117,7 @@ def input_number(label: str, id: str, config: dict) -> html.Div:
 
 def generate_options(options_list: list) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
-    return [{"label": label, "value": f"{i}"} for i, label in enumerate(options_list)]
+    return [{"label": label, "value": i} for i, label in enumerate(options_list)]
 
 
 def generate_options_dropdown(options_list: list) -> list[dict]:
@@ -130,33 +131,53 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    qpu_solver_opts = ["Randomized QPU"]
+    qpu_solver_opts = [f"Random {SolverMode.QPU.label}"]
     qpu_solver_opts += [slvr.solver_name for slvr in AVAILABLE_QPU_SOLVERS]
 
-    bootstrap_solver_opts = ["Randomized Bootstrap Solver"]
-    bootstrap_solver_opts += [slvr.solver_name for slvr in BOOTSTRAP_SOLVERS]
+    simulated_solver_opts = [f"Random {SolverMode.SIMULATED.label}"]
+    simulated_solver_opts += [slvr.solver_name for slvr in BOOTSTRAP_SOLVERS]
 
-    if HIDE_BOOTSTRAP_SOLVERS:
-        return html.Div(
-            className="settings",
-            children=[
-                slider("Number of Miners","miner-slider", MINER_SLIDER,),
-                input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
-                dropdown("Solver", "solver-select", generate_options_dropdown(qpu_solver_opts)),
-                ]
-        )
-    else:
-        return html.Div(
-            className="settings",
-            children=[
-                slider("Number of Miners","miner-slider", MINER_SLIDER,),
-                input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
-                radio("Solver Mode", "solver-mode-select", ["QPU Solver", "Bootstrapping Solver"], "QPU Solver"),
-                html.Div(id="QPU-dropdown", children = dropdown("Solver", "qpu-solver-select", generate_options_dropdown(qpu_solver_opts))),
-                html.Div(id= "bootstrap-dropdown", className="display-none", children = dropdown("Solver", "bootstrap-solver-select", generate_options_dropdown(bootstrap_solver_opts))),
-                ]
+    solver_mode_options = [
+        {"label": solver_mode.label, "value": solver_mode.value} for solver_mode in SolverMode
+    ]
+
+    solver_settings = dropdown(
+        "Solver", "solver-select", generate_options_dropdown(qpu_solver_opts)
+    )
+
+    if not HIDE_BOOTSTRAP_SOLVERS:
+        solver_settings = (
+            radio(
+                "Solver Mode",
+                "solver-mode-select",
+                solver_mode_options,
+                solver_mode_options[0]["value"],
+            ),
+            html.Div(
+                id="qpu-dropdown",
+                children=dropdown(
+                    "Solver", "qpu-solver-select", generate_options_dropdown(qpu_solver_opts)
+                )
+            ),
+            html.Div(
+                id="simulated-dropdown",
+                className="display-none",
+                children=dropdown(
+                    "Solver",
+                    "simulated-solver-select",
+                    generate_options_dropdown(simulated_solver_opts)
+                )
+            ),
         )
 
+    return html.Div(
+        className="settings",
+        children=[
+            slider("Number of Miners", "miner-slider", MINER_SLIDER),
+            input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
+            *solver_settings,
+        ]
+    )
 
 def generate_run_buttons() -> html.Div:
     """Run, Pause, Reset and Resume buttons for the simulation"""
@@ -166,7 +187,7 @@ def generate_run_buttons() -> html.Div:
             html.Button(id="run-button", children="Start Simulation", n_clicks=0, disabled=False),
             html.Button(
                 id="pause-button",
-                children="Pause Simulation",
+                children="Pause",
                 n_clicks=0,
                 className="display-none",
             ),
@@ -176,7 +197,7 @@ def generate_run_buttons() -> html.Div:
                 children=[
                     html.Button(
                         id="reset-button",
-                        children="Reset Simulation",
+                        children="Reset",
                         n_clicks=0,
                         className="display-none",
                     ),
@@ -269,79 +290,46 @@ def create_interface():
                                 className="display-none",
                                 id="miner-graph-and-table",
                                 children=[
-                                    dropdown(
-                                        "",
-                                        "view-select",
-                                        generate_options_dropdown(
-                                            [opt.menu_select for opt in VIEW_OPTS]
-                                        ),
+                                    html.Div(
+                                        [
+                                            dropdown(
+                                                "",
+                                                "view-select",
+                                                generate_options_dropdown(
+                                                    [opt.menu_select for opt in VIEW_OPTS]
+                                                ),
+                                            ),
+                                            html.H4(id="block-status"),
+                                        ],
                                     ),
                                     html.Div(
                                         className="graph-table-wrapper",
                                         children=[
-                                            html.Div(
-                                                id=VIEW_OPTS[0].wrapper_name,
-                                                className="graph-wrapper",
-                                                children=[
-                                                    dcc.Graph(
-                                                        id=VIEW_OPTS[0].graph_name,
-                                                        responsive=True,
-                                                        config={"displayModeBar": False},
-                                                    ),
-                                                ]
-                                            ),
-                                            html.Div(
-                                                id=VIEW_OPTS[1].wrapper_name,
-                                                className="graph-wrapper display-none",
-                                                children=[
-                                                    dcc.Graph(
-                                                        id=VIEW_OPTS[1].graph_name,
-                                                        responsive=True,
-                                                        config={"displayModeBar": False},
-                                                    ),
-                                                ]
-                                            ),
-                                            html.Div(
-                                                id=VIEW_OPTS[2].wrapper_name,
-                                                className="graph-wrapper display-none",
-                                                children=[
-                                                    dcc.Graph(
-                                                        id=VIEW_OPTS[2].graph_name,
-                                                        responsive=True,
-                                                        config={"displayModeBar": False},
-                                                    ),
-                                                ]
-                                            ),
-                                            html.Div(
-                                                id=VIEW_OPTS[3].wrapper_name,
-                                                className="graph-wrapper display-none",
-                                                children=[
-                                                    dcc.Graph(
-                                                        id=VIEW_OPTS[3].graph_name,
-                                                        responsive=True,
-                                                        config={"displayModeBar": False},
-                                                    ),
-                                                ]
-                                            ),
-                                            html.Div(
-                                                [
-                                                    html.H4(id="miner-table-head"),
-                                                    html.Table(
-                                                        id="miner-status-table",
-                                                        children=[
-                                                            html.Thead(
-                                                                html.Tr(
-                                                                    [
-                                                                        html.Th("Miner"),
-                                                                        html.Th("Status"), #TODO figure out how to add conditional 3rd element
-                                                                    ],
-                                                                )
-                                                            ),
-                                                            html.Tbody(id="miner-table-body"),
-                                                        ],
-                                                    ),
-                                                ]
-                                            ),
+                                            html.Div([
+                                                dcc.Loading(
+                                                    parent_className="graph-loading",
+                                                    overlay_style={
+                                                        "visibility": "visible",
+                                                        "opacity": "0.5",
+                                                    },
+                                                    type="circle",
+                                                    color=THEME_COLOR,
+                                                    children=[
+                                                        html.Div(
+                                                            id=view.wrapper_name,
+                                                            className=f"graph-wrapper {'display-none' if i > 0 else ''}",
+                                                            children=[
+                                                                dcc.Graph(
+                                                                    id=view.graph_name,
+                                                                    responsive=True,
+                                                                    config={"displayModeBar": False},
+                                                                ),
+                                                            ]
+                                                        ) for i, view in enumerate(VIEW_OPTS)
+                                                    ],
+                                                ),
+                                            ]),
+                                            html.Div(html.Table(id="miner-status-table")),
                                         ],
                                     ),
                                 ],

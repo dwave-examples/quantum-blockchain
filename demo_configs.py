@@ -73,15 +73,9 @@ MIN_MINERS = 3
 
 MAX_MINERS = 28
 
-MAX_MINER_ROWS = 28
-
-MAX_MINER_COLUMNS = 2
-
 DEFAULT_TABLE_HEADER = "Initializing..."
 
 DEFAULT_TABLE_BODY = ""
-
-GRAPH_WIDTH = 1000  # width of graph and load screen elements
 
 HIDE_BOOTSTRAP_SOLVERS = False
 
