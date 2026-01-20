@@ -70,11 +70,10 @@ class BlockScoreTree:
         for block in self.trunk:
             trunk_str += self.short_block_rep(block)
 
-        for i in range(1, len(self.branches)):
-            branch = self.branches[i]
+        for idx, branch in enumerate(self.branches[1:]):
             parent_idx = self.branches.index(branch.parent)
-            trunk_str += f"]\n + Branch {i}({parent_idx})  ["
-            for block in self.branches[i]:
+            trunk_str += f"]\n + Branch {idx+1}({parent_idx})  ["
+            for block in branch:
                 trunk_str += self.short_block_rep(block)
         trunk_str += "]"
         return trunk_str
@@ -431,7 +430,7 @@ class BlockScoreTree:
         if block_hash in self.hash_to_branch_lookup:
             return self.hash_to_branch_lookup[block_hash].get_block(block_hash)
         else:
-            return None
+            raise Exception(f"Block with hash {block_hash} not found in tree.")
 
     def get_predecessor_list(
         self, block_hash: str, stopping_hash: str = None, stopping_height: int = 0

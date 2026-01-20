@@ -110,7 +110,7 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2**32)  # TODO check how to make non-arcitechture specific
+        nonce = np.random.randint(0, 2**31)  # TODO check how to make non-arcitechture specific
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
@@ -120,7 +120,7 @@ class Miner:
 
         Returns:
             succeeded (bool): whether the mining succeeded or failed
-            sample_time (float): the time spent performing the quantum experiment. Currently unused, but
+            sample_time (float): the time in seconds spent performing the quantum experiment. Currently unused, but
                 something we will likely wish to track eventually.
         """
         if mining_block is None:
@@ -177,8 +177,8 @@ class Miner:
             raise Exception(
                 f"Block {block.hash} failed required protocol validation checks for miner {self.id}"
             )
-        else:
-            return score, solver
+        
+        return score, solver
 
     def broadcast_mined_block(self) -> str:
         """Stores a copy of the Miner's most recently mined block in the Miner's own blockchain before serializing
@@ -190,12 +190,12 @@ class Miner:
         if self.mined_block is None:
             raise Exception(f"Miner {self.id} attempted to broadcast with no block ready")
 
-        if self.mined_block_score is not None:
-            self.add_block_to_chain(self.mined_block, self.mined_block_score)
-        else:
+        if self.mined_block_score is None:
             raise Exception(
                 f"Attempted to broadcast mined block with hash {self.mined_block.hash}, but it had not been scored."
             )
+        else:
+            self.add_block_to_chain(self.mined_block, self.mined_block_score)
 
         block_data = self.mined_block.to_json
         self.mined_block = None

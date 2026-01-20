@@ -109,7 +109,7 @@ class ProofOfWorkProtocol:
 
         new_quantum_hash, dot_vector, sample_time = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
-        validation_bits = [1 for i in range(QUANTUM_HASH_LENGTH)]
+        validation_bits = [1 for _ in range(QUANTUM_HASH_LENGTH)]
         block.set_hash()
         assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
 
@@ -205,11 +205,11 @@ class ProofOfWorkProtocol:
         random_seed = int(block.hash_seed, 16)
         self.set_random_solver()
 
-        q_hash = self.current_solver.calculate_quantum_hash(
+        quantum_hash = self.current_solver.calculate_quantum_hash(
             hash_length=QUANTUM_HASH_LENGTH, rng_seed=random_seed
         )
 
-        return q_hash
+        return quantum_hash
 
     def set_random_solver(self):
         """Returns a random solver and its corresponding DWaveSampler. If the self.require_all_solvers flag is set, and one or more

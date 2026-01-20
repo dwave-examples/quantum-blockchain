@@ -43,8 +43,7 @@ from src.values import MINER_NAMES  # TODO move to DemoConstants
 @dash.callback(
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("block-status", "children", allow_duplicate=True),
-    background=True,
+    Output("block-status", "className", allow_duplicate=True),
     inputs=[
         Input("is-running-status", "data"),
         State("miner-slider", "value"),
@@ -59,9 +58,10 @@ from src.values import MINER_NAMES  # TODO move to DemoConstants
     ],
     cancel=[Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
+    background=True,
 )
 def simulation(
-    update_current_block_data,
+    update_current_block_data: dict,
     is_running: bool,
     num_miners: int,
     num_blocks: int,
@@ -161,7 +161,7 @@ def simulation(
     while manager.blocks_mined <= num_blocks:
         iter_start_time = time.time()
         if manager.round_progress == 0 and manager.blocks_mined == num_blocks:
-            break  # TODO simplify if possible
+            break 
         mined, miner_id, block_score, solver = manager.single_step()
         if mined:
             current_block_dict = copy.deepcopy(block_dict_template)
@@ -184,6 +184,7 @@ def simulation(
         miner_fig = None
 
         if miner_id in view_miners:
+            manager.miners[miner_id]
             plotter = SpiralPlotter()
             if "global" in view_miners[miner_id]:
                 last_shared_block = manager.get_last_common_trunk_block()
@@ -480,7 +481,7 @@ def toggle_graph_display(
     ],
 )
 def toggle_solver_mode(solver_mode):
-    """Toggles between QPU Solver mode and Boostrapping Solver Mode"""
+    """Toggles between QPU Solver mode and Bootstrapping Solver Mode"""
     solver_mode = SolverMode(solver_mode)
 
     if solver_mode is SolverMode.QPU:
