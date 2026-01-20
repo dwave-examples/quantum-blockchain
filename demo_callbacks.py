@@ -43,7 +43,7 @@ from src.values import MINER_NAMES  # TODO move to DemoConstants
 @dash.callback(
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("block-status", "className", allow_duplicate=True),
+    Output("block-status", "children", allow_duplicate=True),
     background=True,
     inputs=[
         Input("is-running-status", "data"),
@@ -214,7 +214,7 @@ def simulation(
         if iter_total_time < min_loop_time:
             time.sleep(min_loop_time - iter_total_time)
 
-    return "", "display-none", "display-none"
+    return "", "display-none", ""
 
 
 # ======================================================================================================
