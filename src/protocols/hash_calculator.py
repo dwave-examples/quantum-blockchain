@@ -108,7 +108,7 @@ class BootstrappingHashSolver(HashSolver):
             bootstrap_path: Path to the directory containing the witness data.
             mean_witnesses: A numpy array of expected witness values.
             var_witnesses: A numpy array of expected witness variances.
-            var_rescaling: To emulate variable sampling error (or high frequency control error) we can rescale the variance.
+            var_rescaling: Variance rescaling allows emulation of variable sampling error (or high frequency control error) .
                 Resampled witnesses are distributed as ~ N(mean, variance*variance_rescaling)).
                 If fewer/more reads are to be simulated, relative to the value used in data correction we can scale accordingly.
         """
@@ -197,7 +197,7 @@ class QuantumHashSolver(HashSolver):
             solver_name: The name of the QPU solver
             profile: client profile
             num_reads: number of QPU reads per hash calculation
-            reference_annealing_time: targetted evolution time with respect to Advantage2_prototype2 schedule.
+            reference_annealing_time: targeted evolution time with respect to Advantage2_prototype2 schedule.
             energy_time_rescaling: problem Hamiltonian and time rescaling factors required
                  to emulate Advantage2_prototype2 dynamics with given solver.
             embedding_directory: Location of embeddings
@@ -212,22 +212,22 @@ class QuantumHashSolver(HashSolver):
                 raise ValueError(
                     "Unsupported {solver_name}: See examples/ for generation of energy-time rescaling values and embeddings"
                 )
-            problem_r, time_r = DEFAULT_ENERGY_TIME_RESCALING[solver_name]
+            problem_hamiltonian_rescaling, time_rescaling = DEFAULT_ENERGY_TIME_RESCALING[solver_name]
         else:
-            problem_r, time_r = energy_time_rescaling
+            problem_hamiltonian_rescaling, time_rescaling = energy_time_rescaling
 
         self._solver_name = solver_name
         if sampler_kwargs is None:
             self.sampler_kwargs = dict(
                 fast_anneal=True,
-                annealing_time=reference_annealing_time / time_r,
+                annealing_time=reference_annealing_time / time_rescaling,
                 auto_scale=False,
                 num_reads=num_reads,
                 label=f"Examples - Quantum Blockchain",
             )
         else:
             self.sampler_kwargs = sampler_kwargs
-        self.problem_energy_scale = problem_r
+        self.problem_energy_scale = problem_hamiltonian_rescaling
         self.profile = profile
 
         if sampler is None:
