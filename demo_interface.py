@@ -20,6 +20,8 @@ import dash_mantine_components as dmc
 from dash import dcc, html
 
 from demo_configs import (
+    ABANDONED_BRANCH_POINT_COLOR,
+    ACTIVE_BRANCH_POINT_COLOR,
     DESCRIPTION,
     HIDE_BOOTSTRAP_SOLVERS,
     INTRO_SUBTEXT,
@@ -29,6 +31,8 @@ from demo_configs import (
     MINER_SLIDER,
     NUM_BLOCKS,
     THUMBNAIL,
+    TRUNK_POINT_COLOR,
+    TRUNK_TIP_COLOR,
     VIEW_OPTS,
 )
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
@@ -343,6 +347,15 @@ def create_interface():
                                                             for i, view in enumerate(VIEW_OPTS)
                                                         ],
                                                     ),
+                                                    html.Div(
+                                                        [
+                                                            html.P([html.Span(style={"background": TRUNK_POINT_COLOR}), "Consensus"]),
+                                                            html.P([html.Span(style={"background": ABANDONED_BRANCH_POINT_COLOR}), "Abandoned"]),
+                                                            html.P([html.Span(style={"background": ACTIVE_BRANCH_POINT_COLOR}), "Undecided"]),
+                                                            html.P([html.Span(style={"background": TRUNK_TIP_COLOR}), "Being Mined"]),
+                                                        ],
+                                                        className="graph-legend",
+                                                    )
                                                 ]
                                             ),
                                             html.Div(html.Table(id="miner-status-table")),

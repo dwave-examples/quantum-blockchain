@@ -115,15 +115,16 @@ custom CSS can be added below.
 }
 
 #miner-status-table td.mined-cell {
-    background-color: hsl(26, 100%, 80%);
+    background-color: black;
+    color: white;
 }
 
 #miner-status-table td.validated-cell {
-    background-color: hsl(176, 75%, 80%);
+    background-color: hsl(213, 75%, 80%);
 }
 
 #miner-status-table td.rejected-cell {
-    background-color: hsl(360, 86%, 81%);
+    background-color: hsl(25, 89%, 73%);
 }
 
 #miner-status-table thead {
@@ -163,6 +164,28 @@ custom CSS can be added below.
     height: calc(50vw - var(--left-col-width)/2);
     width: calc(50vw - var(--left-col-width)/2);
     margin-right: 2rem;
+    position: relative;
+}
+
+.graph-legend {
+    position: absolute;
+    bottom: 2px;
+    left: 0.75rem;
+}
+
+.graph-legend p {
+    margin: 0.125rem 0;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+
+.graph-legend span {
+    border-radius: 50%;
+    height: 1rem;
+    width: 1rem;
+    margin-right: 0.5rem;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .graph-wrapper {
