@@ -10,5 +10,6 @@ test_tree = generate_random_tree(num_nodes=100, branch_probability=0.07)
 last_active_block = test_tree.trunk[-15]
 active_block_cutoff = last_active_block.block_number
 my_plotter = SpiralPlotter()
-test_plot = my_plotter.create_plot_from_tree(test_tree, active_block_cutoff=active_block_cutoff)
+mining_block_hash = test_tree.trunk.tip.hash
+test_plot = my_plotter.create_plot_from_tree(test_tree, active_block_cutoff=active_block_cutoff, mining_block_hash=mining_block_hash)
 test_plot.show()

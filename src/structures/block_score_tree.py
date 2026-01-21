@@ -108,6 +108,13 @@ class BlockScoreTree:
     @property
     def num_nodes(self):
         return sum([len(branch) for branch in self.branches])
+    
+    @property
+    def most_recent_block(self):
+        all_blocks = [block for branch in self.branches for block in branch]
+        most_recent_block = max(all_blocks, key=lambda node: node.block_number)
+        print(most_recent_block)
+        return most_recent_block
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================

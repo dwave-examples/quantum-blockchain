@@ -184,15 +184,18 @@ def simulation(
         miner_fig = None
 
         if miner_id in view_miners:
-            manager.miners[miner_id]
+            most_recent_block = manager.miners[miner_id].blockchain.most_recent_block
             plotter = SpiralPlotter()
             if "global" in view_miners[miner_id]:
                 last_shared_block = manager.get_last_common_trunk_block()
                 miner_fig = plotter.create_plot_from_tree(
-                    manager.miners[miner_id].blockchain, active_block_cutoff=last_shared_block
+                    manager.miners[miner_id].blockchain, 
+                    active_block_cutoff=last_shared_block, 
+                    mining_block=most_recent_block
                 )
             else:
-                miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain)
+                miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain, 
+                                                          mining_block=most_recent_block)
 
             miner_graph_name = view_miners[miner_id]
 

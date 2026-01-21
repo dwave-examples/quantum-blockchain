@@ -21,9 +21,10 @@ from demo_configs import (
     TRUNK_EDGE_COLOR,
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
+    MINING_BLOCK_BORDER_COLOR
 )
 from src.structures.block_score_tree import BlockScoreTree
-from src.structures.score_tree_branch import ScoreTreeBranch
+from src.structures.score_tree_branch import ScoreTreeBranch, BlockNode
 
 
 class GraphBranch(ScoreTreeBranch):
@@ -132,6 +133,14 @@ class SpiralPlotter:
         self.center = (self.fig_width / 2, self.fig_width / 2)
         self.coord_dict = {}
 
+    @property
+    def trunk(self):
+        return self.tree.trunk
+    
+    @property
+    def branches(self):
+        return self.tree.branches
+
     def _create_master_size_chart(self):
         """Creates a size chart for the points in the trunk, which determines how large each point will
         appear on the chart. Points closer to the center will appear smaller, points closer to the tip
@@ -142,7 +151,8 @@ class SpiralPlotter:
     def import_plotting_data(self, tree_data: BlockScoreTree):
         """Takes a BlockScoreTree object and processes the data to prepare it to be plotted"""
 
-        tree_data.refactor_branches()
+        self.tree = tree_data
+        self.tree.refactor_branches()
         self.num_nodes = tree_data.num_nodes
         self.master_size_chart = self._create_master_size_chart()
         self.points_per_rev = self.calculate_points_per_rev()
@@ -161,37 +171,30 @@ class SpiralPlotter:
             for i in range(self.num_nodes)
         ]
 
-        self.branches = []
-        branch_pairs = {}
-        for branch in tree_data.branches:
-            if branch == tree_data.trunk:
+        for idx, branch in enumerate(self.tree.branches):
+            if branch == self.tree.trunk:
                 new_graph_branch = GraphBranch(
                     branch, point_color=TRUNK_POINT_COLOR, edge_color=TRUNK_EDGE_COLOR
                 )
                 new_graph_branch.create_size_chart(self.master_size_chart)
-                self.trunk = new_graph_branch
-                self.trunk.point_colors[-1] = TRUNK_TIP_COLOR
+                self.tree.branches[0] = new_graph_branch
+                self.tree.trunk = new_graph_branch
+                self.tree.trunk.point_colors[-1] = TRUNK_TIP_COLOR
 
             else:
                 new_graph_branch = GraphBranch(branch)
                 new_graph_branch.create_size_chart(
                     self.master_size_chart, GRAPH_BRANCH_POINT_SCALING
                 )
+                self.tree.branches[idx] = new_graph_branch
+            for node in branch:
+                self.tree.hash_to_branch_lookup[node.hash] = new_graph_branch
 
-            self.branches.append(new_graph_branch)
-            branch_pairs.update({branch.base.hash: new_graph_branch})
+        for branch in self.tree.branches:
+            if branch != self.trunk:
+                parent_branch = self.tree.hash_to_branch_lookup[branch.root_hash]
+                parent_branch.link_child_branch(branch)
 
-        for (
-            base_hash,
-            new_branch,
-        ) in (
-            branch_pairs.items()
-        ):  # Need to link parent and child branches to match original tree structure
-            base_branch = tree_data.hash_to_branch_lookup[base_hash]
-            if base_branch.parent is not None:
-                new_branch.parent = branch_pairs[base_branch.parent.base.hash]
-            for child in base_branch.children:
-                new_branch.child = branch_pairs[child.base.hash]
 
     def calculate_points_per_rev(self):
         """Calculates how many points will be drawn in a single turn of the spiral. This changes
@@ -382,7 +385,7 @@ class SpiralPlotter:
 
         return traces
 
-    def draw_spiral(self, active_block_cutoff: int | None = None):
+    def draw_spiral(self, active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
         """Assuming all the points and edges have been plotted, draws them on the figure, coloring and sizing them
         according to the pre-defined color and size schema. This will draw two distinct sorts of elements onto the
         graph area: points and lines. Each branch of the graph will have one set of points (indicating the blocks
@@ -409,6 +412,26 @@ class SpiralPlotter:
         if active_block_cutoff is not None:
             self._color_for_global_view(active_block_cutoff)
 
+        if mining_block is not None:
+            if mining_block.hash in self.tree.hash_to_branch_lookup:
+                mining_branch = self.tree.hash_to_branch_lookup[mining_block.hash]
+                block_color = MINING_BLOCK_BORDER_COLOR
+            else:
+                mining_branch = self.tree.hash_to_branch_lookup[mining_block.prev_hash]
+                block_color = MINING_BLOCK_BORDER_COLOR
+            mining_x = [mining_branch.x_points.pop()]
+            mining_y = [mining_branch.y_points.pop()]
+            mining_size = mining_branch.size_chart.pop()
+            mining_trace = go.Scatter(
+                    x=mining_x,
+                    y=mining_y,
+                    mode="markers",
+                    marker={"color": TRUNK_TIP_COLOR, "opacity": 1, "size": mining_size, 
+                            "line":{"width":4, "color": block_color}},
+                    )
+        else:
+            mining_branch = None
+        
         trunk_edge_traces = []
         if active_block_cutoff is None or active_block_cutoff >= self.trunk.tip.block_number:
             edge_section = go.Scatter(
@@ -442,6 +465,8 @@ class SpiralPlotter:
         plot_data = trunk_edge_traces
 
         node_traces = [trunk_node_trace]
+        if self.trunk == mining_branch:
+            node_traces.append(mining_trace)
 
         for branch in self.branches:
             if branch != self.trunk:
@@ -459,6 +484,8 @@ class SpiralPlotter:
                     marker={"color": branch.point_colors, "opacity": 1, "size": branch.size_chart},
                 )
                 node_traces.append(branch_node_trace)
+                if branch == mining_branch:
+                    node_traces.append(mining_trace)
 
         for trace in node_traces:
             plot_data.append(trace)
@@ -470,7 +497,7 @@ class SpiralPlotter:
         fig = go.Figure(plot_data)
         return fig
 
-    def create_plot_from_tree(self, tree: BlockScoreTree, active_block_cutoff: int | None = None):
+    def create_plot_from_tree(self, tree: BlockScoreTree, active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
         """Given a BlockScoreTree object, creates a spiral plot displaying that tree. Calls
         all the necessary SpiralPlotter functions in order. For typical usage, this should
         be the only method that's necessary to call outside the class.
@@ -482,5 +509,5 @@ class SpiralPlotter:
                 the graph as a global view."""
 
         self.import_plotting_data(tree_data=tree)
-        plot = self.draw_spiral(active_block_cutoff=active_block_cutoff)
+        plot = self.draw_spiral(active_block_cutoff=active_block_cutoff, mining_block=mining_block)
         return plot
