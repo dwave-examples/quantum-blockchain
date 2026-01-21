@@ -14,7 +14,6 @@
 
 """This file stores input parameters for the app."""
 
-import os
 from collections import namedtuple
 
 import plotly.express as px
