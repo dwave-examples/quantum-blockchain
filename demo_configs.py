@@ -116,6 +116,6 @@ VIEW_OPTS = [
 #######################################
 # Mining Difficulty Parameters        #
 #######################################
-QUANTUM_HASH_LENGTH = 128
-ALLOWABLE_ERR = 4
+QUANTUM_HASH_LENGTH = 64
+ALLOWABLE_ERR = 1
 N_ZEROES = 0

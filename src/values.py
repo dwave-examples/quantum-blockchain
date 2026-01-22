@@ -1,4 +1,9 @@
-from datetime import datetime
+from datetime import datetime  # To set genesis block
+
+import numpy as np  # To set effective number of samples (sampling noise)
+
+# TO DO, THIS FILE CONTAINS UNUSED CONSTANTS (APPEARING NOWHERE ELSE IN REPO). TO BE REMOVED
+# SOME CONSTANTS NEED TO BE MOVED TO/FROM, OR IMPORTED TO/FROM demo_configs.py . MOST IMPORTANTLY CONFUSING AND DUPLICATED ONES, LIKE MAX_MINERS.
 
 # ===================================================================================
 #                      PoW Protocol Definitions
@@ -42,7 +47,7 @@ DEFAULT_ENERGY_TIME_RESCALING = {
 # ===================================================================================
 
 
-MAX_MINERS = 100 
+MAX_MINERS = 100
 MAX_BLOCKS = 4096
 MINER_NAMES = [
     f"Miner_{i}" for i in range(1, MAX_MINERS + 1)
@@ -50,10 +55,11 @@ MINER_NAMES = [
 
 DEFAULT_BLOCK_SCORE = 0.0
 W_0_ALPHA = 0.0
-DELTA_W_0_ALPHA = 0.18  # Reference paper value based on witness variance amongst 4 online general access solvers at hte time of the study.
-DEFAULT_NUM_READS = 600  # NB - Smaller than the reference paper.
-BOOTSTRAP_DATA_NUM_READS = 3860  # Reference paper value for the number of reads performed in estimation of offline witness data for Advantage_system4.1.
+DEFAULT_NUM_READS = 600  # NB - Smaller than arXiv:2503.14462.
+BOOTSTRAP_DATA_NUM_READS = 3860  # Value used for Advantage_system4.1 in arXiv:2503.14462. The num reads was fixed to use 1 second of QPU access time (maximum for single-programming). For the simulated data, this is the relevant value.
+DELTA_W_0_ALPHA = 0.16 * np.sqrt(
+    BOOTSTRAP_DATA_NUM_READS / DEFAULT_NUM_READS
+)  # Set per the description of arXiv:arXiv:2503.14462 subject to two difference: (1) NUM_READS can be (is by default) smaller, so variance is scaled accordingly (conservatively: in line with sampling noise and ignoring control noise) (2) the generally available compute environment is different (measured d_Walpha=0.16 over 3 solvers available January 21 2026, as opposed to 0.18 the 4 GA solvers at the time of the paper).
+
 GENESIS_BLOCK_TIMESTAMP = datetime.timestamp(datetime.fromisoformat("2025-01-01 00:00:00.000"))
 GENESIS_BLOCK_PREV_HASH = "begin_blockchain"
-
-
