@@ -330,7 +330,7 @@ class SpiralPlotter:
                 branch.x_edges.append(x_ij)
                 branch.y_edges.append(y_ij)
 
-    def _color_for_global_view(self, trunk_cutoff: int):
+    def _color_for_global_view(self, active_blocks: list[str], trunk_cutoff: int):
         """Performs the necessary computations to recolor the graph according to
         the global view coloring scheme. In this scheme, the trunk is divided into
         two different colors, and active branches are also recolored to match the second trunk
@@ -354,8 +354,11 @@ class SpiralPlotter:
         for branch in self.branches:
             if branch != self.trunk and branch.root.block_number >= trunk_cutoff:
                 branch.point_colors = [ACTIVE_BRANCH_POINT_COLOR for _ in range(len(branch))]
-                branch.point_colors[-1] = TRUNK_TIP_COLOR
                 branch.edge_color = ACTIVE_BRANCH_EDGE_COLOR
+                for block_hash in active_blocks:
+                    if block_hash in branch:
+                        block_index = branch.hash_to_index_lookup[block_hash]
+                        branch.point_colors[block_index] = TRUNK_TIP_COLOR
 
         if cutoff_index == len(self.trunk) - 1:
             return 
@@ -385,7 +388,7 @@ class SpiralPlotter:
 
         return traces
 
-    def draw_spiral(self, active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
+    def draw_spiral(self, active_blocks: list[str], active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
         """Assuming all the points and edges have been plotted, draws them on the figure, coloring and sizing them
         according to the pre-defined color and size schema. This will draw two distinct sorts of elements onto the
         graph area: points and lines. Each branch of the graph will have one set of points (indicating the blocks
@@ -410,15 +413,19 @@ class SpiralPlotter:
             self._plot_spiral_curves(branch, trunk=bool(branch == self.trunk))
 
         if active_block_cutoff is not None:
-            self._color_for_global_view(active_block_cutoff)
+            self._color_for_global_view(active_blocks=active_blocks, trunk_cutoff=active_block_cutoff)
 
         if mining_block is not None:
             if mining_block.hash in self.tree.hash_to_branch_lookup:
                 mining_branch = self.tree.hash_to_branch_lookup[mining_block.hash]
-                block_color = MINING_BLOCK_BORDER_COLOR
             else:
                 mining_branch = self.tree.hash_to_branch_lookup[mining_block.prev_hash]
-                block_color = MINING_BLOCK_BORDER_COLOR
+
+            if mining_branch == self.trunk or active_block_cutoff is not None:
+                mining_block_color = TRUNK_TIP_COLOR
+            else:
+                mining_block_color = ABANDONED_BRANCH_POINT_COLOR
+
             mining_x = [mining_branch.x_points.pop()]
             mining_y = [mining_branch.y_points.pop()]
             mining_size = mining_branch.size_chart.pop()
@@ -426,8 +433,8 @@ class SpiralPlotter:
                     x=mining_x,
                     y=mining_y,
                     mode="markers",
-                    marker={"color": TRUNK_TIP_COLOR, "opacity": 1, "size": mining_size, 
-                            "line":{"width":4, "color": block_color}},
+                    marker={"color": mining_block_color, "opacity": 1, "size": mining_size, 
+                            "line":{"width":4, "color": MINING_BLOCK_BORDER_COLOR}},
                     )
         else:
             mining_branch = None
@@ -497,7 +504,7 @@ class SpiralPlotter:
         fig = go.Figure(plot_data)
         return fig
 
-    def create_plot_from_tree(self, tree: BlockScoreTree, active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
+    def create_plot_from_tree(self, tree: BlockScoreTree, active_blocks: list[str], active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
         """Given a BlockScoreTree object, creates a spiral plot displaying that tree. Calls
         all the necessary SpiralPlotter functions in order. For typical usage, this should
         be the only method that's necessary to call outside the class.
@@ -509,5 +516,5 @@ class SpiralPlotter:
                 the graph as a global view."""
 
         self.import_plotting_data(tree_data=tree)
-        plot = self.draw_spiral(active_block_cutoff=active_block_cutoff, mining_block=mining_block)
+        plot = self.draw_spiral(active_blocks = active_blocks, active_block_cutoff=active_block_cutoff, mining_block=mining_block)
         return plot

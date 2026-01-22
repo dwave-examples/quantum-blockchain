@@ -46,15 +46,13 @@ class Miner:
     def re_initialize_blockchain(self, node_list: list[dict]):
 
         for block_entry in node_list:
-            try:  # TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining
-                scores = block_entry[
-                    "scores"
-                ]  # how much of the tree a particular miner has completed
-                score = scores[self.id]
-                block = Block.from_json(block_entry["block_json"])
-                self.add_block_to_chain(block=block, block_score=score)
-            except:  # If we hit an error, then this miner has accessed as much of the tree as able.
-                break
+            #try:  # TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining
+            scores = block_entry["scores"]  
+            score = scores[self.id]
+            block = Block.from_json(block_entry["block_json"])
+            self.add_block_to_chain(block=block, block_score=score)
+            #except:  # If we hit an error, then this miner has accessed as much of the tree as able.
+                #break
 
     def add_block_to_chain(self, block: Block, block_score: float = 0.0):
         """Adds a block to the blockchain memory stored in self.blockchain, which also

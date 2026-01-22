@@ -113,7 +113,6 @@ class BlockScoreTree:
     def most_recent_block(self):
         all_blocks = [block for branch in self.branches for block in branch]
         most_recent_block = max(all_blocks, key=lambda node: node.block_number)
-        print(most_recent_block)
         return most_recent_block
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -524,6 +523,10 @@ class BlockScoreTree:
         with open(filename, "w") as f:
             branches = [b.node_list for b in self.branches]
             json.dump(branches, f)
+
+    def to_json(self) -> str:
+        branches = [b.node_list for b in self.branches]
+        return json.dumps(branches)
 
     @staticmethod
     def from_node_and_score_list(

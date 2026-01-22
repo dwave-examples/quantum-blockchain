@@ -5,7 +5,7 @@ from src.agents.miner import Miner
 from src.protocols.hash_calculator import HashSolver
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
-from src.values import MINER_NAMES
+from src.values import MINER_NAMES, GENESIS_BLOCK_PREV_HASH, GENESIS_BLOCK_TIMESTAMP
 
 
 class TrialManager:
@@ -42,7 +42,7 @@ class TrialManager:
         self.solvers = solvers
         self.pow = ProofOfWorkProtocol(hash_solvers=self.solvers)
         self.trial_init_time = time.time()
-        genesis_block = Block(miner_id="genesis", previous_block_hash="")
+        genesis_block = Block(miner_id="genesis", previous_block_hash=GENESIS_BLOCK_PREV_HASH, timestamp=GENESIS_BLOCK_TIMESTAMP)
         genesis_block.set_quantum_hash()
         genesis_block.set_hash()
         genesis_block.lock()
@@ -186,6 +186,10 @@ class TrialManager:
 
         while self.blocks_mined < stopping_block:
             self.single_step()
+
+    def get_active_blocks(self) -> list:
+        active_hashes = [miner.blockchain.strongest_block_hash for miner in self.miners.values()]
+        return list(set(active_hashes))
 
     def get_last_common_trunk_block(self) -> int:
         """Finds the block number of the last block that all miners have in their trunks: that is, the last

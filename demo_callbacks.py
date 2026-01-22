@@ -33,6 +33,8 @@ from src.utilities.display_update import render_miner_status
 from src.utilities.spiral_plotter import SpiralPlotter
 from src.values import MINER_NAMES  # TODO move to DemoConstants
 
+from src.structures.block import Block
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
 #                             SECTION: Mining Round Steps                                             |
@@ -126,20 +128,22 @@ def simulation(
         "miner_id": "",
     }
     current_block_dict = copy.deepcopy(block_dict_template)
+    current_blockchain = []
 
-    first_empty_index = blockchain_structure.index(None)
-    if first_empty_index > 0:
-        print(f"Restarting trial at block {first_empty_index}")
-        current_blockchain = blockchain_structure[:first_empty_index]
-        short_blockchain = current_blockchain[:-1]
-        manager.blocks_mined = first_empty_index
-        last_block = current_blockchain[-1]
+    
+    if len(blockchain_structure) > 0:
+        print(blockchain_structure)
+        current_idx = len(blockchain_structure)
+        print(f"Restarting trial at block {current_idx}")
+        short_blockchain = blockchain_structure[:-1]
+        manager.blocks_mined = current_idx + 1
+        last_block = blockchain_structure[-1]
         finished_miners = []
         unfinished_miners = []
 
         for miner_id, miner in manager.miners.items():
             if miner_id in last_block["scores"]:
-                miner.re_initialize_blockchain(current_blockchain)
+                miner.re_initialize_blockchain(blockchain_structure)
                 finished_miners.append(miner_id)
             else:
                 miner.re_initialize_blockchain(short_blockchain)
@@ -151,6 +155,10 @@ def simulation(
         random.shuffle(unfinished_miners)
         manager.round_order = finished_miners + unfinished_miners
         current_block_dict = last_block
+        current_block = Block.from_json(current_block_dict["block_json"])
+        for miner_id, miner in manager.miners.items():
+            assert current_block.previous_hash in miner.blockchain.hash_to_branch_lookup, f"{miner_id} failed to have latest block {current_block.hash} with tree structure {miner.blockchain}"
+        current_blockchain = blockchain_structure
         print("Finished all restart logic.")
 
     min_loop_time = 1.1  # TODO make a constant
@@ -171,11 +179,23 @@ def simulation(
             print(
                 f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined."
             )
-        else:
-            current_block_dict["new"] = False
 
-        current_block_dict["scores"][miner_id] = block_score
-        current_block_dict["solvers"][miner_id] = solver
+            current_block_dict["scores"][miner_id] = block_score
+            current_block_dict["solvers"][miner_id] = solver
+            current_blockchain.append(current_block_dict)
+
+        else:
+
+            current_block_dict["scores"][miner_id] = block_score
+            current_block_dict["solvers"][miner_id] = solver
+            current_blockchain[-1] = current_block_dict
+
+
+        
+
+
+        set_props("blockchain-structure-data", {"data": current_blockchain})
+        time.sleep(0.2)
 
         update_current_block_data(current_block_dict)
 
@@ -184,17 +204,20 @@ def simulation(
         miner_fig = None
 
         if miner_id in view_miners:
+            active_hashes = manager.get_active_blocks()
             most_recent_block = manager.miners[miner_id].blockchain.most_recent_block
             plotter = SpiralPlotter()
             if "global" in view_miners[miner_id]:
                 last_shared_block = manager.get_last_common_trunk_block()
                 miner_fig = plotter.create_plot_from_tree(
                     manager.miners[miner_id].blockchain, 
+                    active_blocks = active_hashes,
                     active_block_cutoff=last_shared_block, 
                     mining_block=most_recent_block
                 )
             else:
                 miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain, 
+                                                          active_blocks = active_hashes,
                                                           mining_block=most_recent_block)
 
             miner_graph_name = view_miners[miner_id]
@@ -213,31 +236,13 @@ def simulation(
                 {"figure": miner_fig},
             )
 
+
         iter_end_time = time.time()
         iter_total_time = iter_end_time - iter_start_time
         if iter_total_time < min_loop_time:
             time.sleep(min_loop_time - iter_total_time)
 
     return "", "display-none", ""
-
-
-# ======================================================================================================
-
-
-@dash.callback(
-    Output("blockchain-structure-data", "data"),
-    inputs=[
-        Input("current-block-data", "data"),
-    ],
-    prevent_initial_call=True,
-)
-def update_blockchain_data(block_data: dict):
-    """Pass-through function to patch the single-block update from the 'simulation' callback
-    into the larger blockchain data structure."""
-    block_number = block_data["block_number"]
-    to_update = Patch()
-    to_update[block_number - 1] = block_data
-    return to_update
 
 
 # ======================================================================================================
@@ -268,33 +273,18 @@ def update_miner_display(
     table and the graph display."""
 
     solver_mode = SolverMode(solver_mode)
-    mining_id = current_block_data["miner_id"]
-    block_number = current_block_data["block_number"]
-
     show_solvers = (solver_mode is SolverMode.QPU and int(qpu_select) == 0) or (
         solver_mode is SolverMode.SIMULATED and int(simulated_select) == 0
     )
 
-    miner_status_dict = {MINER_NAMES[i]: ["", ""] for i in range(num_miners)}
-    for miner_id, score in current_block_data["scores"].items():
-        status = "Validated" if score > 0 else "Rejected"
-        miner_status_dict[miner_id][0] = status
+    block_number = current_block_data["block_number"]
 
-    miner_status_dict[mining_id][0] = "Mined"
+    block_status_text = f"Currently mining block number {block_number}"
 
-    for miner_id, solver in current_block_data["solvers"].items():
-        if "simulated_" in solver:
-            solver_str = solver.replace("simulated_", "")
-        else:
-            solver_substrings = solver.split("_system")
-            solver_str = f"{solver_substrings[0]} {solver_substrings[1]}"
-        miner_status_dict[miner_id][1] = solver_str
+    miner_table_body = render_miner_status(current_block_data, num_miners, show_solvers)
 
-    miner_head, miner_table_body = render_miner_status(
-        block_number, miner_status_dict, show_solvers=show_solvers
-    )
 
-    return "", "display-none", miner_head, miner_table_body
+    return "", "display-none", block_status_text, miner_table_body
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -315,7 +305,6 @@ class RunSimulationReturn(NamedTuple):
     blocks_input_disabled: bool = True
     qpu_solver_select_disabled: bool = True
     simulated_solver_select_disabled: bool = True
-    blockchain_structure_data: list = dash.no_update
 
 
 @dash.callback(
@@ -327,7 +316,6 @@ class RunSimulationReturn(NamedTuple):
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
-    Output("blockchain-structure-data", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
         State("blocks-input", "value"),
@@ -336,7 +324,7 @@ class RunSimulationReturn(NamedTuple):
 )
 def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
     """Runs a simulation with the selected number of miners and blocks."""
-    return RunSimulationReturn(blockchain_structure_data=[None] * (num_blocks + 3))
+    return RunSimulationReturn()
 
 
 # ========================================================================================
@@ -348,10 +336,11 @@ def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
     Output("pause-button", "className", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
+        State("blockchain-structure-data", "data"),
     ],
     prevent_initial_call=True,
 )
-def pause_simulation(pause_click: int):
+def pause_simulation(pause_click: int, blocks: list):
     """This callback will pause the current, in-progress simulation. In reality, the
     'simulation' callback is cancelled, but the data defining its current state is
     still stored in the blockchain_structure_data dcc.Store object, so the simulation
@@ -365,6 +354,10 @@ def pause_simulation(pause_click: int):
         reset-button (str): makes visible
         resume-button (str): makes visible
         pause-button (str): hides"""
+    
+    print("In pause")
+    time.sleep(0.2)
+    print(f"Paused with blockchain structure {blocks}")
 
     return "", "", "display-none"
 
@@ -395,6 +388,7 @@ def resume_simulation(pause_click: int):
         resume-button (str): hides
         pause-button (str): makes visible
         is-running-status (bool): sets to 'True', indicating that simulation should resume."""
+
     return "display-none", "display-none", "", True
 
 
@@ -414,6 +408,7 @@ class ResetSimulationReturn(NamedTuple):
     blocks_input_disabled: bool = False
     qpu_solver_select_disabled: bool = False
     simulated_solver_select_disabled: bool = False
+    blockchain_data: list = []
     graph_0: go.Figure = go.Figure()
     graph_1: go.Figure = go.Figure()
     graph_2: go.Figure = go.Figure()
@@ -433,6 +428,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
+    Output("blockchain-structure-data", "data", allow_duplicate=True),
     Output(VIEW_OPTS[0].graph_name, "figure"),
     Output(VIEW_OPTS[1].graph_name, "figure"),
     Output(VIEW_OPTS[2].graph_name, "figure"),
