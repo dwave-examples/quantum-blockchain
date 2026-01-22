@@ -15,6 +15,7 @@
 """This file stores the Dash HTML layout for the app."""
 
 from __future__ import annotations
+from collections import namedtuple
 
 import dash_mantine_components as dmc
 from dash import dcc, html
@@ -33,12 +34,31 @@ from demo_configs import (
     THUMBNAIL,
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
-    VIEW_OPTS,
+    MINER_NAMES,
+    NUM_MINER_VIEWS,
 )
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
 from src.demo_enums import SolverMode
 
 THEME_COLOR = "#2d4376"
+
+ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
+
+VIEW_OPTS = [ViewOption(
+                    menu_select="Global View", 
+                    graph_name="global_view_graph", 
+                    wrapper_name="global_view_wrapper", 
+                    miner_number=-1 
+                    )
+             ] + [ 
+             ViewOption(
+                        menu_select=f"{MINER_NAMES[i]} View",
+                        graph_name=f"{MINER_NAMES[i].lower()}_view_graph",
+                        wrapper_name=f"{MINER_NAMES[i].lower()}_view_wrapper",
+                        miner_number=i,
+                        )
+             for i in range(NUM_MINER_VIEWS)
+            ]
 
 
 def slider(label: str, id: str, config: dict) -> html.Div:
@@ -47,7 +67,7 @@ def slider(label: str, id: str, config: dict) -> html.Div:
     Args:
         label: The title that goes above the slider.
         id: A unique selector for this element.
-        config: A dictionary of slider configerations, see dcc.Slider Dash docs.
+        config: A dictionary of slider configurations, see dcc.Slider Dash docs.
     """
     return html.Div(
         className="slider-wrapper",

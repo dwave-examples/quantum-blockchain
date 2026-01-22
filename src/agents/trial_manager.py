@@ -5,7 +5,7 @@ from src.agents.miner import Miner
 from src.protocols.hash_calculator import HashSolver
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
-from src.values import MINER_NAMES, GENESIS_BLOCK_PREV_HASH, GENESIS_BLOCK_TIMESTAMP
+from src.values import GENESIS_BLOCK_PREV_HASH, GENESIS_BLOCK_TIMESTAMP
 
 
 class TrialManager:
@@ -22,7 +22,14 @@ class TrialManager:
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def __init__(self, num_blocks: int, num_miners: int, solvers: list[HashSolver]):
+    def __init__(
+                self, num_blocks: int, 
+                miner_names: list[str], 
+                solvers: list[HashSolver], 
+                quantum_hash_length: int, 
+                n_zeroes: int, 
+                allowable_err: int
+                ):
         """Initializes a new TrialManager object. Requires a file with name matching
         the name stored in TRIAL_PARAMETERS_FILE (found in common.values) to be located
         in the same directory and properly formatted in order to initialize. Such a
@@ -37,17 +44,17 @@ class TrialManager:
         """
 
         self.max_blocks = num_blocks
-        num_miners = num_miners
+        num_miners = len(miner_names)
 
         self.solvers = solvers
-        self.pow = ProofOfWorkProtocol(hash_solvers=self.solvers)
+        self.pow = ProofOfWorkProtocol(solvers, quantum_hash_length, n_zeroes, allowable_err)
         self.trial_init_time = time.time()
         genesis_block = Block(miner_id="genesis", previous_block_hash=GENESIS_BLOCK_PREV_HASH, timestamp=GENESIS_BLOCK_TIMESTAMP)
         genesis_block.set_quantum_hash()
         genesis_block.set_hash()
         genesis_block.lock()
         self.genesis_block = genesis_block
-        self.initialize_miners(num_miners)
+        self.initialize_miners(miner_names)
 
         self.max_mining_attempts = 1000000  # should definitely have some cutoff, but what's a good value depends a lot on use-case
         self.mining_miner = None
@@ -60,7 +67,7 @@ class TrialManager:
     def num_miners(self):
         return len(self.miners)
 
-    def initialize_miners(self, num_miners: int):
+    def initialize_miners(self, miner_names: list[str]):
         """Creates all the Miner objects necessary to run the trial, passing each one a reference to
         the subdirectory where its initial blockchain.txt file is stored, and having it run initialization
         for both the blockchain, its ProofOfWorkProtocol class and its logs..
@@ -72,9 +79,8 @@ class TrialManager:
             Exception: if one of the necessary owner directories does not exist."""
         self.miners = {}
 
-        for i in range(num_miners):
-            miner_id = MINER_NAMES[i]
-            next_miner = Miner(miner_id, self.pow, self.genesis_block)
+        for name in miner_names:
+            next_miner = Miner(name, self.pow, self.genesis_block)
             self.miners.update({next_miner.id: next_miner})
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -138,8 +144,9 @@ class TrialManager:
             validator_id (str): the ID of the miner who should validate during this step
 
         Returns:
-            string containing the score the Miner assigned to the block and whether it passed or failed, formatted
-                to be printed to the console."""
+            validator_id (string): ID of the validating miner
+            block_score (float): score that the validator assigned to the block
+            solver (string): name of the solver used for validation """
 
         validator_id = self.round_order[self.round_progress]
         validator = self.miners[validator_id]
@@ -155,7 +162,13 @@ class TrialManager:
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def single_step(self) -> tuple[bool, str, float, str]:
-        """Executes a single, atomic step of the simulation algorithm. Logging and recovery can capture"""
+        """ Executes a single, atomic step of the simulation algorithm, deciding based on the internal state
+            of the TrialManager object which action needs to happen next.
+            
+            Returns:
+                mined (bool): Indicates whether this step was a mining step
+                miner_id (string): ID of the miner that mined or validated this round
+                solver (string): name of the solver that was used for mining or validation this round"""
         if self.round_progress == 0 or self.round_progress >= self.num_miners:  # TODO reconsider
             mined = True
             self.reset_round()
@@ -187,7 +200,14 @@ class TrialManager:
         while self.blocks_mined < stopping_block:
             self.single_step()
 
-    def get_active_blocks(self) -> list:
+    def get_active_block_hashes(self) -> list:
+        """ Queries miners to get a list of the hashes of all blocks that are currently candidates for mining. 
+            Each miner should have one block that they consider the strongest (may be the same for different
+            miners), which they will mine on top of if they are selected for the next mining round. This 
+            function collects a list of those block hashes and returns it (with duplicates removed).
+            
+            Returns:
+                active_hash_list (list[str]). List of hashes of blocks that are candidates for mining."""
         active_hashes = [miner.blockchain.strongest_block_hash for miner in self.miners.values()]
         return list(set(active_hashes))
 
@@ -198,7 +218,8 @@ class TrialManager:
         immutable, as every new block mined will include it as a predecessor.
 
         Returns:
-            largest_common_block_num (int): the"""
+            largest_common_block_num (int): the block number of the last block that all miners have
+                their trunk."""
         trunk_sets = [
             set([blk.block_number for blk in miner.blockchain.trunk])
             for miner in self.miners.values()

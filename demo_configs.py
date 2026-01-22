@@ -12,17 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This file stores input parameters for the app."""
+""" This file stores input parameters for the app and various configuration values that
+    will change the appearance (but generally not the functionality) of the demo as it runs."""
 
 from collections import namedtuple
-
-import plotly.express as px
-
-# THEME_COLOR is used for the button, text, and banner and should be dark
-# and pass accessibility checks with white: https://webaim.org/resources/contrastchecker/
-# THEME_COLOR_SECONDARY can be light or dark and is used for sliders, loading icon, and tabs
-THEME_COLOR = "#074C91"  # D-Wave dark blue default #074C91
-THEME_COLOR_SECONDARY = "#2A7DE1"  # D-Wave blue default #2A7DE1
 
 THUMBNAIL = "static/dwave_logo.svg"
 
@@ -38,25 +31,26 @@ LOADING_TEXT = "Generating graphs..."
 #######################################
 # Graph Visual Elements              #
 #######################################
-TRUNK_POINT_COLOR = "#1F74DA"
-TRUNK_EDGE_COLOR = "#7AAEEC"
-ABANDONED_BRANCH_POINT_COLOR = "#D9610C"
-ABANDONED_BRANCH_EDGE_COLOR = "#F5924B"
-ACTIVE_BRANCH_POINT_COLOR = "#929292"
-ACTIVE_BRANCH_EDGE_COLOR = "#D6D6D6"
-MINING_BLOCK_BORDER_COLOR = "#17BEBB"
-TRUNK_TIP_COLOR = "black"
-GRAPH_RADIAL_LINE_COLOR = "grey"
-GRAPH_RADIAL_LINE_WIDTH = 0.5
+TRUNK_POINT_COLOR = "#1F74DA" #Used for points corresponding to blocks that are considered valid parts of the main chain
+TRUNK_EDGE_COLOR = "#7AAEEC" #Used for spiral segments connecting the valid blocks
+ABANDONED_BRANCH_POINT_COLOR = "#D9610C" #Used for graph points corresponding to blocks that are not considered valid
+ABANDONED_BRANCH_EDGE_COLOR = "#F5924B" #Used for spiral segments connecting invalid blocks
+ACTIVE_BRANCH_POINT_COLOR = "#929292" #In the global view, differentiates 'disputed' blocks from 'consensus' blocks
+ACTIVE_BRANCH_EDGE_COLOR = "#D6D6D6" 
+MINING_BLOCK_BORDER_COLOR = "#17BEBB" #Border indicates the block that is currently (or most recently) being mined on
+TRUNK_TIP_COLOR = "black" #Fill color for the block at the end of the trunk. Also used for other 'active' blocks in global view
+GRAPH_RADIAL_LINE_COLOR = "grey" #Color for the radial lines that help with graph readability
+GRAPH_RADIAL_LINE_WIDTH = 0.5 #Width of the radial lines
 
-GRAPH_POINT_MIN_SIZE = 5
-GRAPH_POINT_MAX_SIZE = 15
+GRAPH_POINT_MIN_SIZE = 5 #Points drawn nearer the center of the graph will be closer to this size
+GRAPH_POINT_MAX_SIZE = 15 #Points drawn closer to the edge of the graph will be closer to this size
 GRAPH_BRANCH_POINT_SCALING = (
     0.65  # Determines how large the branch points are relative to the trunk points.
 )
 GRAPH_MAX_POINTS_PER_REV = 36  # Only set to a multiple of 4 to keep dynamic adjustments nice
-GRAPH_MIN_POINTS_PER_REV = 8
-GRAPH_SEGS_PER_REV = GRAPH_MAX_POINTS_PER_REV * 2
+GRAPH_MIN_POINTS_PER_REV = 8 #Controls how many points are drawn in one full 'turn' of the spiral
+GRAPH_SEGS_PER_REV = GRAPH_MAX_POINTS_PER_REV * 2 #Controls how many straight segments are used to connect each
+#graph point. More segments make a smoother curve. Dynamically adjusted to the size of the graph
 
 GRAPH_LOOP_SCALING = (
     2 / 3
@@ -83,39 +77,17 @@ MINER_SLIDER = {"min": MIN_MINERS, "max": MAX_MINERS, "step": 1, "value": 7}
 
 NUM_BLOCKS = {"min": 3, "max": 300, "step": 1, "value": 10}
 
-ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
+NUM_MINER_VIEWS = 3
 
-VIEW_OPTS = [
-    ViewOption(
-        menu_select="Global View",
-        graph_name="global_view_graph",
-        wrapper_name="global_view_wrapper",
-        miner_number=-1,
-    ),
-    ViewOption(
-        menu_select="Miner 1 View",
-        graph_name="miner_1_view_graph",
-        wrapper_name="miner_1_view_wrapper",
-        miner_number=0,
-    ),
-    ViewOption(
-        menu_select="Miner 2 View",
-        graph_name="miner_2_view_graph",
-        wrapper_name="miner_2_view_wrapper",
-        miner_number=1,
-    ),
-    ViewOption(
-        menu_select="Miner 3 View",
-        graph_name="miner_3_view_graph",
-        wrapper_name="miner_3_view_wrapper",
-        miner_number=2,
-    ),
-]
-
-
+MINER_NAMES = [
+    f"Miner_{i}" for i in range(1, MAX_MINERS + 1)
+]  # May want to change this to an aliasing scheme later
 #######################################
 # Mining Difficulty Parameters        #
 #######################################
-QUANTUM_HASH_LENGTH = 64
-ALLOWABLE_ERR = 1
-N_ZEROES = 0
+QUANTUM_HASH_LENGTH = 64 #Length of the quantum hash. Determines how difficult it is to mine and validate a block.
+ALLOWABLE_ERR = 1 #The number of single-bit errors validators will allow. Increasing this will cause validators to
+                #reject blocks more often, resulting in the chain branching more.
+N_ZEROES = 0 #Hardness block mining. At hardness 0, mining succeeds on every attempt. At hardness n,
+            #it takes (on average) 2^n attempts to mine a block. Increasing this will slow down the
+            #mining rate and make the simulation take longer.

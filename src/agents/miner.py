@@ -13,29 +13,19 @@ class Miner:
     on the blockchain network. Current ownership status is a bit of a mess, should consolidate some other
     classes and give more of their functions to this class."""
 
-    def __init__(self, miner_id: str, PoW_protocol: ProofOfWorkProtocol, genesis_block: Block):
+    def __init__(self, miner_id: str, pow_protocol: ProofOfWorkProtocol, genesis_block: Block):
         """Instantiates a new miner at the given hostname. The subdir is the
         directory to store the mempool, known nodes, and blockchain.
 
         Args:
             subdir (str): name of subdirectory with initialization files and where
             file outputs will be written.
-
         """
 
         self.id = miner_id
-
-        genesis_block_node = BlockNode(
-            hash=genesis_block.hash,
-            prev_hash=genesis_block.previous_hash,
-            block_score=1.0,
-            total_score=1.0,
-            block_height=0,
-            block_number=0,
-        )
-
-        self.blockchain = BlockScoreTree(genesis_block=genesis_block_node)
-        self.pow = PoW_protocol
+        self.blockchain = BlockScoreTree()
+        self.add_block_to_chain(genesis_block, 1.0)
+        self.pow = pow_protocol
 
         self.mining_block = (
             None  # Holds block that is currently being mined but not yet finalized or broadcast.
@@ -97,9 +87,6 @@ class Miner:
 
     def assemble_new_block(self, previous_block_hash: Optional[str] = None) -> Block:
         """Assembles a new block
-
-        Args:
-            None
 
         Returns:
             new_block (Block): a new block that is assembled with a random nonce, but has not yet had its quantum hash

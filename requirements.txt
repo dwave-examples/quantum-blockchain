@@ -1,11 +1,11 @@
 dash[diskcache,async]~=3.2
 dash-mantine-components~=2.3
 dwave-ocean-sdk~=9.0
-pycryptodome
-flask
-requests
-pandas
+pycryptodome~=3.23
+flask~=3.1
+requests~=2.32
+pandas~=2.3
 numpy<2.4  # Pending bugfix for dwave-samplers
-pytest
-matplotlib
+pytest~=9.0
+matplotlib~=3.10
 git+https://github.com/jackraymond/dwave-experimental@feature/automorphism_composite#egg=dwave-experimental  # Pull request approval pending

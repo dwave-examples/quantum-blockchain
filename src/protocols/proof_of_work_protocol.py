@@ -3,7 +3,6 @@ import random
 import numpy as np
 from scipy.special import erf
 
-from demo_configs import ALLOWABLE_ERR, N_ZEROES, QUANTUM_HASH_LENGTH
 from src.protocols.hash_calculator import HashSolver
 from src.structures.block import Block
 from src.utilities.crypto_utils import basic_compound_hash, compare_hashes, validate_zeroes
@@ -19,6 +18,9 @@ class ProofOfWorkProtocol:
     def __init__(
         self,
         hash_solvers: list[HashSolver],
+        quantum_hash_length: int,
+        n_zeroes: int,
+        allowable_err: int,
     ) -> None:
         """Initializes a ProofOfWorkProtocol object. Intended usage is for a single Miner to initialize one of these objects on startup and
             keep it initialized for the duration of a trial.
@@ -32,6 +34,9 @@ class ProofOfWorkProtocol:
             miner_public_key (str): the miner's public key, formatted as a hexidecimal string
         """  # TODO replace with Enum
 
+        self.quantum_hash_length = quantum_hash_length
+        self.n_zeroes = n_zeroes
+        self.allowable_err = allowable_err
         self.solver_list = hash_solvers
         self.set_random_solver()
         self.compound_hashing_function = basic_compound_hash  # TODO design more flexibility
@@ -77,7 +82,7 @@ class ProofOfWorkProtocol:
             # Raising an exception here will keep the block from being returned, obscuring which Miner ran into the issue.
             # So the info is printed here, and Miner raises the Exception instead.
             print(
-                f"N_zeroes validation failed, expected {'0'*N_ZEROES} got {int(block.hash[N_ZEROES//2], 16)}"
+                f"N_zeroes validation failed, expected {'0'*self.n_zeroes} got {int(block.hash[self.n_zeroes//2], 16)}"
             )
 
         elif not block.validate_hash():
@@ -109,13 +114,13 @@ class ProofOfWorkProtocol:
 
         new_quantum_hash, dot_vector, sample_time = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
-        validation_bits = [1 for _ in range(QUANTUM_HASH_LENGTH)]
+        validation_bits = [1 for _ in range(self.quantum_hash_length)]
         block.set_hash()
         assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
 
-        if validate_zeroes(block.hash, N_ZEROES):
+        if validate_zeroes(block.hash, self.n_zeroes):
             block_score = self.calculate_confidence_score(
-                validation_bits, ALLOWABLE_ERR, dot_vector
+                validation_bits, self.allowable_err, dot_vector
             )
         else:
             block_score = MIN_SCORE
@@ -137,7 +142,7 @@ class ProofOfWorkProtocol:
             sample_time: the time required for the D Wave sampler call"""
         received_hash = block.quantum_hash
 
-        if QUANTUM_HASH_LENGTH > 0:
+        if self.quantum_hash_length > 0:
             calculated_hash, dot_vector, sample_time = self.calculate_quantum_hash(block)
             assert len(received_hash) == len(
                 calculated_hash
@@ -149,7 +154,7 @@ class ProofOfWorkProtocol:
             dot_vector = []
             sample_time = 0
 
-        block_score = self.calculate_confidence_score(validation_bits, ALLOWABLE_ERR, dot_vector)
+        block_score = self.calculate_confidence_score(validation_bits, self.allowable_err, dot_vector)
         del dot_vector
         return block_score, validation_bits, sample_time
 
@@ -206,7 +211,7 @@ class ProofOfWorkProtocol:
         self.set_random_solver()
 
         quantum_hash = self.current_solver.calculate_quantum_hash(
-            hash_length=QUANTUM_HASH_LENGTH, rng_seed=random_seed
+            hash_length=self.quantum_hash_length, rng_seed=random_seed
         )
 
         return quantum_hash

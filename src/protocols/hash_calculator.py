@@ -65,7 +65,6 @@ class HashSolver(ABC):
                         hash vector and the hyperplane's normal vector)
             sample_time: the time required by the sampler to generate the sampler_output
         """
-        pass
 
     @property
     def solver_name(self) -> str:

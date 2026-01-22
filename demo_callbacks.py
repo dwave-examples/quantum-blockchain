@@ -25,13 +25,13 @@ from dash import MATCH, Patch, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_configs import VIEW_OPTS
+from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES
 from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
+from demo_interface import VIEW_OPTS
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode
 from src.utilities.display_update import render_miner_status
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.values import MINER_NAMES  # TODO move to DemoConstants
 
 from src.structures.block import Block
 
@@ -118,7 +118,7 @@ def simulation(
     if dropdown_idx > 0:
         solvers = [solvers[dropdown_idx-1]]
 
-    manager = TrialManager(num_blocks=num_blocks, num_miners=num_miners, solvers=solvers)
+    manager = TrialManager(num_blocks, MINER_NAMES[:num_miners], solvers, QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR)
 
     block_dict_template = {
         "block_json": "",
@@ -204,7 +204,7 @@ def simulation(
         miner_fig = None
 
         if miner_id in view_miners:
-            active_hashes = manager.get_active_blocks()
+            active_hashes = manager.get_active_block_hashes()
             most_recent_block = manager.miners[miner_id].blockchain.most_recent_block
             plotter = SpiralPlotter()
             if "global" in view_miners[miner_id]:

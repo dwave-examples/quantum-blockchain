@@ -1,5 +1,5 @@
 from dash import html
-from src.values import MINER_NAMES
+from demo_configs import MINER_NAMES
 
 
 def render_miner_status(

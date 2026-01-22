@@ -9,10 +9,7 @@ import numpy as np  # To set effective number of samples (sampling noise)
 #                      PoW Protocol Definitions
 # ===================================================================================
 
-BLOCK_REWARD = 1.0
-MAX_BLOCK_SIZE = 128  # Currently unused as all our trial blocks are small. But we will need to define this eventually.
 EMPTY_QUANTUM_HASH = ""
-TRANSACTION_MAX_PRECISION = 8  # Good practice to define some maximum precision (i.e. some smallest unit of currency) to avoid validation problems due to rounding errors.
 MIN_SCORE = -(
     2**14
 )  # Large enough to outweigh any legitimate score, small enough to work on essentially all platforms.
@@ -46,13 +43,8 @@ DEFAULT_ENERGY_TIME_RESCALING = {
 #                      Global Trial Definitions
 # ===================================================================================
 
-
 MAX_MINERS = 100
 MAX_BLOCKS = 4096
-MINER_NAMES = [
-    f"Miner_{i}" for i in range(1, MAX_MINERS + 1)
-]  # May want to change this to an aliasing scheme later
-
 DEFAULT_BLOCK_SCORE = 0.0
 W_0_ALPHA = 0.0
 DEFAULT_NUM_READS = 600  # NB - Smaller than arXiv:2503.14462.
