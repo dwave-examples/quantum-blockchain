@@ -69,7 +69,7 @@ DEFAULT_TABLE_HEADER = "Initializing..."
 
 DEFAULT_TABLE_BODY = ""
 
-HIDE_BOOTSTRAP_SOLVERS = False
+HIDE_BOOTSTRAP_SOLVERS = True
 
 MINER_SLIDER = {"min": 4, "max": 28, "step": 1, "value": 7}
 

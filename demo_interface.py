@@ -112,7 +112,7 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
     )
 
 
-def radio(label: str, id: str, options: list, value: int, inline: bool = True) -> html.Div:
+def radio(label: str, id: str, options: list, value: int, inline: bool = True, class_name = "") -> html.Div:
     """Radio element for option selection.
 
     Args:
@@ -123,7 +123,7 @@ def radio(label: str, id: str, options: list, value: int, inline: bool = True) -
         inline: Whether the options are displayed beside or below each other.
     """
     return html.Div(
-        className="radio-wrapper",
+        className=class_name,
         children=[
             html.Label(label, htmlFor=id),
             dcc.RadioItems(
@@ -178,17 +178,18 @@ def generate_settings_form() -> html.Div:
         {"label": solver_mode.label, "value": solver_mode.value} for solver_mode in SolverMode
     ]
 
-    solver_settings = dropdown(
-        "Solver", "solver-select", generate_options_dropdown(qpu_solver_opts)
-    )
+    if HIDE_BOOTSTRAP_SOLVERS:
+        solver_select_classname = "display-none"
+    else:
+        solver_select_classname = ""
 
-    if not HIDE_BOOTSTRAP_SOLVERS:
-        solver_settings = (
+    solver_settings = (
             radio(
                 "Solver Mode",
                 "solver-mode-select",
                 solver_mode_options,
                 solver_mode_options[0]["value"],
+                class_name=solver_select_classname
             ),
             html.Div(
                 id="qpu-dropdown",
