@@ -27,7 +27,8 @@ A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
 INTRO_TEXT = 'Select a number of miners and blocks and press "Begin Simulation".'
 INTRO_SUBTEXT = "Results will display here while simulation is running."
 LOADING_TEXT = "Generating graphs..."
-
+MIN_SIMULATION_LOOP_TIME =1.1 #Minimum time for a single loop in "simulation" callback
+#If loops complete too quickly, display components won't update correctly
 #######################################
 # Graph Visual Elements              #
 #######################################

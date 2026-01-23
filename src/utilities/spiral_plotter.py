@@ -367,6 +367,11 @@ class SpiralPlotter:
             ACTIVE_BRANCH_POINT_COLOR for _ in range(cutoff_index + 1, len(self.trunk))
         ]
         self.trunk.point_colors[-1] = TRUNK_TIP_COLOR
+        for block_hash in active_blocks:
+            if block_hash in self.trunk:
+                block_index = self.trunk.hash_to_index_lookup[block_hash]
+                self.trunk.point_colors[block_index] = TRUNK_TIP_COLOR
+
         self.trunk.edge_color_cutoff = trunk_cutoff * self.segs_per_point
 
 

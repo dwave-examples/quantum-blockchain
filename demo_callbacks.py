@@ -25,7 +25,7 @@ from dash import MATCH, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES
+from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES, MIN_SIMULATION_LOOP_TIME
 from demo_solvers import get_solver_lists
 from demo_interface import VIEW_OPTS
 from src.agents.trial_manager import TrialManager
@@ -133,36 +133,34 @@ def simulation(
 
     
     if len(blockchain_structure) > 0:
-        print(blockchain_structure)
         current_idx = len(blockchain_structure)
         print(f"Restarting trial at block {current_idx}")
         short_blockchain = blockchain_structure[:-1]
-        manager.blocks_mined = current_idx + 1
         last_block = blockchain_structure[-1]
-        finished_miners = []
+        finished_miners = [miner_id for miner_id in last_block["scores"].keys()]
         unfinished_miners = []
 
         for miner_id, miner in manager.miners.items():
             if miner_id in last_block["scores"]:
                 miner.re_initialize_blockchain(blockchain_structure)
-                finished_miners.append(miner_id)
             else:
                 miner.re_initialize_blockchain(short_blockchain)
                 unfinished_miners.append(miner_id)
 
-        print("Finished resetting miners")
         manager.round_progress = len(finished_miners)
         manager.block_broadcast = last_block["block_json"]
         random.shuffle(unfinished_miners)
         manager.round_order = finished_miners + unfinished_miners
         current_block_dict = last_block
+        manager.blocks_mined = current_block_dict["block_number"]
+        update_current_block_data(current_block_dict)
         current_block = Block.from_json(current_block_dict["block_json"])
         for miner_id, miner in manager.miners.items():
             assert current_block.previous_hash in miner.blockchain.hash_to_branch_lookup, f"{miner_id} failed to have latest block {current_block.hash} with tree structure {miner.blockchain}"
         current_blockchain = blockchain_structure
+        
         print("Finished all restart logic.")
 
-    min_loop_time = 1.1  # TODO make a constant
     view_miners = {
         MINER_NAMES[(opt.miner_number) % num_miners]: opt.graph_name for opt in VIEW_OPTS
     }
@@ -178,7 +176,7 @@ def simulation(
             current_block_dict["block_json"] = manager.block_broadcast
             current_block_dict["miner_id"] = miner_id
             print(
-                f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined."
+                f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined and round order."
             )
 
             current_block_dict["scores"][miner_id] = block_score
@@ -236,8 +234,8 @@ def simulation(
 
         iter_end_time = time.time()
         iter_total_time = iter_end_time - iter_start_time
-        if iter_total_time < min_loop_time:
-            time.sleep(min_loop_time - iter_total_time)
+        if iter_total_time < MIN_SIMULATION_LOOP_TIME:
+            time.sleep(MIN_SIMULATION_LOOP_TIME - iter_total_time)
 
     return "", "display-none", ""
 
@@ -333,11 +331,10 @@ def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
     Output("pause-button", "className", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
-        State("blockchain-structure-data", "data"),
     ],
     prevent_initial_call=True,
 )
-def pause_simulation(pause_click: int, blocks: list):
+def pause_simulation(pause_click: int):
     """This callback will pause the current, in-progress simulation. In reality, the
     'simulation' callback is cancelled, but the data defining its current state is
     still stored in the blockchain_structure_data dcc.Store object, so the simulation
@@ -351,10 +348,6 @@ def pause_simulation(pause_click: int, blocks: list):
         reset-button (str): makes visible
         resume-button (str): makes visible
         pause-button (str): hides"""
-    
-    print("In pause")
-    time.sleep(0.2)
-    print(f"Paused with blockchain structure {blocks}")
 
     return "", "", "display-none"
 
