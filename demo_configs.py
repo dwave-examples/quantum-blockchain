@@ -36,11 +36,11 @@ TRUNK_EDGE_COLOR = "#7AAEEC" #Used for spiral segments connecting the valid bloc
 ABANDONED_BRANCH_POINT_COLOR = "#D9610C" #Used for graph points corresponding to blocks that are not considered valid
 ABANDONED_BRANCH_EDGE_COLOR = "#F5924B" #Used for spiral segments connecting invalid blocks
 ACTIVE_BRANCH_POINT_COLOR = "#929292" #In the global view, differentiates 'disputed' blocks from 'consensus' blocks
-ACTIVE_BRANCH_EDGE_COLOR = "#D6D6D6" 
+ACTIVE_BRANCH_EDGE_COLOR = "#C5C5C5" 
 MINING_BLOCK_BORDER_COLOR = "#17BEBB" #Border indicates the block that is currently (or most recently) being mined on
 TRUNK_TIP_COLOR = "black" #Fill color for the block at the end of the trunk. Also used for other 'active' blocks in global view
-GRAPH_RADIAL_LINE_COLOR = "grey" #Color for the radial lines that help with graph readability
-GRAPH_RADIAL_LINE_WIDTH = 0.5 #Width of the radial lines
+GRAPH_RADIAL_LINE_COLOR = "#E6E6E6" #Color for the radial lines that help with graph readability
+GRAPH_RADIAL_LINE_WIDTH = 0.7 #Width of the radial lines
 
 GRAPH_POINT_MIN_SIZE = 5 #Points drawn nearer the center of the graph will be closer to this size
 GRAPH_POINT_MAX_SIZE = 15 #Points drawn closer to the edge of the graph will be closer to this size

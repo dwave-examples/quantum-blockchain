@@ -415,6 +415,8 @@ class SpiralPlotter:
         if active_block_cutoff is not None:
             self._color_for_global_view(active_blocks=active_blocks, trunk_cutoff=active_block_cutoff)
 
+        plot_data = self.draw_radial_lines()
+
         if mining_block is not None:
             if mining_block.hash in self.tree.hash_to_branch_lookup:
                 mining_branch = self.tree.hash_to_branch_lookup[mining_block.hash]
@@ -469,7 +471,7 @@ class SpiralPlotter:
             mode="markers",
             marker={"size": self.trunk.size_chart, "color": self.trunk.point_colors, "opacity": 1},
         )
-        plot_data = trunk_edge_traces
+        plot_data += trunk_edge_traces
 
         node_traces = [trunk_node_trace]
         if self.trunk == mining_branch:
@@ -497,9 +499,9 @@ class SpiralPlotter:
         for trace in node_traces:
             plot_data.append(trace)
 
-        radial_traces = self.draw_radial_lines()
-        for trace in radial_traces:
-            plot_data.append(trace)
+        #radial_traces = self.draw_radial_lines()
+        #for trace in radial_traces:
+         #   plot_data.append(trace)
 
         fig = go.Figure(plot_data)
         return fig
