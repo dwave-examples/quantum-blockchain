@@ -1,5 +1,5 @@
 import random
-
+from logging import warning
 import numpy as np
 from scipy.special import erf
 
@@ -7,7 +7,6 @@ from src.protocols.hash_calculator import HashSolver
 from src.structures.block import Block
 from src.utilities.crypto_utils import basic_compound_hash, compare_hashes, validate_zeroes
 from src.values import DELTA_W_0_ALPHA, MIN_SCORE, W_0_ALPHA
-
 
 class ProofOfWorkProtocol:
     """This class implements the Proof of Work Protocol for a node on the blockchain. In practice, that means the
@@ -41,7 +40,7 @@ class ProofOfWorkProtocol:
         self.set_random_solver()
         self.compound_hashing_function = basic_compound_hash  # TODO design more flexibility
 
-    def validate_block(self, block: Block) -> tuple[bool, float, list[int], str]:
+    def validate_block(self, block: Block) -> tuple[bool, float, str]:
         """Validates a block according to the stored protocol parameters and scoring function.
 
         If self.quantum_hash_length > 0 this should involve either making a call to a D-Wave QPU (using
@@ -74,25 +73,21 @@ class ProofOfWorkProtocol:
 
         valid = False
         block_score = MIN_SCORE
-        validation_bits = []
-        sample_time = 0
 
         # If any other validation fails, no reason to waste a QPU call
         if not validate_zeroes(block.hash):
-            # Raising an exception here will keep the block from being returned, obscuring which Miner ran into the issue.
-            # So the info is printed here, and Miner raises the Exception instead.
-            print(
+            warning(
                 f"N_zeroes validation failed, expected {'0'*self.n_zeroes} got {int(block.hash[self.n_zeroes//2], 16)}"
             )
 
         elif not block.validate_hash():
-            print(f"Failed hash check for block with hash {block.hash}")
+            warning(f"Failed hash check for block with hash {block.hash}")
 
         else:
             valid = True
-            block_score, validation_bits, sample_time = self.score_block(block)
+            block_score, _ = self.score_block(block)
 
-        return valid, block_score, validation_bits, self.current_solver.solver_name
+        return valid, block_score, self.current_solver.solver_name
 
     def mine_block(self, block: Block) -> tuple[Block, float, str]:
         """Makes a single attempt to mine a block based on the stored Proof Of Work requirements. Returns
@@ -112,7 +107,7 @@ class ProofOfWorkProtocol:
                 it good, requiring another mining attempt.
             sample_time: the sampling time for the QPU call."""
 
-        new_quantum_hash, dot_vector, sample_time = self.calculate_quantum_hash(block)
+        new_quantum_hash, dot_vector, _ = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
         validation_bits = [1 for _ in range(self.quantum_hash_length)]
         block.set_hash()
@@ -155,15 +150,33 @@ class ProofOfWorkProtocol:
             sample_time = 0
 
         block_score = self.calculate_confidence_score(validation_bits, self.allowable_err, dot_vector)
-        del dot_vector
-        return block_score, validation_bits, sample_time
+        return block_score, sample_time
 
     def calculate_confidence_score(
-        self, valid_bits: np.ndarray, allowable_err: int, dot_vector: np.ndarray
+        self, valid_bits: np.ndarray, allowable_err: int|float, dot_vector: np.ndarray
     ) -> float:
-        """Confidence-based scoring, as defined in the paper. In practice this is quite sensitive to quantum_hash_length,
-        allowable_err, solver schemas and num_reads. Some trial and error is required to find sets of values that
-        allow for reasonable validation rates."""
+        """Confidence-based scoring, as defined in the quantum blockchain paper (see README for details). In practice 
+        this is quite sensitive to quantum_hash_length, allowable_err, solver schemas and num_reads. Some trial and 
+        error is required to find sets of values that allow for reasonable validation rates.
+        
+        Args:
+            valid_bits (np.ndarray): a vector of binary values representing which bits of the original hash appeared
+                to be valid (i.e matched the validator's calculated hash). Will hold 1 if the corresponding hash bit
+                is valid, or a 0 otherwise.
+            allowable_err (int or float): the error tolerance of the scoring procedure. Roughly speaking, increasing
+                this by 1 compensates for one extra maximum-uncertainty bit (i.e. a bit in which the confidence is 50%).
+                A low value means only an extremely high-confidence hash vector will earn a positive score. A low value
+                means a hash vector with many highly-uncertain bits can still earn a positive score. However, bit
+                errors high-confidence bits will reduce the confidence by far more than 1, so even a few serious 
+                errors can overwhelm this threshold at any reasonable value.
+            dot_vector (np.ndarray): Vector that contains the dot products of the hash vector with the normal vectors
+                of hyperplanes chosen by the random projection operation. This vector is used to calculate the bitwise
+                confidence scores: if the value in some coordinate is very far from the mean (W_0_ALPHA), it will have
+                very high confidence (close to 1). If it is near the mean, it will have low confidence (close to 0.5). 
+            
+        Returns:
+            confidence_score (float): the validator's overall log confidence that the hash is correct to within
+                the error threshold defined by allowable_err"""
         min_confidence = MIN_SCORE
         mean = W_0_ALPHA
         std_dev = DELTA_W_0_ALPHA
@@ -178,7 +191,7 @@ class ProofOfWorkProtocol:
             if confidence == 0:
                 return min_confidence
             elif confidence < 0:
-                raise Exception(
+                raise ValueError(
                     f"Invalid confidence value {confidence} at index {idx} from bit {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}"
                 )
             else:

@@ -37,7 +37,7 @@ from demo_configs import (
     MINER_NAMES,
     NUM_MINER_VIEWS,
 )
-from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
+from demo_solvers import get_solver_lists
 from src.demo_enums import SolverMode
 
 THEME_COLOR = "#2d4376"
@@ -166,11 +166,13 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
+    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
+
     qpu_solver_opts = [f"Random {SolverMode.QPU.label}"]
-    qpu_solver_opts += [slvr.solver_name for slvr in AVAILABLE_QPU_SOLVERS]
+    qpu_solver_opts += [slvr.solver_name for slvr in available_qpu_solvers]
 
     simulated_solver_opts = [f"Random {SolverMode.SIMULATED.label}"]
-    simulated_solver_opts += [slvr.solver_name for slvr in BOOTSTRAP_SOLVERS]
+    simulated_solver_opts += [slvr.solver_name for slvr in available_simulated_solvers]
 
     solver_mode_options = [
         {"label": solver_mode.label, "value": solver_mode.value} for solver_mode in SolverMode

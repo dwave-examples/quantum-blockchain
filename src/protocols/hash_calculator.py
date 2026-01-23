@@ -23,7 +23,6 @@ from src.values import (
     DEFAULT_NUM_READS,
 )
 
-
 class SolverName(Enum):
     SOLVER1 = "Advantage_system4.1"
     SOLVER2 = "Advantage_system6.4"
@@ -33,13 +32,11 @@ class SolverName(Enum):
     BOOTSTRAP3 = "simulated_Advantage_system6.4"
     BOOTSTRAP4 = "simulated_Advantage_system7.1"  # Offline
 
-
 SolverParams = namedtuple(
     "SolverParams",
     ["solver_name", "profile"],
     defaults=(None, None),
 )
-
 
 class HashSolver(ABC):
     @abstractmethod
@@ -111,9 +108,8 @@ class BootstrappingHashSolver(HashSolver):
                 Resampled witnesses are distributed as ~ N(mean, variance*variance_rescaling)).
                 If fewer/more reads are to be simulated, relative to the value used in data correction we can scale accordingly.
         """
-        assert solver_name is not None or (
-            mean_witnesses is not None
-        ), "Witness must be provided or a solver associated to a source file specified"
+        if solver_name is None and mean_witnesses is None:
+            raise Exception("Witness must be provided or a solver associated to a source file specified")
         if mean_witnesses is None:
             self._solver_name = solver_name
             mean_filepath = os.path.join(bootstrap_path, self.solver_name + "_mean.npy")
@@ -148,7 +144,7 @@ class BootstrappingHashSolver(HashSolver):
             sample_time (float): sampling time. Not much interest when bootstrapping, but must be
                 included to match the output signature of the QPU version."""
 
-        sample_start = time.time()
+        sample_start = time.perf_counter()
         prng_header = np.random.default_rng(rng_seed)
         prng_sampling = np.random.default_rng()
         indices = prng_header.integers(self.num_witnesses, size=hash_length)
@@ -158,7 +154,7 @@ class BootstrappingHashSolver(HashSolver):
         dot_vector = mu + np.sqrt(var) * prng_sampling.normal(size=hash_length)
         bool_vector = dot_vector > 0
         hash_bits = bool_vector.astype(int)
-        sample_end = time.time()
+        sample_end = time.perf_counter()
         sample_time = sample_end - sample_start
 
         quantum_hash = binascii.hexlify(np.packbits(hash_bits)).decode(encoding="utf-8")
@@ -206,6 +202,7 @@ class QuantumHashSolver(HashSolver):
             sampler_kwargs: Arguments for the dimod sampler, defaulted to QPU fast annealing
                 arguments when not specified. Non defaulted arguments are used for testing.
         """
+
         if energy_time_rescaling is None:
             if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
                 raise ValueError(
@@ -260,9 +257,9 @@ class QuantumHashSolver(HashSolver):
         h, J = quantum_cubic_utils.create_model(
             seed=rng_seed, problem_energy_scale=self.problem_energy_scale
         )
-        sample_start = time.time()
+        sample_start = time.perf_counter()
         sampler_output = self.sampler.sample_ising(h, J, **self.sampler_kwargs)
-        sample_end = time.time()
+        sample_end = time.perf_counter()
 
         stats = quantum_cubic_utils.build_stats(sampler_output, J.keys())
 

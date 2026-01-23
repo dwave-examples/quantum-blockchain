@@ -36,13 +36,11 @@ class Miner:
     def re_initialize_blockchain(self, node_list: list[dict]):
 
         for block_entry in node_list:
-            #try:  # TODO this code should be reliable, but is failing occasionally. Revisit the logic for determining
             scores = block_entry["scores"]  
             score = scores[self.id]
             block = Block.from_json(block_entry["block_json"])
             self.add_block_to_chain(block=block, block_score=score)
-            #except:  # If we hit an error, then this miner has accessed as much of the tree as able.
-                #break
+
 
     def add_block_to_chain(self, block: Block, block_score: float = 0.0):
         """Adds a block to the blockchain memory stored in self.blockchain, which also
@@ -76,8 +74,7 @@ class Miner:
             scoring functions or chain management policies).
 
         Modifies:
-           self.blockchain.tree: the representation of the miner's chain structure
-        """
+           self.blockchain.tree: the representation of the miner's chain structure"""
 
         if self.blockchain.trunk.tip.hash != self.blockchain.strongest_block_hash:
             best_branch = self.blockchain.hash_to_branch_lookup[
@@ -95,7 +92,7 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2**31)  # TODO check how to make non-arcitechture specific
+        nonce = np.random.randint(0, 2**15)
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
@@ -106,8 +103,7 @@ class Miner:
         Returns:
             succeeded (bool): whether the mining succeeded or failed
             sample_time (float): the time in seconds spent performing the quantum experiment. Currently unused, but
-                something we will likely wish to track eventually.
-        """
+                something we will likely wish to track eventually."""
         if mining_block is None:
             if self.mining_block is None:
                 mining_block = self.assemble_new_block()
@@ -156,7 +152,7 @@ class Miner:
                 scores are presumed invalid and will create a secondary branch if their predecessor is in the trunk.
                 (Or be added to an existing branch otherwise)."""
 
-        passes, score, validation_bits, solver = self.pow.validate_block(block)
+        passes, score, solver = self.pow.validate_block(block)
 
         if not passes:
             raise Exception(

@@ -208,6 +208,26 @@ class ScoreTreeBranch:
     def get_score_map(self):
         score_map = [node.total_score for node in self.node_list]
         return score_map
+    
+    def get_longest_child(self):
+        """ Returns the child of the current branch with the highest-numbered tip block,
+            if it is higher than the block number of this branch's tip. This is a helper 
+            function for BlockScoreTree.refactor_branches, used to find the branches that
+            will extend the farthest (when drawn with the graphing logic in SpiralPlotter),
+            so they can be positioned to avoid overlaps.
+            
+            Returns:
+                longest_child (ScoreTreeBranch): child branch of this branch whose
+                    tip has the highest block_number"""
+        
+        highest_block_num = self.tip.block_number
+        longest_child = None
+        for child in self.children:
+            if child.tip.block_number > highest_block_num:
+                highest_block_num = child.tip.block_number
+                longest_child = child
+
+        return longest_child
 
     def get_descendants_by_depth(self) -> list[list["ScoreTreeBranch"]]:
         """Compiles a list of all the descendants (children and their children and so on)

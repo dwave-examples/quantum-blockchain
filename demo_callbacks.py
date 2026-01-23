@@ -21,18 +21,17 @@ from typing import NamedTuple
 
 import dash
 import plotly.graph_objects as go
-from dash import MATCH, Patch, ctx, set_props
+from dash import MATCH, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
 from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES
-from demo_solvers import AVAILABLE_QPU_SOLVERS, BOOTSTRAP_SOLVERS
+from demo_solvers import get_solver_lists
 from demo_interface import VIEW_OPTS
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode
 from src.utilities.display_update import render_miner_status
 from src.utilities.spiral_plotter import SpiralPlotter
-
 from src.structures.block import Block
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,9 +108,11 @@ def simulation(
     solver_mode = SolverMode(solver_mode)
     print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
 
+    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
+
     mode_config = {
-        SolverMode.QPU: (int(qpu_solver_select_val), AVAILABLE_QPU_SOLVERS),
-        SolverMode.SIMULATED: (int(simulated_solver_select_val), BOOTSTRAP_SOLVERS),
+        SolverMode.QPU: (int(qpu_solver_select_val), available_qpu_solvers),
+        SolverMode.SIMULATED: (int(simulated_solver_select_val), available_simulated_solvers),
     }
     dropdown_idx, solvers = mode_config[solver_mode]
 
@@ -189,10 +190,6 @@ def simulation(
             current_block_dict["scores"][miner_id] = block_score
             current_block_dict["solvers"][miner_id] = solver
             current_blockchain[-1] = current_block_dict
-
-
-        
-
 
         set_props("blockchain-structure-data", {"data": current_blockchain})
         time.sleep(0.2)

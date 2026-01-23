@@ -14,7 +14,6 @@
 
 from enum import Enum
 
-
 class SolverMode(Enum):
     QPU = 0
     SIMULATED = 1

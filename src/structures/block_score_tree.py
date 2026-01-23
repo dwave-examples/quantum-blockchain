@@ -10,7 +10,6 @@ from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 
 SHORT_BLOCK_REPRESENTATION_LENGTH = 5
 
-
 class BlockScoreTree:
     """Class for tracking structure and score of a blockchain. Each block is represented by a 6-element
     named BlockNode tuple (see score_tree_branch.py for definition) formatted as
@@ -58,8 +57,9 @@ class BlockScoreTree:
         self.hash_to_branch_lookup = {}
         self.branches = [self.trunk]
         self.short_hash_len = SHORT_BLOCK_REPRESENTATION_LENGTH
+        self.strongest_block_hash = None
         if genesis_block is not None:
-            self.initialize_first_block(genesis_block)
+            self.add_block_as_node(genesis_block)
 
     def __str__(self):
         """Represents the chain as lists of tuples, usually with hashes substantially truncated
@@ -128,15 +128,10 @@ class BlockScoreTree:
         do not. All current scoring schemes just go by whether the block score is greater than 0, but having that be
         adjustable seems like good future-proofing."""
         return bool(block_score > 0)
-
-    def initialize_first_block(self, initial_block: BlockNode) -> None:
-        """Adds an initial block to the empty tree"""
-        if self.num_nodes != 0:
-            raise Exception("Attempted to initialize non-empty tree.")
-
-        self.trunk.append_block(initial_block)
-        self.strongest_block_hash = initial_block.hash
-        self.hash_to_branch_lookup.update({initial_block.hash: self.trunk})
+    
+    def add_block_to_branch(self, block: BlockNode, branch: ScoreTreeBranch):
+        branch.append_block(block)
+        self.hash_to_branch_lookup.update({block.hash: branch})
 
     def add_block(
         self, block_hash: str, prev_block_hash: str, block_score: float, block_number: int = -1
@@ -178,7 +173,7 @@ class BlockScoreTree:
                 block_number=block_number,
                 block_height=0,
             )
-            self.initialize_first_block(new_block)
+            self.add_block_to_branch(new_block, self.trunk)
         elif block_hash in self.hash_to_branch_lookup:  # otherwise, check for duplicates...
             raise Exception(f"Attempted to add duplicate block with hash {block_hash} to tree.")
         elif (
@@ -205,15 +200,14 @@ class BlockScoreTree:
             # If it is, we need to check that its score meets our criterion
 
             if prev_block == parent_branch.tip and canonical:  # Block goes on branch tip
-                parent_branch.append_block(new_block)
-                self.hash_to_branch_lookup.update({block_hash: parent_branch})
+                self.add_block_to_branch(new_block, parent_branch)
             else:  # Block goes in new branch
-                new_branch = ScoreTreeBranch(new_block)
+                new_branch = ScoreTreeBranch()
                 self.branches.append(new_branch)
-                self.hash_to_branch_lookup.update({block_hash: new_branch})
+                self.add_block_to_branch(new_block, new_branch)
                 parent_branch.link_child_branch(new_branch)
 
-        if new_block.total_score > self.high_score:
+        if self.strongest_block_hash is None or new_block.total_score > self.high_score:
             self.strongest_block_hash = new_block.hash
 
     def add_block_as_node(self, block: BlockNode, force_trunk: bool = False) -> None:
@@ -233,7 +227,7 @@ class BlockScoreTree:
         if (
             len(self.trunk) == 0
         ):  # If the trunk is empty, initialize the tree with this as the first block
-            self.initialize_first_block(block)
+            self.add_block_to_branch(block, self.trunk)
         elif block.hash in self.hash_to_branch_lookup:  # otherwise, check for duplicates...
             raise Exception(f"Attempted to add duplicate block with hash {block.hash} to tree.")
         elif (
@@ -252,15 +246,14 @@ class BlockScoreTree:
             # If it is, we need to check that its score meets our criterion
 
             if prev_block == parent_branch.tip and canonical:  # Block goes on branch tip
-                parent_branch.append_block(block)
-                self.hash_to_branch_lookup.update({block.hash: parent_branch})
+                self.add_block_to_branch(block, parent_branch)
             else:  # Block goes in new branch
-                new_branch = ScoreTreeBranch(block)
+                new_branch = ScoreTreeBranch()
                 self.branches.append(new_branch)
-                self.hash_to_branch_lookup.update({block.hash: new_branch})
+                self.add_block_to_branch(block, new_branch)
                 parent_branch.link_child_branch(new_branch)
 
-        if block.total_score > self.high_score:
+        if self.strongest_block_hash is None or block.total_score > self.high_score:
             self.strongest_block_hash = block.hash
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -404,25 +397,19 @@ class BlockScoreTree:
         for base_branch in base_branches:
             branch_descendants = base_branch.get_descendants_by_depth()
 
-            for i in range(len(branch_descendants) - 1, 0, -1):  # Working from the highest depth to the lowest lets us make only one pass
-                layer = branch_descendants[i]
+            for layer in reversed(branch_descendants[:-1]):  # Working from the highest depth to the lowest lets us make only one pass
                 layer_remaining = {
                     branch.base.hash for branch in layer
                 }  # We'll create the longest (by last block number) branch at that layer we can
-                for (branch) in (layer):  # Which will ensure that one pass over the next lowest layer is also optimal
+                for branch in layer:  # Which will ensure that one pass over the next lowest layer is also optimal
                     if branch.depth <= 1:  # Want to stop just short of the bottom branch.
                         break
-                    if branch.base.hash in layer_remaining:
-                        parent = branch.parent
-                        best_child = branch
-                        best_block_num = branch.tip.block_number
-                        for child in parent.children:
-                            layer_remaining.remove(child.base.hash)  # Remove each child as we check it
-                            if child.tip.block_number > best_block_num:
-                                best_child = child
-                                best_block_num = child.tip.block_number
-                        if (best_block_num > parent.tip.block_number):  # If any children have a higher block number than the parent
-                            self.promote_branch(best_child)  # Promote them
+                    
+                    longest_child_branch = branch.get_longest_child()
+                    layer_remaining.remove(branch.base.hash)
+                    if longest_child_branch is not None:
+                        self.promote_branch(longest_child_branch)
+
                     if len(layer_remaining) == 0:
                         break
 

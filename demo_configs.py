@@ -47,9 +47,9 @@ GRAPH_POINT_MAX_SIZE = 15 #Points drawn closer to the edge of the graph will be 
 GRAPH_BRANCH_POINT_SCALING = (
     0.65  # Determines how large the branch points are relative to the trunk points.
 )
-GRAPH_MAX_POINTS_PER_REV = 36  # Only set to a multiple of 4 to keep dynamic adjustments nice
-GRAPH_MIN_POINTS_PER_REV = 8 #Controls how many points are drawn in one full 'turn' of the spiral
-GRAPH_SEGS_PER_REV = GRAPH_MAX_POINTS_PER_REV * 2 #Controls how many straight segments are used to connect each
+GRAPH_MAX_POINTS_PER_REVOLUTION = 36  # Only set to a multiple of 4 to keep dynamic adjustments nice
+GRAPH_MIN_POINTS_PER_REVOLUTION = 8 #Controls how many points are drawn in one full 'turn' of the spiral
+GRAPH_SEGMENTS_PER_REVOLUTION = GRAPH_MAX_POINTS_PER_REVOLUTION * 2 #Controls how many straight segments are used to connect each
 #graph point. More segments make a smoother curve. Dynamically adjusted to the size of the graph
 
 GRAPH_LOOP_SCALING = (
@@ -59,13 +59,11 @@ GRAPH_MAX_RADIUS = (
     0.999  # Furthest out on the chart area that points will be drawn. Value of 1 is the very edge.
 )
 GRAPH_MAX_BRANCH_DISTANCE = 0.78  # How far in towards the next trunk section a branch can extend. Value of 1 is all the way to the trunk.
+
 #######################################
 # Sliders, buttons and option entries #
 #######################################
 
-MIN_MINERS = 3
-
-MAX_MINERS = 28
 
 DEFAULT_TABLE_HEADER = "Initializing..."
 
@@ -73,15 +71,14 @@ DEFAULT_TABLE_BODY = ""
 
 HIDE_BOOTSTRAP_SOLVERS = False
 
-MINER_SLIDER = {"min": MIN_MINERS, "max": MAX_MINERS, "step": 1, "value": 7}
+MINER_SLIDER = {"min": 4, "max": 28, "step": 1, "value": 7}
 
-NUM_BLOCKS = {"min": 3, "max": 300, "step": 1, "value": 10}
+NUM_BLOCKS = {"min": 3, "max": 600, "step": 1, "value": 20}
 
 NUM_MINER_VIEWS = 3
 
-MINER_NAMES = [
-    f"Miner_{i}" for i in range(1, MAX_MINERS + 1)
-]  # May want to change this to an aliasing scheme later
+MINER_NAMES = [f"Miner_{i}" for i in range(1, MINER_SLIDER["max"] + 1)]
+
 #######################################
 # Mining Difficulty Parameters        #
 #######################################

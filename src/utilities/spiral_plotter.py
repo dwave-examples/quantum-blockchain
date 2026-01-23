@@ -10,14 +10,14 @@ from demo_configs import (
     GRAPH_BRANCH_POINT_SCALING,
     GRAPH_LOOP_SCALING,
     GRAPH_MAX_BRANCH_DISTANCE,
-    GRAPH_MAX_POINTS_PER_REV,
+    GRAPH_MAX_POINTS_PER_REVOLUTION,
     GRAPH_MAX_RADIUS,
-    GRAPH_MIN_POINTS_PER_REV,
+    GRAPH_MIN_POINTS_PER_REVOLUTION,
     GRAPH_POINT_MAX_SIZE,
     GRAPH_POINT_MIN_SIZE,
     GRAPH_RADIAL_LINE_COLOR,
     GRAPH_RADIAL_LINE_WIDTH,
-    GRAPH_SEGS_PER_REV,
+    GRAPH_SEGMENTS_PER_REVOLUTION,
     TRUNK_EDGE_COLOR,
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
@@ -157,7 +157,7 @@ class SpiralPlotter:
         self.master_size_chart = self._create_master_size_chart()
         self.points_per_rev = self.calculate_points_per_rev()
         self.num_revs = (self.num_nodes + 1) / self.points_per_rev
-        self.segs_per_point = math.ceil(GRAPH_SEGS_PER_REV / self.points_per_rev)
+        self.segs_per_point = math.ceil(GRAPH_SEGMENTS_PER_REVOLUTION / self.points_per_rev)
 
         angle_step = 2 * math.pi / self.points_per_rev
         self.angles = [i * angle_step for i in range(1, self.points_per_rev + 1)]
@@ -206,11 +206,11 @@ class SpiralPlotter:
 
         Returns:
             points_per_rev (int): the number of points that will be drawn in a single revolution."""
-        allowed_vals = [i for i in range(GRAPH_MIN_POINTS_PER_REV, GRAPH_MAX_POINTS_PER_REV + 1, 4)]
-        if self.num_nodes <= GRAPH_MIN_POINTS_PER_REV * 1.5:
-            return GRAPH_MIN_POINTS_PER_REV
-        elif self.num_nodes >= GRAPH_MAX_POINTS_PER_REV * 1.5:
-            return GRAPH_MAX_POINTS_PER_REV
+        allowed_vals = [i for i in range(GRAPH_MIN_POINTS_PER_REVOLUTION, GRAPH_MAX_POINTS_PER_REVOLUTION + 1, 4)]
+        if self.num_nodes <= GRAPH_MIN_POINTS_PER_REVOLUTION * 1.5:
+            return GRAPH_MIN_POINTS_PER_REVOLUTION
+        elif self.num_nodes >= GRAPH_MAX_POINTS_PER_REVOLUTION * 1.5:
+            return GRAPH_MAX_POINTS_PER_REVOLUTION
         else:
             allowed_index = 0
             for idx, val in enumerate(allowed_vals):
