@@ -66,9 +66,9 @@ from the quantum-blockchain/tests directory.
 
 # Problem Description
 
-This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by defaulted distributed) computing resources.
+This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by default distributed) computing resources.
 
-Miners demonstrate completion of quantum work by performing experiments parameterized by the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space; a miner must find experimental parameters such that this point falls in a small subspace. Miners search by varying nonce parameters, which change the parameters of the unitary evolution and post-processing. Statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors. The process of generating a hash is demonstrated below.
+Miners demonstrate completion of quantum work by performing experiments parameterized by the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space; a miner must find experimental parameters such that this point falls in a small subspace. Miners search by varying a nonce parameter, which controls the parameters of the unitary evolution and post-processing. Statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors. The process of generating a hash is demonstrated below.
 
 ![Quantum Hash Generation](static/Quantum_hash_infographic.png "Image of quantum hash generation")
 
@@ -86,14 +86,15 @@ This example implements methods found in the paper, “Blockchain with Proof of 
 
 ### Comparison with Amin et al. Blockchain with Proof of Quantum Work [[1]](#arXiv_2503_14462)
 
-The simulations in this example execute unitary evolutions on cubic spin glasses matching the paper with simple +/- chain work, subject to changes in the generally available solvers.
-The hash length is fixed to 32 and `num_reads` to 600 in order to reduce the QPU access time and accelerate the blockchain evolution (as opposed to the standardized 1 second of QPU access time in the [[1]](#arXiv_2503_14462) experiments).
-<!-- TODO: FIX VERIFICAIONT TYPE, NUM_READS, dW, Nmax and Hash Length TO BEST BRANCHING VALUES, AND DOCUMENT -->
-Problem-Hamiltonian and/or annnealing rescaling allows one processor to emulate another, accommodating differences in the annealing schedules (energy scales). In both the paper and demo the target unitary evolution is defined relative to the Advantage2_prototype2 solver schedule.  Advantage systems modeled this schedule in the paper by lengthening their anneal times, to emulate the higher energy scales of Advantage2, which is also true in the demo. However, Advantage2 solvers (unavailable at the time of the original study) can have higher energy scales than the prototype system and emulation of the unitary dynamics must be achieved by scaling down of the problem Hamliltonian (since we cannot reduce annealing_time beyond the lower bound of 5 nanoseconds).
-Visualization of the blockchain in the paper placed blocks sequential on a spiral, in the demo visualization the strongest chain follows the same parametric spiral, but other (non-strongest, or rejected) branches deviate inwards from that path. Whereas the paper only included 4-color global views, the demo also allows 2-color presentations of the state from an individual miner perspective.
+The simulations in this example execute unitary evolutions on cubic spin glasses matching the paper, subject to changes in the generally available solvers.
+The hash length is fixed to 64 and `num_reads` to 600 in order to reduce the QPU access time and accelerate the blockchain evolution (as opposed to the standardized 1 second of QPU access time in the [[1]](#arXiv_2503_14462) experiments).
 
-The delay and efficiency of quantum blockchains was evaluated in the paper in part by use of bootstrapping methods. The same methods can be implemented in the context of this demo by enaabling SIMULATIONS=True in the demo_configs.py file.
-<!-- TODO: REMOVE SIMULATED SOLVERS OPTIONS BY DEFAULT -->
+The blockchain demo uses confidence-based Chainwork. We choose the quantum hash length as 64, and Nmax (called ALLOWABLE_ERROR in demo) to be 1, which allows comparison to the paper statistics demonstrating high efficiency and small delay if we account for changes to the compute environment. Experiments determine the witness uncertain (due to sampling and control errors at 1 second of QPU access time) to be 0.16 with the current set of generally available QPUs (January 2026). The discrepancy between generally available QPUs was larger (0.18) for the generally available QPUs in the paper experiments. Furthermore number of reads is reduced in the demo (enhancing witness uncerainty). A new default for the dW parameter is set accordingly, matching the paper methods. 
+
+Problem-Hamiltonian and/or annnealing rescaling allows one processor to emulate another, accommodating differences in the annealing schedules (energy scales). In both the paper and demo the target unitary evolution is defined relative to the Advantage2_prototype2 solver schedule.  Advantage systems modeled this schedule in the paper by lengthening their anneal times, to emulate the higher energy scales of Advantage2, which is also true in the demo. However, Advantage2 solvers (unavailable at the time of the original study) can have higher energy scales than the prototype system and emulation of the unitary dynamics must be achieved by scaling down of the problem Hamliltonian (since we cannot reduce annealing_time beyond the lower bound of [currently 5 nanoseconds]).
+Visualization of the blockchain in the paper placed blocks sequential on a spiral, in the demo visualization the strongest chain follows the same parametric spiral, but other (non-strongest, or rejected) branches deviate inwards from that path. Whereas the paper included 4-color global views, the demo also allows 2-color presentations of the state from an individual miner perspective.
+
+The delay and efficiency of quantum blockchains was evaluated in the paper, in part, by use of bootstrapping stratistics. The same methods can be implemented in the context of this demo by enabling HIDE_BOOTSTRAP_SOLVERS=False in the demo_configs.py file.
 
 ## Model and Code Overview
 
@@ -116,7 +117,7 @@ and a set of QPUs (single or multiple). If multiple QPUs are selected, each expe
 
 For each round of mining, one miner is randomly selected to be the 'winner' of that round,
 simulating a distributed community with competitive mining where each miner has an equal chance
-of winning. The winning miner completes a quantum experiment, creates a hash, and publishes a block.
+of winning. The winning miner completes a quantum experiment of sufficient confidence, creates a hash, and publishes a block.
 Each unsuccessful miner validates the block and adjusts their pattern of mining based on the validation.
 As this process iterates a panel is updated to demonstrate verification patterns.
 A central graphic showing the state of the chain is updated showing either a single miner view
@@ -141,14 +142,14 @@ The delay is determined by the number of grey and black blocks, which indicate b
 
 The unitary evolution that defines "the quantum puzzle", is defined by a set of programmable couplers, J, cryptographically determined by the strongest block (the block defining maximum chain work).
 Each coupler is sampled uniformly at random +/- J for each edge matched to a 4x4x4 dimerized cubic lattice, with the desired evolution definded by a 5ns quench on the Advantage2_prototype2 system.
-For other annealing QPUs to emulate the Advantage2_protocol2 schedule it is necessary to perform time energy rescaling (i.e. the rescaling of the problem Hamiltonian and annealing time is device specific with values precalculated).
+For other annealing QPUs to emulate the Advantage2_prototype2 schedule it is necessary to perform time energy rescaling (i.e. the rescaling of the problem Hamiltonian and annealing time is device specific with values precalculated).
 A dimerized cubic lattice is a simple cubic lattice in which each node is replaced by a pair of nodes.
 Miners access QPUs uniformly at random from the specified QPUs.
 The QPU sampling makes use of the Ocean&trade; SDK composites framework with parallel embedding,
 automorphism, and spin-reversal transform (SRT) averaging. The use of automorphism and SRT averaging,
 enhances (relative) control errors, simulating variability that may exist across a more diverse ecosystem of QPUs.
 
-After the sampleset is collected, it is post-processed to nearest neighbor correlations. These correlations are then randomly projected by normally distributed random vectors, to give witnesses. The sign on the witnesses specify the bits of the quantum hash. 
+After the sampleset is collected, it is post-processed to nearest neighbor correlations. These correlations are then randomly projected by normally distributed random vectors, to give witnesses. The sign on the witnesses specify the bits of the quantum hash.
 
 
 ### Per-QPU One-Time Calibration:
