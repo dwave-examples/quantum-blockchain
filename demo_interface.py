@@ -34,6 +34,7 @@ from demo_configs import (
     THUMBNAIL,
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
+    MINING_BLOCK_BORDER_COLOR,
     MINER_NAMES,
     NUM_MINER_VIEWS,
 )
@@ -375,7 +376,8 @@ def create_interface():
                                                             html.P([html.Span(style={"background": TRUNK_POINT_COLOR}), "Consensus"]),
                                                             html.P([html.Span(style={"background": ABANDONED_BRANCH_POINT_COLOR}), "Abandoned"]),
                                                             html.P([html.Span(style={"background": ACTIVE_BRANCH_POINT_COLOR}), "Undecided"]),
-                                                            html.P([html.Span(style={"background": TRUNK_TIP_COLOR}), "Being Mined"]),
+                                                            html.P([html.Span(style={"background": TRUNK_TIP_COLOR}), "Available to Mine"]),
+                                                            html.P([html.Span(style={"border-color": MINING_BLOCK_BORDER_COLOR}), "Currently Mining"]),
                                                         ],
                                                         className="graph-legend",
                                                     )

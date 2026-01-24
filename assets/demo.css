@@ -188,6 +188,10 @@ custom CSS can be added below.
     vertical-align: middle;
 }
 
+.graph-legend p:last-child span {
+    border: 4px solid;
+}
+
 .graph-wrapper {
     width: 100%;
     height: 100%;
