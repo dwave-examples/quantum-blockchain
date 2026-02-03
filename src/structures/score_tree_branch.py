@@ -107,9 +107,14 @@ class ScoreTreeBranch:
 
     @property
     def high_score(self) -> float:
-        """Returns the highest total_score of any block currently stored in
-        this branch"""  # TODO check logic to make sure this isn't broken by change
+        """Returns the highest total_score of any block currently stored in this branch""" 
         return max([node.total_score for node in self.node_list])
+    
+    @property
+    def high_score_hash(self) -> float:
+        """ Returns the hash of the block with the highest total score in this branch"""
+        max_block = max(self.node_list, key= lambda x: x.total_score)
+        return max_block.hash
 
     def __getitem__(self, index: int) -> BlockNode:
         return self.node_list[index]

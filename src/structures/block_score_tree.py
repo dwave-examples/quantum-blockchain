@@ -22,7 +22,7 @@ from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SHORT_BLOCK_REPRESENTATION_LENGTH = 5
+TRUNCATED_HASH_LEN = 5
 
 class BlockScoreTree:
     """Class for tracking structure and score of a blockchain. Each block is represented by a 6-element
@@ -65,13 +65,21 @@ class BlockScoreTree:
     the child branch.
     """
 
-    def __init__(self, genesis_block: BlockNode = None):
+    def __init__(self, genesis_block: BlockNode|None=None, score_predicate: 'function|None'=None):
 
         self.trunk = ScoreTreeBranch()
         self.hash_to_branch_lookup = {}
         self.branches = [self.trunk]
-        self.short_hash_len = SHORT_BLOCK_REPRESENTATION_LENGTH
-        self.strongest_block_hash = None
+        self.short_hash_len = TRUNCATED_HASH_LEN
+        if score_predicate is None:
+            default_predicate = lambda x: bool(x > 0)
+            self.score_predicate = default_predicate
+        else:
+            if callable(score_predicate):
+                self.score_predicate = score_predicate
+            else:
+                raise Exception(f"BlockScoreTree was passed non-callable score predicate {score_predicate}.")
+            
         if genesis_block is not None:
             self.add_block_as_node(genesis_block)
 
@@ -117,7 +125,12 @@ class BlockScoreTree:
 
     @property
     def high_score(self):
-        return self.get_block(self.strongest_block_hash).total_score
+        return max([branch.high_score for branch in self.branches])
+    
+    @property
+    def strongest_block_hash(self):
+        strongest_branch = max(self.branches, key=lambda x: x.high_score)
+        return strongest_branch.high_score_hash
 
     @property
     def num_nodes(self):
@@ -134,14 +147,6 @@ class BlockScoreTree:
     #                             SECTION: Block I/O Operations                                          |
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def score_predicate(
-        self, block_score: float
-    ) -> bool:  # TODO add argument to constructor allowing this to be changed
-        """ScoreTree logic requires some condition to determine which blocks default to being added to the trunk and which
-        do not. All current scoring schemes just go by whether the block score is greater than 0, but having that be
-        adjustable seems like good future-proofing."""
-        return bool(block_score > 0)
     
     def add_block_to_branch(self, block: BlockNode, branch: ScoreTreeBranch):
         branch.append_block(block)
@@ -208,11 +213,8 @@ class BlockScoreTree:
                 block_height=prev_block.block_height + 1,
             )
 
-            canonical = (parent_branch != self.trunk) or self.score_predicate(
-                block_score
-            )  # If the block isn't going in the trunk, score is unimportant.
-            # If it is, we need to check that its score meets our criterion
-
+            #Before block can go in the trunk, it must be checked against score criterion
+            canonical = (parent_branch != self.trunk) or self.score_predicate(block_score) 
             if prev_block == parent_branch.tip and canonical:  # Block goes on branch tip
                 self.add_block_to_branch(new_block, parent_branch)
             else:  # Block goes in new branch
@@ -220,9 +222,6 @@ class BlockScoreTree:
                 self.branches.append(new_branch)
                 self.add_block_to_branch(new_block, new_branch)
                 parent_branch.link_child_branch(new_branch)
-
-        if self.strongest_block_hash is None or new_block.total_score > self.high_score:
-            self.strongest_block_hash = new_block.hash
 
     def add_block_as_node(self, block: BlockNode, force_trunk: bool = False) -> None:
         """Counterpart to add_block for data already formatted as BlockNode named tuple.
@@ -254,10 +253,9 @@ class BlockScoreTree:
             parent_branch = self.hash_to_branch_lookup[block.prev_hash]
             prev_block = parent_branch.get_block(block.prev_hash)
 
-            canonical = (parent_branch != self.trunk) or (
-                force_trunk or self.score_predicate(block.block_score)
-            )  # If the block isn't going in the trunk, score is unimportant.
-            # If it is, we need to check that its score meets our criterion
+            #Before block can go in the trunk, it must be checked against score criterion
+            canonical = (parent_branch != self.trunk) or \
+                (force_trunk or self.score_predicate(block.block_score))  
 
             if prev_block == parent_branch.tip and canonical:  # Block goes on branch tip
                 self.add_block_to_branch(block, parent_branch)
@@ -266,9 +264,6 @@ class BlockScoreTree:
                 self.branches.append(new_branch)
                 self.add_block_to_branch(block, new_branch)
                 parent_branch.link_child_branch(new_branch)
-
-        if self.strongest_block_hash is None or block.total_score > self.high_score:
-            self.strongest_block_hash = block.hash
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -293,7 +288,7 @@ class BlockScoreTree:
         if trunk_join_index is None:  # If branch is the trunk, do nothing
             block_hash_list = []
         else:
-            while branch_to_promote != self.trunk:  # Otherwise, keep promoting until we get there
+            while branch_to_promote != self.trunk:  # Otherwise, keep promoting to reach trunk
                 branch_to_promote = self.promote_branch(branch_to_promote)
             block_hash_list = [block.hash for block in self.trunk[trunk_join_index + 1 :]]
 
@@ -302,16 +297,15 @@ class BlockScoreTree:
                 try:
                     assert branch.root_hash in branch.parent
                 except:
-                    self.to_text_file(
-                        f"error_tree{self.trunk.tip.hash[:SHORT_BLOCK_REPRESENTATION_LENGTH]}.txt"
-                    )
-                    raise Exception(
-                        f"Triggering branch: {[(bn.hash[:SHORT_BLOCK_REPRESENTATION_LENGTH],bn.prev_hash[:SHORT_BLOCK_REPRESENTATION_LENGTH]) for bn in branch.node_list]} with"
-                        f" parent: {[(bn.hash[:SHORT_BLOCK_REPRESENTATION_LENGTH],bn.prev_hash[:SHORT_BLOCK_REPRESENTATION_LENGTH]) for bn in branch.parent.node_list]}. "
-                        f"Root hash is {branch.root_hash} "
-                    )
+                    self.to_text_file(f"error_tree\
+                                    {self.trunk.tip.hash[:TRUNCATED_HASH_LEN]}.txt")
+                    branch_txt = [(br.hash[:TRUNCATED_HASH_LEN], br.prev_hash[:TRUNCATED_HASH_LEN])
+                                                                        for br in branch.node_list]
+                    parent_txt = [(br.hash[:TRUNCATED_HASH_LEN],br.prev_hash[:TRUNCATED_HASH_LEN]) 
+                                                                for br in branch.parent.node_list]
+                    raise Exception(f"Triggering branch: {branch_txt} with parent: {parent_txt}. Root hash is {branch.root_hash} ")
 
-        self.branches.sort(key=lambda x: x.depth)  # TODO consider further
+        self.branches.sort(key=lambda x: x.depth)
 
         return block_hash_list
 
@@ -334,61 +328,56 @@ class BlockScoreTree:
             the parent branch, which should now be updated by the promotion
         """
 
-        # Can't promote the trunk. We shouldn't have any other branches with no parents: if we do the final else clause will catch it.
+        # Can't promote the trunk. No other branches without no parents: if there are
+        #final 'else' clause will raise an exception
         if branch_to_promote.parent is not None:
-            assert branch_to_promote.depth > 0, (
-                f"Branch {[(bn.hash[:SHORT_BLOCK_REPRESENTATION_LENGTH],bn.prev_hash[:SHORT_BLOCK_REPRESENTATION_LENGTH]) for bn in branch_to_promote]} had depth "
-                + f"{branch_to_promote.depth}, parent {[(bn.hash[:SHORT_BLOCK_REPRESENTATION_LENGTH],bn.prev_hash[:SHORT_BLOCK_REPRESENTATION_LENGTH]) for bn in branch_to_promote.parent]}"
+            assert branch_to_promote.depth > 0, \
+            (
+                f"Branch {[(bn.hash[:TRUNCATED_HASH_LEN], bn.prev_hash[:TRUNCATED_HASH_LEN]) \
+                for bn in branch_to_promote]} had depth {branch_to_promote.depth}, parent \
+                {[(bn.hash[:TRUNCATED_HASH_LEN], bn.prev_hash[:TRUNCATED_HASH_LEN]) 
+                for bn in branch_to_promote.parent]}"
             )
             base_branch = branch_to_promote.parent
 
-            orig_len = len(
-                base_branch
-            )  # This chunk and the assert at the end of the 'if' are validation to give visibility...
-            promoted_len = len(
-                branch_to_promote
-            )  # in case there's a logic error in the code. If it's working properly, they will never be relevant.
+            # This chunk and the assert at the end of the 'if' are validation to give visibility 
+            # in case of a logic error in the code. If it's working properly, they won't be relevant.
+            orig_len = len(base_branch)  
+            promoted_len = len(branch_to_promote)  
             total_len = orig_len + promoted_len
-            demoted_len = (
-                0  # Default value: will be overwritten if we demote part of the base branch
-            )
+            demoted_len = 0 #Default value: overwritten if part of the base branch is demoted
+            # Leave the root block in place, remove the next block
+            join_loc = base_branch.hash_to_index_lookup[branch_to_promote.root_hash] + 1
 
-            join_loc = (
-                base_branch.hash_to_index_lookup[branch_to_promote.root_hash] + 1
-            )  # Leave the root block in place, remove the next block
             for block in branch_to_promote:
                 self.hash_to_branch_lookup.update({block.hash: base_branch})
             base_branch.children.remove(branch_to_promote)
             self.branches.remove(branch_to_promote)
 
-            if (
-                join_loc < base_branch.tip_idx + 1
-            ):  # If the base branch extends beyond the join location...
-                demoted_section = base_branch.cut_branch_section(
-                    join_loc
-                )  # the remainder must be cut...
-                self.branches.append(demoted_section)  # and added as its own branch.
+            # If the base branch extends beyond the join location, the remainder must be cut
+            if join_loc < base_branch.tip_idx + 1: 
+                demoted_section = base_branch.cut_branch_section(join_loc)  
+                self.branches.append(demoted_section) # Cut section is added as its own branch.
                 for child in demoted_section.children:
-                    assert (
-                        child.parent == demoted_section
-                    ), f"Child-parent mismatch. Child had parent {child.parent}, expected {demoted_section}"
+                    assert child.parent == demoted_section, f"Child-parent mismatch. Child had \
+                                                parent {child.parent}, expected {demoted_section}"
                 for block in demoted_section:
                     self.hash_to_branch_lookup.update({block.hash: demoted_section})
                 base_branch.link_child_branch(demoted_section)
                 demoted_len = len(demoted_section)
-                assert demoted_section.parent == base_branch, (
-                    f"Branch with root {demoted_section.root} had parent with root"
-                    + f"{demoted_section.parent.root}. Expected {base_branch.root}"
-                )
+                assert demoted_section.parent == base_branch, f"Branch with root \
+                                                        {demoted_section.root} had parent \
+                                                        with root {demoted_section.parent.root}.\
+                                                        Expected {base_branch.root}"
+                
 
             base_branch.concatenate_branch(branch_to_promote)
-            assert len(base_branch) + demoted_len == total_len, (
-                f"Missing blocks. Demoted: {demoted_len}, promoted:"
-                + f"{promoted_len}, Orig: {orig_len}, Final {len(base_branch)}"
-            )
+            assert len(base_branch) + demoted_len == total_len, f"Missing blocks. Demoted: \
+                                                        {demoted_len}, promoted: {promoted_len},\
+                                                         Orig: {orig_len}, Final {len(base_branch)}"
             return base_branch
 
-        elif branch_to_promote == self.trunk:  # If we try to promote the trunk, nothing happens
+        elif branch_to_promote == self.trunk:  # Trying to promote trunk does nothing
             return branch_to_promote
 
         else:
@@ -411,10 +400,9 @@ class BlockScoreTree:
         for base_branch in base_branches:
             branch_descendants = base_branch.get_descendants_by_depth()
 
-            for layer in reversed(branch_descendants[:-1]):  # Working from the highest depth to the lowest lets us make only one pass
-                layer_remaining = {
-                    branch.base.hash for branch in layer
-                }  # We'll create the longest (by last block number) branch at that layer we can
+            #Working from the highest to the lowest depth allows this to be done in one pass.
+            for layer in reversed(branch_descendants[:-1]): #Create longest possible branch in...
+                layer_remaining = {branch.base.hash for branch in layer}  #... each layer
                 for branch in layer:  # Which will ensure that one pass over the next lowest layer is also optimal
                     if branch.depth <= 1:  # Want to stop just short of the bottom branch.
                         break
@@ -471,13 +459,12 @@ class BlockScoreTree:
             if current_block is not None:
                 node_list.append(current_block)
             else:
-                raise Exception(
-                    f"Reached a dead end in the tree before reaching a termination condition. Last node accessed was {node_list[-1].hash}"
-                )
+                raise Exception(f"Reached a dead end in the tree before reaching a termination \
+                                condition. Last node accessed was {node_list[-1].hash}")
 
         return node_list
 
-    def get_trunk_join_index(self, branch: ScoreTreeBranch) -> int:
+    def get_trunk_join_index(self, branch: ScoreTreeBranch) -> int|None:
         """Finds the index where a branch or one of its parent branches joins the trunk.
 
         Args:
@@ -495,7 +482,7 @@ class BlockScoreTree:
 
         assert current_branch == self.trunk, "No path found from branch to trunk."
 
-        if root_hash is None:  # If we never set our root hash, we must have started at the trunk
+        if root_hash is None:  # Only way root hash remains unset is if starting branch was trunk
             index = None
         else:
             index = self.trunk.hash_to_index_lookup[root_hash]
@@ -544,7 +531,7 @@ class BlockScoreTree:
         return new_tree
 
     @staticmethod
-    def from_json_file(filename: str, cutoff: int = None) -> "BlockScoreTree":
+    def from_json_file(filename: str, cutoff: int|None = None) -> "BlockScoreTree":
         """Given an appropriately formatted file, loads a BlockScoreTree object.
         Ought to keep the same graph structure and scores under realistic circumstances
         (but this is difficult to guarantee in all cases). If provided a positive value for

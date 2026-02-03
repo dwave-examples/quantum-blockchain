@@ -147,8 +147,6 @@ class TrialManager:
                 self.blocks_mined += 1
                 return self.mining_miner_id, block_score, solver
 
-            # TODO figure out what to do if mining fails
-
         raise Exception(f"TrialManager exceeded max mining attempts of {self.max_mining_attempts} without {self.mining_miner_id} finding mining a valid block.")
 
     def validation_step(self) -> tuple[str, float, str]:
@@ -181,7 +179,7 @@ class TrialManager:
                 miner_id (string): ID of the miner that mined or validated this round
                 solver (string): name of the solver that was used for mining or validation this round"""
         
-        if self.round_progress == 0 or self.round_progress >= self.num_miners:  # TODO reconsider
+        if self.round_progress == 0 or self.round_progress >= self.num_miners:
             mined = True
             self.reset_round()
             miner_id, block_score, solver = self.mining_step()
@@ -238,5 +236,8 @@ class TrialManager:
             for miner in self.miners.values()
         ]
         common_block_nums = set.intersection(*trunk_sets)
-        largest_common_block_num = max(list(common_block_nums))  # TODO validity check
-        return largest_common_block_num
+        if len(common_block_nums) == 0:
+            return 0
+        else:
+            largest_common_block_num = max(list(common_block_nums))
+            return largest_common_block_num

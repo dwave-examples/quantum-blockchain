@@ -25,7 +25,7 @@ from dash import MATCH, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES, MIN_SIMULATION_LOOP_TIME
+from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES, MIN_SIMULATION_LOOP_TIME, GRAPH_LAYOUT_DICT
 from demo_solvers import get_solver_lists
 from demo_interface import VIEW_OPTS
 from src.agents.trial_manager import TrialManager
@@ -175,9 +175,7 @@ def simulation(
             current_block_dict["block_number"] = manager.blocks_mined
             current_block_dict["block_json"] = manager.block_broadcast
             current_block_dict["miner_id"] = miner_id
-            print(
-                f"TrialManager at beginning of new round with {manager.blocks_mined} blocks mined and round order."
-            )
+            print(f"TrialManager starting new round with {manager.blocks_mined} blocks mined.")
 
             current_block_dict["scores"][miner_id] = block_score
             current_block_dict["solvers"][miner_id] = solver
@@ -217,20 +215,8 @@ def simulation(
 
             miner_graph_name = view_miners[miner_id]
 
-            miner_fig.update_layout(  # TODO move to configs
-                autosize=False,
-                showlegend=False,
-                xaxis=dict(showticklabels=False),
-                yaxis=dict(showticklabels=False),
-                margin=dict(l=0, r=0, b=0, t=0, pad=4),
-                paper_bgcolor="white",
-                plot_bgcolor="white",
-            )
-            set_props(
-                miner_graph_name,
-                {"figure": miner_fig},
-            )
-
+            miner_fig.update_layout(**GRAPH_LAYOUT_DICT)
+            set_props(miner_graph_name, {"figure": miner_fig},)
 
         iter_end_time = time.time()
         iter_total_time = iter_end_time - iter_start_time
@@ -408,7 +394,7 @@ class ResetSimulationReturn(NamedTuple):
 @dash.callback(
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
-    Output("miner-graph-and-table", "className", allow_duplicate=True),  # TODO clear graph displays
+    Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
@@ -444,17 +430,13 @@ def reset_simulation(reset_click: int) -> ResetSimulationReturn:
     ],
     prevent_initial_call=True,
 )
-def toggle_graph_display(
-    selected_view,
-):  # TODO check binding between this and view dropdown options
+def toggle_graph_display(selected_view): 
     """Toggles the visibility of the four different graph displays. Will default to showing the Global
     View graph. When triggered, will hide three of the graph displays and make the selected one visible.
     """
 
-    print(f"View {selected_view} has been selected.")
     selected_view = int(selected_view)
     return_tuple = ["" if opt == selected_view else "display-none" for opt in range(4)]
-    print(f"Returning {return_tuple}")
 
     return return_tuple
 

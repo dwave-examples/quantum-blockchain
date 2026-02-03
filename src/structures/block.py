@@ -65,7 +65,7 @@ class Block:
         self,
         miner_id: str,
         previous_block_hash: str,
-        timestamp: float = None,  # User can pass in timestamp, but adding any further transactions after the block is declared will overwrite it.
+        timestamp: float | None = None,  # Adding any further transactions after block is declared will overwrite passed timestamp.
         nonce: int = 0,
     ):
         """Initializes a new Block object with the data provided. Intent is to allow user to either add all the block data immediately, or
@@ -73,9 +73,7 @@ class Block:
         nonce is found, the block should be locked to prevent further alteration."""
 
         if timestamp is None:  # If value is still at default, replace with current timestamp.
-            timestamp = datetime.timestamp(
-                datetime.now()
-            )  # TODO consider adding an "elif" clause to make sure a valid timestamp has been passed
+            timestamp = datetime.timestamp(datetime.now()) 
         self._locked = False  # Used to indicate a finalized block that should not be altered.
         self._transactions = []
 
@@ -142,7 +140,8 @@ class Block:
         """This property defines the data fields and ordering used to calculate both quantum and classical
         hashes. Important that this be consistent across all users or they will not calculate
         comparable hash values."""
-        seed_string = f"{self.previous_hash}{self.merkle_root}{self.timestamp}{self.merkle_root}{self.miner_id}{self.nonce}"
+        seed_string = f"{self.previous_hash}{self.merkle_root}{self.timestamp}\
+                        {self.merkle_root}{self.miner_id}{self.nonce}"
         return calculate_hash(seed_string)
 
     @property
@@ -244,7 +243,8 @@ class Block:
             self._locked = True
         else:
             raise Exception(
-                f"Attempted to lock a block without current hashes. Current States are Quantum Hash: {self.current_quantum_hash}  Block Hash: {self.current_block_hash}"
+                f"Attempted to lock a block without current hashes. Current States are Quantum \
+                Hash: {self.current_quantum_hash}  Block Hash: {self.current_block_hash}"
             )
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -303,15 +303,11 @@ class Block:
         return block_data
 
     @property
-    def to_json(
-        self,
-    ) -> (
-        str
-    ):  # TODO consider check whether the block is locked and raising an exception otherwise. Non-locked blocks generally shouldn't be serialized.
+    def to_json(self) -> str:  
         return json.dumps(self.to_dict)
 
     @staticmethod
-    def from_dict(block_dict: dict) -> "Block":
+    def from_dict(block_dict: dict, validate_hash: bool = True) -> "Block":
         """Reconstitutes a (locked) Block object from a dictionary of its data, such as that created
         by the to_dict method. Will raise an exception if the block hash calculated from
         the stored data does not match the stored hash value--this ensures the integrity
@@ -334,7 +330,7 @@ class Block:
         new_block.set_quantum_hash(quantum_hash)
         new_block.set_hash()
         new_block.lock()
-        if block_hash != new_block.hash:
+        if validate_hash and block_hash != new_block.hash:
             raise Exception(
                 f"When deserializing block, expected hash {block_hash} but calculated hash {new_block.hash}"
             )
@@ -342,10 +338,10 @@ class Block:
         return new_block
 
     @staticmethod
-    def from_json(json_block: str) -> "Block":  # TODO update for optional hash checking
+    def from_json(json_block: str, validate_hash: bool = True) -> "Block":
         """Deserializes a blocked stored as json into a locked Block object. Calls from_dict,
         which performs a check on the hash of the reconstructed Block to ensure integrity."""
 
         block_dict = json.loads(json_block)
-        new_block = Block.from_dict(block_dict)
+        new_block = Block.from_dict(block_dict, validate_hash)
         return new_block

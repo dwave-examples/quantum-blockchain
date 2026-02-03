@@ -61,6 +61,16 @@ GRAPH_MAX_RADIUS = (
 )
 GRAPH_MAX_BRANCH_DISTANCE = 0.78  # How far in towards the next trunk section a branch can extend. Value of 1 is all the way to the trunk.
 
+GRAPH_LAYOUT_DICT = dict(
+                autosize=False,
+                showlegend=False,
+                xaxis=dict(showticklabels=False),
+                yaxis=dict(showticklabels=False),
+                margin=dict(l=0, r=0, b=0, t=0, pad=4),
+                paper_bgcolor="white",
+                plot_bgcolor="white",
+            )
+
 #######################################
 # Sliders, buttons and option entries #
 #######################################

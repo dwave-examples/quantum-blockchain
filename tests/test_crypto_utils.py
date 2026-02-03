@@ -59,9 +59,9 @@ def test_validate_zeroes():
     number of leading zeroes in the string and that they fail to validate for the next
     higher value."""
 
-    val_1 = int.to_bytes(int("00000111", 2))  # Five zeroes
-    val_2 = int.to_bytes(int("0000000010101", 2), 2)  # Eight zeroes
-    val_3 = int.to_bytes(int("000000000001101011011011", 2), 3)  # Eleven zeroes
+    val_1 = int.to_bytes(int("0000011101101011", 2), 2)  # Five zeroes
+    val_2 = int.to_bytes(int("0000000010101110", 2), 2)  # Eight zeroes
+    val_3 = int.to_bytes(int("0000000000011010", 2), 2)  # Eleven zeroes
     str_1 = binascii.hexlify(val_1).decode(encoding="utf-8")
     str_2 = binascii.hexlify(val_2).decode(encoding="utf-8")
     str_3 = binascii.hexlify(val_3).decode(encoding="utf-8")

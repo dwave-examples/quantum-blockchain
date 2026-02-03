@@ -19,7 +19,7 @@ from scipy.special import erf
 
 from src.protocols.hash_calculator import HashSolver
 from src.structures.block import Block
-from src.utilities.crypto_utils import basic_compound_hash, compare_hashes, validate_zeroes
+from src.utilities.crypto_utils import compare_hashes, validate_zeroes
 from src.values import DELTA_W_0_ALPHA, MIN_SCORE, W_0_ALPHA
 
 class ProofOfWorkProtocol:
@@ -52,7 +52,6 @@ class ProofOfWorkProtocol:
         self.allowable_err = allowable_err
         self.solver_list = hash_solvers
         self.set_random_solver()
-        self.compound_hashing_function = basic_compound_hash  # TODO design more flexibility
 
     def validate_block(self, block: Block) -> tuple[bool, float, str]:
         """Validates a block according to the stored protocol parameters and scoring function.
@@ -205,9 +204,8 @@ class ProofOfWorkProtocol:
             if confidence == 0:
                 return min_confidence
             elif confidence < 0:
-                raise ValueError(
-                    f"Invalid confidence value {confidence} at index {idx} from bit {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}"
-                )
+                raise ValueError(f"Invalid confidence value {confidence} at index {idx} from bit\
+                                {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}")
             else:
                 log_confidence += np.log2(confidence)
 

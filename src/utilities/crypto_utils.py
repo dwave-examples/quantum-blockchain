@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import binascii
-import sys
 from enum import Enum
 
 import numpy as np
@@ -66,12 +65,16 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
 
     Returns:
         passes_validation (bool): True if the hash passes, false otherwise."""
+    
+    if 4*len(hash) < num_zeroes:
+        raise Exception(f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
+                        represents only {4*len(hash)} binary digits.")
 
     q_hash_bytes = binascii.unhexlify(hash.encode(encoding="utf-8"))
     numpy_bytes = np.frombuffer(np.array(q_hash_bytes), dtype="B")
     numpy_bits = np.unpackbits(numpy_bytes)
 
-    if np.any(numpy_bits[:num_zeroes]):  # TODO consider validating length of hash_bytes
+    if np.any(numpy_bits[:num_zeroes]):
         return False
     else:
         return True
