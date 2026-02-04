@@ -19,7 +19,6 @@ from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.structures.block_score_tree import BlockScoreTree
 
-
 class Miner:
     """This class is intended to encapsulate all necessary functions for running a miner
     on the blockchain network."""
@@ -65,13 +64,11 @@ class Miner:
             self.blockchain: the miner's blockchain
         """
 
-        self.blockchain.add_block(
-            block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=block_score
-        )
+        self.blockchain.add_block(block.hash, block.previous_hash, block_score)
 
         # Only need to update on blocks that are good and not already in trunk
-        if self.blockchain.score_predicate(block_score):
-            self.update_blockchain_beliefs()
+        if self.blockchain.score_predicate(block_score):  
+            self.update_blockchain_beliefs() 
 
     def update_blockchain_beliefs(self):
         """Updates the blockchain tree so that the branch containing the highest scoring block is now the trunk.
@@ -180,9 +177,8 @@ class Miner:
             raise Exception(f"Miner {self.id} attempted to broadcast with no block ready")
 
         if self.mined_block_score is None:
-            raise Exception(
-                f"Attempted to broadcast mined block with hash {self.mined_block.hash}, but it had not been scored."
-            )
+            raise Exception(f"Attempted to broadcast mined block with hash \
+                            {self.mined_block.hash}, but it had not been scored.")
         else:
             self.add_block_to_chain(self.mined_block, self.mined_block_score)
 
