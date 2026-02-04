@@ -156,7 +156,7 @@ After the sampleset is collected, it is post-processed to nearest neighbor corre
 
 The unitary evolution is adjusted by selection of a QPU-specific energy-time rescaling and embedding,
 precalculated for a restricted set of available solvers.
-The files `examples/get_enery_time_rescaling.py` and `examples/get_embedding.py` can be used to generate parameters for a currently unsupported solver. 
+The files `examples/get_qpu_enery_time_rescaling.py` and `examples/get_qpu_embeddings.py` can be used to generate parameters for a currently unsupported solver. 
 
 ## References
 

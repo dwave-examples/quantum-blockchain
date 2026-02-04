@@ -34,6 +34,31 @@ from directory_paths import EMBEDDINGS_PATH
 from src.values import DEFAULT_CUBIC_BOUNDARY_CONDITIONS, DEFAULT_CUBIC_LATTICE_SHAPE
 
 
+def get_embeddings_filename(
+    edge_list_source: list[tuple],
+    edge_list_target: list[tuple],
+    embedding_directory: str = EMBEDDINGS_PATH,
+) -> str:
+    """Generate a filename unique to the source and target graph pairs
+
+    Sorted edge lists uniquely identify graphs (up to ordering of nodes within edges,
+    assumed this is canonical - potential future improvement).
+    The hashes of the source and target edgelists can be used to
+    identify embeddings for which valid embeddings are known:
+
+    Args:
+        edge_list_source: edges defining the source graph. Edges should be sortable.
+        edge_list_target: edges defining the target graph. Edges should be sortable.
+        embedding_directory: path to the canonical (repository) embeddings.
+    Returns:
+        A file name
+    """
+
+    els_hash = hashlib.sha256(str(tuple(sorted(edge_list_source))).encode()).hexdigest()
+    elt_hash = hashlib.sha256(str(tuple(sorted(edge_list_target))).encode()).hexdigest()
+    return os.path.join(embedding_directory, f"emb_S{els_hash}_T{elt_hash}.pkl")
+
+
 def get_embeddings(
     edge_list_source: list[tuple],
     edge_list_target: list[tuple],
@@ -65,6 +90,8 @@ def get_embeddings(
         embedding_timeout: timeout applied to embedding search when loading
             from saved files fails. This parameter is ignored if loading
             succeeds. A value of zero can be used to disable generation on the fly.
+            The value is applied to find_multiple_embeddings, if find_subgraph_kwargs
+            is None, it is also used as the timeout for find_subgraph_kwargs.
         max_num_emb: max_num_emb to seek when loading from files fails. This
             parameter is ignored if loading succeeds.
         load_from_cache: attempt to load from the src.static.embeddings directory.
@@ -76,10 +103,9 @@ def get_embeddings(
         A list of dictionaries, each dictionary defines an embedding.
 
     """
-    # Sufficient graph identifiers:
-    els_hash = hashlib.sha256(str(tuple(sorted(edge_list_source))).encode()).hexdigest()
-    elt_hash = hashlib.sha256(str(tuple(sorted(edge_list_target))).encode()).hexdigest()
-    embedding_filename = os.path.join(embedding_directory, f"emb_S{els_hash}_T{elt_hash}.pkl")
+    embedding_filename = get_embeddings_filename(
+        edge_list_source, edge_list_target, embedding_directory
+    )
     if os.path.isfile(embedding_filename) and load_from_cache:
         with open(embedding_filename, "rb") as f:
             embeddings = pickle.load(f)
@@ -92,8 +118,8 @@ def get_embeddings(
                     f"embedding_timeout*2 = {embedding_timeout*2} seconds"
                 )
             if find_subgraph_kwargs is None:
-                print("Should not happen!")
                 find_subgraph_kwargs = {"timeout": embedding_timeout}
+
             embeddings = find_multiple_embeddings(
                 S=nx.from_edgelist(edge_list_source),
                 T=nx.from_edgelist(edge_list_target),
@@ -101,7 +127,6 @@ def get_embeddings(
                 max_num_emb=max_num_emb,
                 embedder_kwargs=find_subgraph_kwargs,
             )
-            print(f"A set of {len(embeddings)} embeddings were found.")
             # Subgraph isomorphisms (1 to 1 dictionaries) must be converted to
             # embeddings (1 to iterable dictionaries)
             embeddings = [
@@ -126,7 +151,7 @@ def get_embeddings(
 def dimerize_coupling_3d(
     node1: tuple[int, int, int],
     node2: tuple[int, int, int],
-    z_parity,
+    z_parity: int,
     lattice_dims: tuple[int, int, int] = DEFAULT_CUBIC_LATTICE_SHAPE,
 ) -> tuple[tuple, tuple]:
     """Convert a simple cubic lattice to a dimerized cubic lattice.
