@@ -22,15 +22,13 @@ import dwave
 import dwave_networkx as dnx
 import networkx as nx
 import numpy as np
-from dwave.experimental.automorphism import (
-    AutomorphismComposite,
-)  # Module location within dwave-ocean-sdk could be subject to change.
+from directory_paths import EMBEDDINGS_PATH
+from dwave.experimental.automorphism import \
+    AutomorphismComposite  # Module location within dwave-ocean-sdk could be subject to change.
 from dwave.preprocessing.composites import SpinReversalTransformComposite
 from dwave.system import DWaveSampler
 from dwave.system.composites import ParallelEmbeddingComposite
 from minorminer.utils.parallel_embeddings import find_multiple_embeddings
-
-from directory_paths import EMBEDDINGS_PATH
 from src.values import DEFAULT_CUBIC_BOUNDARY_CONDITIONS, DEFAULT_CUBIC_LATTICE_SHAPE
 
 
@@ -361,9 +359,9 @@ def generate_default_sampler(
     qpu: DWaveSampler,
     *,
     embedding_directory: str = EMBEDDINGS_PATH,
-    embedding_timeout: int | float = 0,
-    max_num_emb: int = None,
-) -> tuple[dimod.Sampler | None, dict]:
+    embedding_timeout: float | int = 0,
+    automorphism_per_component: bool = False,
+) -> dimod.Sampler:
     """This function generates a sampler (either a QPU or a SA sampler), appropriately
     parameterized based on the input to this function.
 
@@ -371,44 +369,48 @@ def generate_default_sampler(
     Args:
         source_edge_list: A list of couplers relevant to the programmed Hamiltonian
         qpu: A DWaveSampler
-        embedding_directory: Path to the embedding repo
-        embedding_timeout: If embeddings are not found, time in seconds to allocate for search.
-            Note that this process may be iterated (if `max_num_emb` is None, or larger than 1),
-            and so the timeout may be up to 2 times larger.  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
-        max_num_emb: When embeddings are not found in the path, a bound on the number
-            if embeddings to attempt to find. By default None (unbounded).  # REMOVE LATER (MAKE EMBEDDING SEARCH SEPARATE HELPER FUNCTION)
+        embedding_directory: Path to saved embeddings.
+        embedding_timeout: Timeout for on-the-fly embedding. Embeddings can be
+            created as one-time work per QPU using examples/get_qpu_embeddings.py. By
+            default the timeout is zero and an error is thrown if the embedding is not
+            precalculation.
+        automorphism_per_component: If True, each embedding has an independent
+            automorphism applied (matching arxiv: ) implementation. If False, independent
+            automorphisms are applied ot each component, which is faster in the current
+            implementation.
     Returns:
-        tuple: A sampler aggregating samplesets from random parallel QPU embeddings
+        A sampler aggregating samplesets from random parallel QPU embeddings
     """
-    # TO DO: Move into embedding generation example:
-
-    node_labels = (
-        source_dimer_orientation(set(n for e in source_edge_list for n in e)),
-        target_dimer_orientation(qpu),
-    )
-    find_subgraph_kwargs = {
-        "timeout": embedding_timeout,
-        "node_labels": node_labels,
-    }
-    # TO DO, SIMPLIFY TO NO-SEARCH. RUN SEARCH SEPARATELY:
     embeddings = get_embeddings(
         source_edge_list,
         qpu.edgelist,
         embedding_directory=embedding_directory,
         embedding_timeout=embedding_timeout,
-        max_num_emb=max_num_emb,
-        find_subgraph_kwargs=find_subgraph_kwargs,
     )
     if len(embeddings) == 0:
-        raise Exception(f"Embeddings not found at {embedding_directory}")
-        return None, {}
-    # Improvement: (and to match paper implementation) make Automorphism composite inner loop
-    # Improvement: allow seeding for reproducibility of SRT and automorphisms.
-    sampler = AutomorphismComposite(
-        ParallelEmbeddingComposite(
-            SpinReversalTransformComposite(qpu),
+        raise Exception(
+            f"Embeddings not found at {embedding_directory}"
+            "Use examples/get_qpu_embeddings to generate embeddings/"
+        )
+    if automorphism_per_component:
+        # This should be much faster subject to https://github.com/dwavesystems/dwave-experimental/pull/38
+        embedded_edge_list = [
+            (emb[v1], emb[v2]) for emb in embeddings for v1, v2 in source_edge_list
+        ]
+        sampler = ParallelEmbeddingComposite(
+            AutomorphismComposite(
+                SpinReversalTransformComposite(qpu), G=nx.from_edgelist(embedded_edge_list)
+            ),
             embeddings=embeddings,
             source=nx.from_edgelist(source_edge_list),
         )
-    )
+    else:
+        sampler = AutomorphismComposite(
+            ParallelEmbeddingComposite(
+                SpinReversalTransformComposite(qpu),
+                embeddings=embeddings,
+                source=nx.from_edgelist(source_edge_list),
+            )
+        )
+
     return sampler
