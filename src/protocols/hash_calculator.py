@@ -40,7 +40,7 @@ from src.values import (
 class SolverName(Enum):
     SOLVER1 = "Advantage_system4.1"
     SOLVER2 = "Advantage_system6.4"
-    SOLVER3 = "Advantage2_system1.10"
+    SOLVER3 = "Advantage2_system1.11"
     BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"  # No longer general access
     BOOTSTRAP2 = "simulated_Advantage_system4.1"
     BOOTSTRAP3 = "simulated_Advantage_system6.4"
