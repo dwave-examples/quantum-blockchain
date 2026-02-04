@@ -41,17 +41,9 @@ DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
 # anneals must be run for longer, for systems of higher energy scale, the
 # problem Hamiltonian (energy) scale is reduced.
 DEFAULT_ENERGY_TIME_RESCALING = {
-    "Advantage2_prototype2.6": (
-        1.0,
-        1.0,
-    ),  # Not generally available, available for resampling (simulated) experiments.
     "Advantage_system4.1": (1.0, 0.535),
     "Advantage_system6.4": (1.0, 0.488),
-    "Advantage_system7.1": (
-        1.0,
-        0.456,
-    ),  # Not generally available, available for resampling (simulated) experiments.
-    "Advantage2_system1.10": (1.34, 1.0),
+    "Advantage2_system1.11": (1.34, 1.0),
 }
 # ===================================================================================
 #                      Global Trial Definitions
