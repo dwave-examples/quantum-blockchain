@@ -35,12 +35,15 @@ def main(
     verbose: bool = True,
     overwrite: bool = False,
 ) -> list[dict]:
-    """Find and save (in examples/ directory) embedding files for a combination of qpu and sampler.
+    """Finds embeddings for a specific qpu/sampler combination, producing embedding files 
+    which are saved in examples/ directory.
 
     See verbose statements for operational summary. A file is saved to the
     local directory when embedding succeeds, overwriting any other local
-    copy (same edgelist for qpu and target model). This can be moved to
-    the repo EMBEDDINGS_PATH for use within the blockchain demo.
+    copy (same edgelist for qpu and target model). Note that for this 
+    embedding to be used by the blockchain demo code, the file must
+    be moved or copied to the directory named in the EMBEDDINGS_PATH
+    filepath, which can be found in /directory_paths.py
 
     Note that, for typical applications, initial subgraph searches are fast
     and only the final (unsuccessful) search is slow. Default settings
@@ -118,8 +121,8 @@ def main(
         )
         print(
             f"A list of disjoint embeddings of length {len(embeddings)} has been created "
-            f"and saved to {fn}. To use this file "
-            f"for purposes of the demo it should be copied to {EMBEDDINGS_PATH}. "
+            f"and saved to {fn}. For this file to be used by the blockchain demo code, "
+            f"it should be copied to the directory {EMBEDDINGS_PATH}. "
             "An energy-time rescaling should also be specified, see get_time_energy_rescaling.py"
         )
 

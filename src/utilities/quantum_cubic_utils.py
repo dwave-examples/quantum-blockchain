@@ -49,7 +49,7 @@ def get_embeddings_filename(
         edge_list_target: edges defining the target graph. Edges should be sortable.
         embedding_directory: path to the canonical (repository) embeddings.
     Returns:
-        A file name
+        embedding_filename (str): Unique file name based on the passed source and target edgelists.
     """
 
     els_hash = hashlib.sha256(str(tuple(sorted(edge_list_source))).encode()).hexdigest()

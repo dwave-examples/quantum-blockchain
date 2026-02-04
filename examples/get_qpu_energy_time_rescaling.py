@@ -94,13 +94,13 @@ def fit_rescaling_to_kibble_zurek_form(
     kappa_R: float | None = None,
     res_en_target: float | None = None,
     annealing_time_model: float | None = None,
-    energy_time_rescaling: float | None = None,  # Initial guess
+    energy_time_rescaling: tuple[float,float] | None = None,  # Initial guess
     ground_state_estimates: np.ndarray | None = None,
-) -> tuple[float, float, np.ndarray]:
+) -> tuple[tuple[float,float], tuple[float,float], np.ndarray]:
     r"""Determine a time (or as necessary energy) rescaling to match a reference Kibble-Zurek curve.
 
 
-    The residual energy is well-enough desribed by a Kibble-Zurek scaling form
+    The residual energy is well-enough described by a Kibble-Zurek scaling form
     :math:`<<H(x)>-min_x H(x) >_{model} = E (t_a/t_0)^{-\kappa_t} (J/R_0)^{-\kappa_R}` (1)
     where J is the problem Hamiltonian scale (relative to max value 1),
     and t_a is the programmed annealing time.
@@ -114,7 +114,7 @@ def fit_rescaling_to_kibble_zurek_form(
 
 
     The Advantage2_prototype2 energy versus annealing time curve is taken as a
-    reference profile, per the methodolofy of arXiv:2503.14462. The model is
+    reference profile, per the methodology of arXiv:2503.14462. The model is
     fitted to data averaged on on 25 seeds with problem Hamiltonian rescalings
     in [0.5,1], and annealing times 5-10ns.
     Note kappa is approximately constant (per model ensemble). We fix E=-153.2 +/- 0.4,
@@ -143,16 +143,24 @@ def fit_rescaling_to_kibble_zurek_form(
         ground_state_estimates: An array of ground state energies.
 
     Returns:
-        A tuple of an energy_rescaling proposal, time_rescaling proposal, and
-        residual energies measured.
+        energy_rescaling_proposal (float, float): estimate of the problem Hamiltonian 
+            rescaling required to emulate the reference residual energy curve 
+        time_rescaling_proposal (float, float): estimate of the annealing time rescaling 
+            required to emulate the reference residual energy curve
+        residual_energies (np.ndarray): mean energy of each problem, minus estimated 
+            ground-state energy
     """
     if energy_time_rescaling is None:
+        energy_rescaling = 1.0
         if qpu.properties["chip_id"].startswith("Advantage_"):
             # Suitable guess for Advantage:
-            energy_time_rescaling = (1.0, 0.5)
+            time_rescaling = 0.5
         else:
             # Suitable guess for Advantage2:
-            energy_time_rescaling = (1.0, 1.0)
+            time_rescaling = 1.0
+    else:
+        energy_rescaling, time_rescaling = energy_time_rescaling
+
     if annealing_time_model is None:
         annealing_time_model = ADV2_PROTOTYPE2_FIT["annealing_time"]
     if kappa_t is None:
@@ -160,10 +168,9 @@ def fit_rescaling_to_kibble_zurek_form(
     if kappa_R is None:
         kappa_R = ADV2_PROTOTYPE2_FIT["kappa_R"]
     if ground_state_estimates is None:
-        # A single QPU programming with 100 microsecond
-        # annealing and 1000 samples (otherwise defaults)
-        # solves these problems to optimality with high
-        # (sufficient) probability:
+        # A single QPU programming with 100 microsecond annealing and 1000 samples 
+        # (other values left at default) solves these problems to optimality with 
+        # high (sufficient) probability:
         ground_state_estimates = np.array(
             [
                 get_energy(
@@ -184,15 +191,15 @@ def fit_rescaling_to_kibble_zurek_form(
     residual_energies = [
         get_energy(
             qpu=qpu,
-            energy_rescaling=energy_time_rescaling[0],
-            annealing_time=annealing_time_model / energy_time_rescaling[1],
+            energy_rescaling=energy_rescaling,
+            annealing_time=annealing_time_model / time_rescaling,
             seed_bqm=seed_bqm,
         )
         - ground_state_estimates[seed_bqm]
         for seed_bqm in range(num_bqms)
     ]
     mean_residual_energy = np.mean(residual_energies)
-    if 0 >= mean_residual_energy:
+    if mean_residual_energy >= 0:
         raise ValueError(
             "Expected residual energies should be positive, but the "
             f"expected value is {mean_residual_energy}."
@@ -201,8 +208,8 @@ def fit_rescaling_to_kibble_zurek_form(
             "are overestimated."
         )
     lin_target = np.log(mean_residual_energy / res_en_target)
-    proposed_t = energy_time_rescaling[1] * np.exp(-lin_target / kappa_t)
-    proposed_R = energy_time_rescaling[0] * np.exp(-lin_target / kappa_R)
+    proposed_t = time_rescaling * np.exp(-lin_target / kappa_t)
+    proposed_R = energy_rescaling * np.exp(-lin_target / kappa_R)
     if proposed_R < 1:
         print(
             f"Inviable problem-energy rescaling {proposed_R}, out of standard range 1/|J| in [1,infty)"
@@ -216,8 +223,8 @@ def fit_rescaling_to_kibble_zurek_form(
         print(
             f"Inviable annealing time rescaling {annealing_time}, out of programmable annealing_time range"
         )
-    candidate_energy_rescaling = (float(proposed_R), energy_time_rescaling[1])
-    candidate_time_rescaling = (energy_time_rescaling[0], float(proposed_t))
+    candidate_energy_rescaling = (float(proposed_R), time_rescaling)
+    candidate_time_rescaling = (energy_rescaling, float(proposed_t))
     return (
         candidate_energy_rescaling,
         candidate_time_rescaling,
@@ -233,7 +240,7 @@ def main(
 
     See :code:`fit_rescaling_to_kibble_zurek_form`.
 
-    This is a basic fit, more careful parameterization may allow
+    This function performs a basic fit, more careful parameterization may allow 
     higher cross-validation rates.
 
     Args:
@@ -247,15 +254,13 @@ def main(
         print(f"Solving for chip_id {qpu.properties['chip_id']}")
         print()
         print(
-            "A Kibble-Zurek model model provides a good description "
-            "of the ensemble-average expected energy for all "
-            "Advantage and Advantage2 processors given a suitable "
+            "A Kibble-Zurek model model provides a good description of the ensemble-average"
+            "expected energy for all Advantage and Advantage2 processors given a suitable "
             "selection of the device and ensemble specific parameters. "
             "<Hp> = E_0 + E_1 (t_a/t_0)^{-kappa_t} (J/R_0)^{-kappa_R}. "
-            "A fit to the Advantage2_prototype2_x_internal system "
-            "yields all but the time (t_0) and energy (R_0) rescaling factors. "
-            "These are determined by fitting the R_0 or t_0 to the experimental "
-            "average energy from 25 QPU programmings, a short delay applies "
+            "A fit to the Advantage2_prototype2_x_internal system yields all but the time (t_0) "
+            "and energy (R_0) rescaling factors. These are determined by fitting the R_0 or t_0 "
+            "to the experimental average energy from 25 QPU programmings. A short delay applies "
             "during data collection."
         )
     (
