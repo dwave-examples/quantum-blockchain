@@ -258,7 +258,7 @@ def main(
             "expected energy for all Advantage and Advantage2 processors given a suitable "
             "selection of the device and ensemble specific parameters. "
             "<Hp> = E_0 + E_1 (t_a/t_0)^{-kappa_t} (J/R_0)^{-kappa_R}. "
-            "A fit to the Advantage2_prototype2_x_internal system yields all but the time (t_0) "
+            "A fit to the Advantage2_prototype2.6 system yields all but the time (t_0) "
             "and energy (R_0) rescaling factors. These are determined by fitting the R_0 or t_0 "
             "to the experimental average energy from 25 QPU programmings. A short delay applies "
             "during data collection."

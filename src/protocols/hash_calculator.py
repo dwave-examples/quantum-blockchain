@@ -208,7 +208,7 @@ class QuantumHashSolver(HashSolver):
             num_reads: number of QPU reads per hash calculation
             reference_annealing_time: targeted evolution time with respect to Advantage2_prototype2 schedule.
             energy_time_rescaling: problem Hamiltonian and time rescaling factors required
-                 to emulate Advantage2_prototype2 dynamics with given solver.
+                 to emulate Advantage2_prototype2 dynamics with the given solver.
             embedding_directory: Location of embeddings
             sampler: A `dimod.Sampler`, when not specified the solver name and profile is used to select
                 a QPU with the Leap client, and a suitable embedding is loaded. non-QPU samplers
