@@ -5,19 +5,19 @@ import sys
 
 sys.path.append(os.path.join("..", ".."))
 
-from src.structures.block_score_tree import BlockNode, BlockScoreTree
+from src.structures.block_score_tree import BlockScoreTree
 
 
 def dummy_hash(num: int):
     """Returns a three-character string in a set sequence (depending only on the input number), of the form
-    A0a and cylcing through all possible triples of that form (Capital Letter/digit/lowercase letter), for
+    A0a and cycling through all possible triples of that form (Capital Letter/digit/lowercase letter), for
     a total of 6760 possible 'hash' values. This guarantees several thousand unique values while keeping them
     short and well-ordered so to be convenient to read for debugging purposes. Will start to cause errors
     if a tree of size 6761 or larger is tested (as hashes will repeat)."""
 
-    cap_block = [i for i in range(65, 91)]
-    digit_block = [i for i in range(48, 58)]
-    lower_block = [i for i in range(97, 123)]
+    cap_block = list(range(65, 91))
+    digit_block = list(range(48, 58))
+    lower_block = list(range(97, 123))
     return (
         chr(cap_block[num % 26])
         + chr(digit_block[((num + 1) // 26) % 10])
@@ -180,7 +180,7 @@ def generate_random_tree(
             the first branch_range blocks, a 25% in the next branch_range blocks and so on.
         branch_end_prob (float): Chance that a branch will become inactive each time a block is 
             added to it. This keeps the number of branches from growing too large.
-        earlest_branch (int): Lowest index a child branch can appear on a parent branch.
+        earliest_branch (int): Lowest index a child branch can appear on a parent branch.
     """
 
     tree = BlockScoreTree()

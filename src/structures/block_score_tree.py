@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+from typing import Optional
 
 from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 
@@ -55,8 +56,7 @@ class BlockScoreTree:
     scoring assumptions encoded into the structure of this class is that 1. higher scores are preferred
     to lower scores, 2. total scores are determined additively (that is, the total score of a block is the sum
     of its block_score and the block_score of all its predecessors) and that 3. blocks with negative-scores are
-    by-default not considered part of the main chain. Logic to alter these assumptions may be added later if it
-    becomes useful.
+    by-default not considered part of the main chain.
 
     Outside of the trunk, the choice of which section of blocks belong to a parent branch and which belong to a child
     is largely arbitrary: both chains extending from the fork point must be tracked, but neither has inherently special
@@ -65,7 +65,7 @@ class BlockScoreTree:
     the child branch.
     """
 
-    def __init__(self, genesis_block: BlockNode|None=None, score_predicate: 'function|None'=None):
+    def __init__(self, genesis_block: Optional[BlockNode]=None, score_predicate: 'Optional[function]'=None):
 
         self.trunk = ScoreTreeBranch()
         self.hash_to_branch_lookup = {}
@@ -531,7 +531,7 @@ class BlockScoreTree:
         return new_tree
 
     @staticmethod
-    def from_json_file(filename: str, cutoff: int|None = None) -> "BlockScoreTree":
+    def from_json_file(filename: str, cutoff: Optional[int] = None) -> "BlockScoreTree":
         """Given an appropriately formatted file, loads a BlockScoreTree object.
         Ought to keep the same graph structure and scores under realistic circumstances
         (but this is difficult to guarantee in all cases). If provided a positive value for

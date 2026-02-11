@@ -24,7 +24,7 @@ from demo_configs import (
     ABANDONED_BRANCH_POINT_COLOR,
     ACTIVE_BRANCH_POINT_COLOR,
     DESCRIPTION,
-    HIDE_BOOTSTRAP_SOLVERS,
+    HIDE_SIMULATED_SOLVERS,
     INTRO_SUBTEXT,
     INTRO_TEXT,
     LOADING_TEXT,
@@ -38,28 +38,29 @@ from demo_configs import (
     MINER_NAMES,
     NUM_MINER_VIEWS,
 )
-from demo_solvers import get_solver_lists
+from src.utilities.get_solvers import get_solver_lists
 from src.demo_enums import SolverMode
 
 THEME_COLOR = "#2d4376"
 
 ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
 
-VIEW_OPTS = [ViewOption(
-                    menu_select="Global View", 
-                    graph_name="global_view_graph", 
-                    wrapper_name="global_view_wrapper", 
-                    miner_number=-1 
-                    )
-             ] + [ 
-             ViewOption(
-                        menu_select=f"{MINER_NAMES[i]} View",
-                        graph_name=f"{MINER_NAMES[i].lower()}_view_graph",
-                        wrapper_name=f"{MINER_NAMES[i].lower()}_view_wrapper",
-                        miner_number=i,
-                        )
-             for i in range(NUM_MINER_VIEWS)
-            ]
+VIEW_OPTS = [
+    ViewOption(
+        menu_select="Global View", 
+        graph_name="global_view_graph", 
+        wrapper_name="global_view_wrapper", 
+        miner_number=-1 
+    )
+] + [ 
+    ViewOption(
+        menu_select=f"{MINER_NAMES[i]} View",
+        graph_name=f"{MINER_NAMES[i].lower()}_view_graph",
+        wrapper_name=f"{MINER_NAMES[i].lower()}_view_wrapper",
+        miner_number=i,
+    )
+    for i in range(NUM_MINER_VIEWS)
+]
 
 
 def slider(label: str, id: str, config: dict) -> html.Div:
@@ -170,44 +171,39 @@ def generate_settings_form() -> html.Div:
     available_qpu_solvers, available_simulated_solvers = get_solver_lists()
 
     qpu_solver_opts = [f"Random {SolverMode.QPU.label}"]
-    qpu_solver_opts += [slvr.solver_name for slvr in available_qpu_solvers]
+    qpu_solver_opts += [solver.solver_name for solver in available_qpu_solvers]
 
     simulated_solver_opts = [f"Random {SolverMode.SIMULATED.label}"]
-    simulated_solver_opts += [slvr.solver_name for slvr in available_simulated_solvers]
+    simulated_solver_opts += [solver.solver_name for solver in available_simulated_solvers]
 
     solver_mode_options = [
         {"label": solver_mode.label, "value": solver_mode.value} for solver_mode in SolverMode
     ]
 
-    if HIDE_BOOTSTRAP_SOLVERS:
-        solver_select_classname = "display-none"
-    else:
-        solver_select_classname = ""
-
     solver_settings = (
-            radio(
-                "Solver Mode",
-                "solver-mode-select",
-                solver_mode_options,
-                solver_mode_options[0]["value"],
-                class_name=solver_select_classname
+        radio(
+            "Solver Mode",
+            "solver-mode-select",
+            solver_mode_options,
+            solver_mode_options[0]["value"],
+            class_name="display-none" if HIDE_SIMULATED_SOLVERS else ""
+        ),
+        html.Div(
+            id="qpu-dropdown",
+            children=dropdown(
+                "Solver", "qpu-solver-select", generate_options_dropdown(qpu_solver_opts)
             ),
-            html.Div(
-                id="qpu-dropdown",
-                children=dropdown(
-                    "Solver", "qpu-solver-select", generate_options_dropdown(qpu_solver_opts)
-                ),
+        ),
+        html.Div(
+            id="simulated-dropdown",
+            className="display-none",
+            children=dropdown(
+                "Solver",
+                "simulated-solver-select",
+                generate_options_dropdown(simulated_solver_opts),
             ),
-            html.Div(
-                id="simulated-dropdown",
-                className="display-none",
-                children=dropdown(
-                    "Solver",
-                    "simulated-solver-select",
-                    generate_options_dropdown(simulated_solver_opts),
-                ),
-            ),
-        )
+        ),
+    )
 
     return html.Div(
         className="settings",

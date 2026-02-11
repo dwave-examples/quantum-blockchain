@@ -16,10 +16,9 @@ import dimod
 import numpy as np
 import pytest
 from dwave.system import DWaveSampler
-from dwave.system.testing import MockDWaveSampler
 
 from src.protocols.hash_calculator import (
-    BootstrappingHashSolver,
+    SimulatedHashSolver,
     QuantumHashSolver,
     SolverName,
     initialize_solver,
@@ -39,20 +38,20 @@ for sv in SolverName:
 
 def test_SolverName():
     assert "Advantage" in SolverName.SOLVER1.value
-    assert "simulated" in SolverName.BOOTSTRAP1.value
+    assert "simulated" in SolverName.SIMULATED1.value
     assert SolverName.SOLVER1.name == "SOLVER1"
     assert SolverName.SOLVER1 in SolverName
 
 
-def test_initialize_solver_bootstrap():
-    initialize_solver(solver_name=SolverName.BOOTSTRAP1.value)
+def test_initialize_solver_simulated():
+    initialize_solver(solver_name=SolverName.SIMULATED1.value)
     pass
 
 
-def test_BootstrappingHashSolver():
+def test_SimulatedHashSolver():
     mean_witnesses = np.array([0, 1])
     var_witnesses = np.array([0, 1e-6])  # Exactly 0, and close to 1
-    bhs1 = BootstrappingHashSolver(mean_witnesses=mean_witnesses)
+    bhs1 = SimulatedHashSolver(mean_witnesses=mean_witnesses)
     hash_length = 100
     str_id, hash1, timing = bhs1.calculate_quantum_hash(hash_length, rng_seed=0)
     print(str_id, timing)
@@ -61,7 +60,7 @@ def test_BootstrappingHashSolver():
         np.unique(hash1), np.arange(2)
     ), "0. and 1. should be only resampled values. Both occurring with high probability"
 
-    bhs2 = BootstrappingHashSolver(
+    bhs2 = SimulatedHashSolver(
         mean_witnesses=mean_witnesses, var_witnesses=var_witnesses, var_rescaling_factor=0.0
     )
     _, hash2a, _ = bhs2.calculate_quantum_hash(hash_length, rng_seed=0)
@@ -69,7 +68,7 @@ def test_BootstrappingHashSolver():
     _, hash2b, _ = bhs2.calculate_quantum_hash(hash_length, rng_seed=1)
     assert not np.array_equal(hash2a, hash2b), "Different seed, same result"
 
-    bhs3 = BootstrappingHashSolver(mean_witnesses=mean_witnesses, var_witnesses=var_witnesses)
+    bhs3 = SimulatedHashSolver(mean_witnesses=mean_witnesses, var_witnesses=var_witnesses)
     # With high probability, all values bigger than 1, 1 absent and 0. present.
     _, hash3, _ = bhs3.calculate_quantum_hash(hash_length, rng_seed=2)
     assert np.all(hash3 >= 0), "Values are 0. and 1 + small random, shouldn't be negative numbers"

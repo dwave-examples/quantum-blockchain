@@ -19,13 +19,11 @@ import numpy as np
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.structures.block_score_tree import BlockScoreTree
-from src.structures.score_tree_branch import BlockNode
 
 
 class Miner:
-    """Intended Usage: this class is intended to encapsulate all necessary functions for running a miner
-    on the blockchain network. Current ownership status is a bit of a mess, should consolidate some other
-    classes and give more of their functions to this class."""
+    """This class is intended to encapsulate all necessary functions for running a miner
+    on the blockchain network."""
 
     def __init__(self, miner_id: str, pow_protocol: ProofOfWorkProtocol, genesis_block: Block):
         """Instantiates a new miner at the given hostname. The subdir is the
@@ -41,9 +39,8 @@ class Miner:
         self.add_block_to_chain(genesis_block, 1.0)
         self.pow = pow_protocol
 
-        self.mining_block = (
-            None  # Holds block that is currently being mined but not yet finalized or broadcast.
-        )
+        # Holds block that is currently being mined but not yet finalized or broadcast.
+        self.mining_block = None  
         self.mined_block = None
         self.mined_block_score = None
 
@@ -65,7 +62,6 @@ class Miner:
             block (Block): a block
             block_score (int or float): score assigned to the block
 
-
         Modifies:
             self.blockchain: the miner's blockchain
         """
@@ -74,16 +70,15 @@ class Miner:
             block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=block_score
         )
 
-        if self.blockchain.score_predicate(
-            block_score
-        ):  # Only need to update on blocks that are good and not already in trunk
+        # Only need to update on blocks that are good and not already in trunk
+        if self.blockchain.score_predicate(block_score):
             self.update_blockchain_beliefs()
 
     def update_blockchain_beliefs(self):
         """Updates the blockchain tree so that the branch containing the highest scoring block is now the trunk.
             Updates the mempool to reflect the change: transactions from blocks that are being moved off the trunk
             are returned to the mempool, transactions from blocks being moved onto the trunk are removed (often this will
-            likely add and then remove many of the same transactions, which is fine). When with function is called and
+            add and then remove many of the same transactions). When with function is called and
             how it should work may need to change when miner behavior is allowed to be more flexible (i.e. different
             scoring functions or chain management policies).
 
@@ -116,8 +111,8 @@ class Miner:
 
         Returns:
             succeeded (bool): whether the mining succeeded or failed
-            sample_time (float): the time in seconds spent performing the quantum experiment. Currently unused, but
-                something we will likely wish to track eventually."""
+            sample_time (float): the time in seconds spent performing the quantum experiment."""
+
         if mining_block is None:
             if self.mining_block is None:
                 mining_block = self.assemble_new_block()
@@ -134,9 +129,9 @@ class Miner:
 
     def receive_block(self, new_block_str) -> tuple[float, str]:
         """Processes a new block that has been received as a broadcast. This includes logging the broadcast in the Owner's
-            broadcast log, reconstructing the json data into a Block object, and adding the new block to the Owner's queue of
-            received blocks. This will not add the block to the Owner's blockchain: that should be done by calling
-            append_block_to_chain().
+            broadcast log, reconstructing the JSON data into a Block object, and adding the new block to the Owner's queue of
+            received blocks. This will not add the block to the Owner's blockchain (that should be done by calling
+            append_block_to_chain()).
 
         Args:
             new_block_str (str): A new block, serialized into a JSON-formatted string.
@@ -163,8 +158,8 @@ class Miner:
             score (float): the Block's score, as determined from evaluating its quantum hash against the miner's
                 scoring function. The current convention across all scoring functions is that positive score blocks
                 are initially presumed valid (and added to the Miner's trunk if applicable) while zero or negative
-                scores are presumed invalid and will create a secondary branch if their predecessor is in the trunk.
-                (Or be added to an existing branch otherwise)."""
+                scores are presumed invalid and will create a secondary branch if their predecessor is in the trunk
+                (or be added to an existing branch otherwise)."""
 
         passes, score, solver = self.pow.validate_block(block)
 

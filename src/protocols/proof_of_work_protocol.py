@@ -75,13 +75,12 @@ class ProofOfWorkProtocol:
         Blocks which fail a classical check return default values indicating an invalid block with a very low score.
 
         Args:
-            block: Block. The Block object to be validated
+            block (Block): The Block object to be validated
 
         Returns:
             valid: a bool indicating whether the block passed all classical validation checks and achieved a positive score.
             block_score: the score assigned to the block by the stored scoring function.
-            validation_bits: the bitwise report of whether each bit in the quantum hash passed or failed debugging. May not
-                            need to be returned in the final implementation, but useful for now.
+            validation_bits: the bitwise report of whether each bit in the quantum hash passed or failed debugging.
             sample_time: the time required by the QPU sampling step."""
 
         valid = False
@@ -108,7 +107,7 @@ class ProofOfWorkProtocol:
         well as a summary of whether the block passes the stored requirements and the sample time.
 
         Args:
-            block: Block. A block that is finalized except for the quantum hash, quantum signature (if applicable) and
+            block (Block): A block that is finalized except for the quantum hash, quantum signature (if applicable) and
                    the classical hash. This method will not alter the nonce value: miners should do that on their own.
 
         Returns:
@@ -122,7 +121,7 @@ class ProofOfWorkProtocol:
 
         new_quantum_hash, dot_vector, _ = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
-        validation_bits = [1 for _ in range(self.quantum_hash_length)]
+        validation_bits = [1]*self.quantum_hash_length
         block.set_hash()
         assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
 
@@ -145,9 +144,9 @@ class ProofOfWorkProtocol:
 
         Returns:
             block_score: the score of the block assigned by the stored scoring function.
-            validation_bits: whether each bit of the quantum hash passed of failed validation. If self.quantum_hash_length == 0
-                            this will just be an empty list.
-            sample_time: the time required for the D Wave sampler call"""
+            validation_bits: whether each bit of the quantum hash passed or failed validation.
+                    If self.quantum_hash_length == 0 this will be an empty list.
+            sample_time: the time required for the D-Wave sampler call"""
         received_hash = block.quantum_hash
 
         if self.quantum_hash_length > 0:
@@ -184,9 +183,9 @@ class ProofOfWorkProtocol:
                 errors can overwhelm this threshold at any reasonable value.
             dot_vector (np.ndarray): Vector that contains the dot products of the hash vector with the normal vectors
                 of hyperplanes chosen by the random projection operation. This vector is used to calculate the bitwise
-                confidence scores: if the value in some coordinate is very far from the mean (W_0_ALPHA), it will have
+                confidence scores. If the value in some coordinate is very far from the mean (W_0_ALPHA), it will have
                 very high confidence (close to 1). If it is near the mean, it will have low confidence (close to 0.5). 
-            
+
         Returns:
             confidence_score (float): the validator's overall log confidence that the hash is correct to within
                 the error threshold defined by allowable_err"""
@@ -201,33 +200,32 @@ class ProofOfWorkProtocol:
         ]  # If a validation bit is 1, we use the confidence. If it's 0, we use 1 - the confidence
         log_confidence = np.float64(allowable_err)
         for idx, confidence in enumerate(validation_confidence):
-            if confidence == 0:
-                return min_confidence
-            elif confidence < 0:
+            if confidence < 0:
                 raise ValueError(f"Invalid confidence value {confidence} at index {idx} from bit\
                                 {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}")
-            else:
-                log_confidence += np.log2(confidence)
+
+            if confidence == 0:
+                return min_confidence
+
+            log_confidence += np.log2(confidence)
 
         return round(log_confidence.item(), 2)
 
     def calculate_quantum_hash(self, block: Block) -> tuple[str, np.ndarray, float]:
         """Calculates the quantum hash for the block provided. This is the centerpiece of the whole
-        codebase and the one place where QPU calls are actually made. Produces a hash of length
+        codebase and the place where QPU calls are made. Produces a hash of length
         defined by self.quantum_hash_length (in turn determined by protocol settings)
 
         #TODO there is a known issue wherein sample data is not getting deleted as promptly as it should.
         Given how large the sampler output is and the fact that each miner now has their own sampler, this
-        can cause memory issues and crashes. Radomir is looking into a fix, but best to keep num_reads low
-        and num_miners moderate until it is fixed.
+        can cause memory issues and crashes.
 
         Args:
-            block: (Block) the block whose quantum hash you wish to calculate.
+            block (Block): the block whose quantum hash you wish to calculate.
 
         Returns:
             vector_output: a np vector whose values should be exclusively 0s and 1s, defining the quantum hash.
-                    Note that this will be processed into a hex string and stored as such by the Block class: it's
-                    more convenient to leave it as raw bits here.
+                    Note that this will be processed into a hex string and stored as such by the Block class.
             dot_vector: a np vector encoding the hyperplane distance for each bit (that is, the dot product of the
                         hash vector and the hyperplane's normal vector)
             sample_time: the time required by the sampler to generate the sampler_output"""
@@ -243,7 +241,7 @@ class ProofOfWorkProtocol:
 
     def set_random_solver(self):
         """Returns a random solver and its corresponding DWaveSampler. If the self.require_all_solvers flag is set, and one or more
-            solvers is a solver is unavailable, the method will check their availability again and again at at successively longer
+            solvers is unavailable, the method will check their availability again and again at at successively longer
             intervals until they become available or the number of allowed attempts is exceeded.
 
         Modifies

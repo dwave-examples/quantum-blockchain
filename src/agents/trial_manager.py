@@ -22,10 +22,10 @@ from src.structures.block import Block
 from src.values import GENESIS_BLOCK_PREV_HASH, GENESIS_BLOCK_TIMESTAMP, MAX_MINING_ATTEMPTS, GENESIS_MINER_ID
 
 def initialize_genesis_block(
-                            miner_id: str=GENESIS_MINER_ID, 
-                            previous_block_hash: str=GENESIS_BLOCK_PREV_HASH, 
-                            timestamp: float =GENESIS_BLOCK_TIMESTAMP
-                             ):
+    miner_id: str = GENESIS_MINER_ID, 
+    previous_block_hash: str = GENESIS_BLOCK_PREV_HASH, 
+    timestamp: float = GENESIS_BLOCK_TIMESTAMP,
+):
     """ Initializes genesis block for the blockchain. In ordinary mining, these steps will
         need to be performed by the miners and interleaved with other operations. For the
         genesis block, we can just do them all at once based on constant values.
@@ -72,7 +72,7 @@ class TrialManager:
             in the same directory and properly formatted in order to initialize. Such a
             file should be created automatically by trials_main anytime it is run without
             being passed a directory argument. If restarting a trial in the same directory, this
-            will simply initialized using the files already present.
+            will be initialized using the files already present.
 
             Instantiates:
                 TrialMiners object: object which declares and initializes miners for the trial."""
@@ -129,19 +129,17 @@ class TrialManager:
 
     def mining_step(self) -> tuple[str, float, str]:
         """ Executes the mining step for the single round of the trial. Miner mines a single block (or times
-            out after exceeding the maximum number of attempts) and stores it serialized form in self.block_broadcast.
+            out after exceeding the maximum number of attempts) and stores its serialized form in self.block_broadcast.
 
             Modifies:
                 self.block_broadcast: stores the newly-mined block here, serialized in JSON format. """
         
         self.mining_miner_id = self.round_order[0]
         self.mining_miner = self.miners[self.mining_miner_id]
-        mining_attempts = 0
-        mine_success = False
-        while mining_attempts <= self.max_mining_attempts and not mine_success:
-            mining_attempts += 1
+
+        for _ in range(self.max_mining_attempts):
             _, block_score, solver = self.mining_miner.attempt_mine()
-            if block_score > 0:  #Deviates from paper methodology (for confidence-based scoring)
+            if block_score > 0:  # Deviates from paper methodology (for confidence-based scoring)
                 self.block_broadcast = self.mining_miner.broadcast_mined_block()
                 self.round_progress += 1
                 self.blocks_mined += 1
@@ -238,6 +236,6 @@ class TrialManager:
         common_block_nums = set.intersection(*trunk_sets)
         if len(common_block_nums) == 0:
             return 0
-        else:
-            largest_common_block_num = max(list(common_block_nums))
-            return largest_common_block_num
+
+        largest_common_block_num = max(list(common_block_nums))
+        return largest_common_block_num

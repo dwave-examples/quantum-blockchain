@@ -26,10 +26,10 @@ BlockNode = namedtuple(
 
 class ScoreTreeBranch:
     """This class serves to encapsulate the fundamental structural units of the BlockScoreTree class, namely branches. The
-    structure of a typical probabilistic blockchain - and thus of a BlockScoreTree object-will be a series of linear
-    chains of blocks  with occasional forks in which a second chain diverges from the first. A ScoreTreeBranch is intended
+    structure of a typical probabilistic blockchain - and thus of a BlockScoreTree object - will be a series of linear
+    chains of blocks with occasional forks in which a second chain diverges from the first. A ScoreTreeBranch is intended
     to represent and store the data for a single such linear section, while tracking useful metadata such as the locations
-    of other chains that fork of this one, a score summary for the section and a reference for the branch's parent (the branch
+    of other chains that fork off this one, a score summary for the section and a reference for the branch's parent (the branch
     it forked off of). This also provides a convenient platform for lower-level manipulations of the chain state - those that
     involve one block or a small, contiguous series of blocks - rather than having them as BlockScoreTree methods.
 
@@ -37,9 +37,8 @@ class ScoreTreeBranch:
     class."""
 
     def __init__(self, base_block: BlockNode = None):
-        """This class ..
-
-        Arguments:
+        """
+        Args:
             base_block (BlockNode): the BlockNode object that will serve as the first node of this branch. Once
                                     added, it should never be removed or modified. It's self.hash attribute can
                                     effectively serve as a unique identifier for this branch, as no other block
@@ -47,7 +46,7 @@ class ScoreTreeBranch:
                                     the first block added with self.append_block will be used instead.
 
         Attributes:
-            self.node_list: the is the central data structure of the class. A list of BlockNode objects corresponding to a
+            self.node_list: this is the central data structure of the class. A list of BlockNode objects corresponding to a
                             single, linear section of the blockchain.
             self.hash_to_index_lookup: dict that allows quickly finding the location of any BlockNode in this ScoreTreeBranch
                                         based on its hash value.
@@ -96,14 +95,14 @@ class ScoreTreeBranch:
     def root(self) -> BlockNode:
         """Returns the BlockNode object that is the immediate predecessor to self.base
         (that is, the predecessor the first block in the branch). Only a branch of depth 0
-        (that is, one with no predecessor) should return None; in intended use the only branch
+        (one with no predecessor) should return None; the only branch
         this should be true of is the trunk."""
         if self.parent is not None:
             return self.parent.get_block(self.root_hash)
         elif self.depth != 0:
             raise Exception("Branch has no root but depth is greater than 0.")
-        else:
-            return None
+
+        return None
 
     @property
     def high_score(self) -> float:
@@ -112,7 +111,7 @@ class ScoreTreeBranch:
     
     @property
     def high_score_hash(self) -> float:
-        """ Returns the hash of the block with the highest total score in this branch"""
+        """Returns the hash of the block with the highest total score in this branch"""
         max_block = max(self.node_list, key= lambda x: x.total_score)
         return max_block.hash
 
@@ -126,16 +125,14 @@ class ScoreTreeBranch:
         return len(self.node_list)
 
     def __contains__(self, item) -> bool:
-        if isinstance(
-            item, str
-        ):  # Supporting membership checking by both hash and object, as hashes should be unique identifiers and
-            return (
-                item in self.hash_to_index_lookup
-            )  # both fairly natural ways to ask the question "does this branch contain this block?"
+        # Supporting membership checking by both hash and object, as hashes should be unique identifiers
+        if isinstance(item, str):
+            return item in self.hash_to_index_lookup
+
         elif isinstance(item, BlockNode):
             return item.hash in self.hash_to_index_lookup
-        else:
-            return False
+
+        return False
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -143,7 +140,7 @@ class ScoreTreeBranch:
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def append_block(self, new_block_node: BlockNode) -> None:
-        """Appends a new block to the end of the branch. This will fail (raising an exception) unless
+        """Appends a new block to the end of the branch. This will raise an exception unless
         the branch is empty or .prev_hash attribute of the added block matches the hash of the block
         at the branch tip. Determining where a new block should be added and whether it should form
         a new branch or extend an existing branch needs to be handled at the tree level. This validation
@@ -184,12 +181,12 @@ class ScoreTreeBranch:
     def set_parent(self, parent_branch: "ScoreTreeBranch") -> None:
         """Sets the passed branch as the parent of the current branch
         (provided that is a legal assignment). Will not set the other end
-        of the relationship: this is intended to be called by link_child_branch,
-        rather than on its own.
+        of the relationship (this is intended to be called by link_child_branch,
+        rather than on its own).
 
         Args:
-            parent_branch: a branch that is the parent of the current branch (that is
-            it contains a block whose hash matches the branch's root hash)."""
+            parent_branch: a branch that is the parent of the current branch (that is,
+                it contains a block whose hash matches the branch's root hash)."""
 
         if self.root_hash in parent_branch:
             self.parent = parent_branch
@@ -221,8 +218,8 @@ class ScoreTreeBranch:
     def get_block(self, block_hash: str) -> BlockNode:
         if block_hash in self.hash_to_index_lookup:
             return self.node_list[self.hash_to_index_lookup[block_hash]]
-        else:
-            return None
+
+        return None
 
     def get_score_map(self):
         score_map = [node.total_score for node in self.node_list]
@@ -262,9 +259,8 @@ class ScoreTreeBranch:
             later_descendants = child.get_descendants_by_depth()
             while len(descendants) < len(later_descendants) + 1:
                 descendants.append([])  # Add enough entries in descendants to hold all the output
-            for i in range(
-                1, len(later_descendants)
-            ):  # 0th entry will just be child again, so ignore it
+
+            for i in range(1, len(later_descendants)):  # 0th entry will be the child again
                 descendants[i + 1] += later_descendants[i]
 
         return descendants
@@ -277,12 +273,10 @@ class ScoreTreeBranch:
 
     def pop(self) -> tuple[BlockNode, list["ScoreTreeBranch"]]:
         """Removes a single block from the tip of the branch, updating all data and properties as necessary.
-        Blocks should never be altered or removed by any means other than the pop function: if a more
+        Blocks should never be altered or removed by any means other than the pop function (if a more
         extensive change is necessary, it should be done by means of repeated calls of pop() and
-        append_block(), as in is done in the other methods in this section.
+        append_block(), as in is done in the other methods in this section).
 
-        Args:
-            None
         Returns:
             removed_block (BlockNode): block removed from branch tip
             removed_children: list of all child branches with root at the
@@ -291,27 +285,27 @@ class ScoreTreeBranch:
 
         if len(self) < 1:
             raise Exception("Cannot pop last block in branch")
-        else:
-            removed_block = self.node_list.pop()
-            self.hash_to_index_lookup.pop(removed_block.hash)
-            removed_children = []
 
-            for child in self.children:
-                if child.root_hash == removed_block.hash:
-                    removed_children.append(child)
+        removed_block = self.node_list.pop()
+        self.hash_to_index_lookup.pop(removed_block.hash)
+        removed_children = []
 
-            for child in removed_children:
-                self.children.remove(child)
+        for child in self.children:
+            if child.root_hash == removed_block.hash:
+                removed_children.append(child)
 
-            return removed_block, removed_children
+        for child in removed_children:
+            self.children.remove(child)
+
+        return removed_block, removed_children
 
     def concatenate_branch(self, new_branch_section: "ScoreTreeBranch") -> None:
         """Concatenates a new branch section to the tip of the current branch.
 
         Args:
             new_branch_section (ScoreTreeBranch): a ScoreTreeBranch object. The
-            root hash of the object must match this branch's tip hash or the operation
-            will fail and throw an exception."""
+                root hash of the object must match this branch's tip hash or the operation
+                will fail and throw an exception."""
 
         if new_branch_section.root_hash == self.tip.hash:
             for block in new_branch_section:
@@ -329,17 +323,16 @@ class ScoreTreeBranch:
 
         Args:
             cut_idx (int): index of the first block in the cut. Will be ignored in favor of cut_hash if a non-default value of cut-hash is passed.
-                In keeping with Python convention for lists, this index can be negative: negative indices will be counted backwards from the end
-                of the list, starting with the last element at index -1.
+                In keeping with Python convention for lists, this index can be negative (negative indices will be counted backwards from the end
+                of the list, starting with the last element at index -1).
 
         Returns:
-            new_branch (ScoreTreeBranch): a branch containing all the blocks from the cut index forward, linked to any children rooted
-                        in those blocks."""
+            new_branch (ScoreTreeBranch): a branch containing all the blocks from the cut index
+                forward, linked to any children rooted in those blocks."""
 
         if cut_idx < 0:
-            cut_idx = (
-                len(self) + cut_idx
-            )  # Convert negative indices to positive so they don't mess up other calculations.
+            # Convert negative indices to positive so they don't mess up other calculations.
+            cut_idx = len(self) + cut_idx
 
         if cut_idx > self.tip_idx or cut_idx < 1:
             raise Exception(
@@ -352,19 +345,18 @@ class ScoreTreeBranch:
         assert (
             num_removals > 0
         ), f"Attempted to cut at index {cut_idx} from branch with base {self.base.hash}, but branch was length {len(self)}"
+
         for i in range(num_removals):
             block, children = self.pop()
-            moving_blocks.append(
-                block
-            )  # Block appended to moving_blocks in reversed order, newest blocks first, oldest blocks last
+            # Block appended to moving_blocks in reversed order, newest blocks first, oldest blocks last
+            moving_blocks.append(block)
             moving_children += children
 
         new_branch = ScoreTreeBranch()
         for i in range(num_removals):
             next_block = moving_blocks.pop()
-            new_branch.append_block(
-                next_block
-            )  # Thus when we pop them off of moving_blocks, we get them in the correct order to add them to the new branch.
+            # Thus when we pop them off of moving_blocks, we get them in the correct order to add them to the new branch.
+            new_branch.append_block(next_block)  
 
         assert (
             len(moving_blocks) == 0
@@ -381,6 +373,7 @@ class ScoreTreeBranch:
         assert len(moving_children) == len(
             moved_children
         ), f"{len(moved_children)} reported moved but {len(moving_children)} were staged to move."
+
         for child in moved_children:
             assert (
                 child.parent == new_branch

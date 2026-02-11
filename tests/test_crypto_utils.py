@@ -20,7 +20,7 @@ from src.utilities import crypto_utils
 def test_hash_functions():
     """Tests that the core hash functions, SHA256 and RIPEMD160 are working as they should. Specifically, this
     test iterates twice over all sequential slices of a regular string, hashing the iteration and testing
-    that the outputs have the correct length, and match one another if and only iff the inputs and hash functions
+    that the outputs have the correct length, and match one another if and only if the inputs and hash functions
     used are identical.
     """
     input_string = "abc123abc123abc"
@@ -94,7 +94,7 @@ def test_validate_zeroes():
 
 def test_signature_functions():
     """Tests the cryptographic signature functions by creating two key sets, and ensuring that validate_signature
-    returns true iff and only iff it is passed a message that has been signed with a valid public-private key pair,
+    returns true if and only if it is passed a message that has been signed with a valid public-private key pair,
     along with the correct signature block and public key corresponding to that message and key pair.
     """
 
@@ -118,7 +118,7 @@ def test_signature_functions():
     ), f"Successfully validated message {message} with pub key {eve_pub}, which should have required pub key {alice_pub}"
     eve_spoofed_sig = crypto_utils.sign_message(
         message=message, private_key=eve_priv
-    )  # Should this throw an error?
+    )
     attempted_spoof = crypto_utils.validate_signature(
         message=message, signature=eve_spoofed_sig, pub_key=alice_pub
     )
