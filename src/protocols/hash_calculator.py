@@ -220,7 +220,7 @@ class QuantumHashSolver(HashSolver):
         if energy_time_rescaling is None:
             if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
                 raise ValueError(
-                    "Unsupported {solver_name}: See examples/ for generation of energy-time rescaling values and embeddings"
+                    "Unsupported {solver_name}: See calibration/ for generation of energy-time rescaling values and embeddings"
                 )
             problem_hamiltonian_rescaling, time_rescaling = DEFAULT_ENERGY_TIME_RESCALING[solver_name]
         else:
