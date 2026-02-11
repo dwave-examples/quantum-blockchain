@@ -93,14 +93,14 @@ def main(
         "node_labels": node_labels,
         "seed": seed,
     }
-    fn = get_embeddings_filename(
+    embedding_filename = get_embeddings_filename(
         edge_list_source=edge_list_source,
         edge_list_target=qpu.edgelist,
         embedding_directory=embedding_directory,
     )
-    if os.path.isfile(fn) and not overwrite:
+    if os.path.isfile(embedding_filename) and not overwrite:
         print(
-            f"A suitable file {fn} exists on the "
+            f"A suitable file {embedding_filename} exists on the "
             "specified path and will not be overwritten. "
             "Set the overwrite flag to replace the "
             "file, or modify the directory_path to "
@@ -133,7 +133,7 @@ def main(
 
                 print(
                     f"A list of disjoint embeddings of length {len(embeddings)} has been created "
-                    f"and saved to {fn}."
+                    f"and saved to {embedding_filename}."
                 )
             else:
                 print(
