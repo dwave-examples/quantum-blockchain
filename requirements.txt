@@ -8,4 +8,4 @@ pandas~=2.3
 numpy<2.4  # Pending bugfix for dwave-samplers
 pytest~=9.0
 matplotlib~=3.10
-git+https://github.com/jackraymond/dwave-experimental@feature/automorphism_composite#egg=dwave-experimental  # Pull request approval pending
+dwave-experimental==2026.1.23  # Update after merging of https://github.com/dwavesystems/dwave-experimental/pull/38
