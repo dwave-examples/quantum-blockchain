@@ -277,12 +277,7 @@ def main(
         print(f"The following energy-rescaling option is viable: {energy_option}")
     if verbose:
         print(
-            "This solver-name key, and rescaling value can be added to "
-            "the DEFAULT_ENERGY_TIME_RESCALING dictionary in src/values.py"
-        )
-        print(
-            "The solver_name should also be enumerated as a SOLVER in "
-            "src/protocols/hash_calculator.py"
+            "Follow README instructions to make this value available to the demo."
         )
 
     return candidate
