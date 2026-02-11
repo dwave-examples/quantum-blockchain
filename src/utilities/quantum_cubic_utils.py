@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@ import os
 import pickle
 from itertools import product
 
+import networkx as nx
+import numpy as np
+
 import dimod
 import dwave
 import dwave_networkx as dnx
-import networkx as nx
-import numpy as np
-from directory_paths import EMBEDDINGS_PATH
 from dwave.experimental.automorphism import (
     AutomorphismComposite,
 )  # Module location within dwave-ocean-sdk could be subject to change.
@@ -30,6 +30,8 @@ from dwave.preprocessing.composites import SpinReversalTransformComposite
 from dwave.system import DWaveSampler
 from dwave.system.composites import ParallelEmbeddingComposite
 from minorminer.utils.parallel_embeddings import find_multiple_embeddings
+
+from directory_paths import EMBEDDINGS_PATH
 from src.values import DEFAULT_CUBIC_BOUNDARY_CONDITIONS, DEFAULT_CUBIC_LATTICE_SHAPE
 
 
@@ -40,8 +42,7 @@ def get_embeddings_filename(
 ) -> str:
     """Generate a filename unique to the source and target graph pairs
 
-    Sorted edge lists uniquely identify graphs (up to ordering of nodes within edges,
-    assumed this is canonical - potential future improvement).
+    Sorted edge lists uniquely identify graphs (up to ordering of nodes within edges).
     The hashes of the source and target edgelists can be used to
     identify embeddings for which valid embeddings are known:
 
@@ -370,8 +371,8 @@ def generate_default_sampler(
             default the timeout is zero and an error is thrown if the embedding is not
             precalculation.
         automorphism_per_component: If True, each embedding has an independent
-            automorphism applied (matching arxiv: ) implementation. If False, independent
-            automorphisms are applied ot each component, which is faster in the current
+            automorphism applied (matching arxiv:2503.14462). If False, independent
+            automorphisms are applied to each component, which is faster in the current
             implementation.
     Returns:
         A sampler aggregating samplesets from random parallel QPU embeddings
