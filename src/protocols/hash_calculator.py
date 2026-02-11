@@ -37,20 +37,39 @@ from src.values import (
     DEFAULT_NUM_READS,
 )
 
+
 class SolverName(Enum):
+    """Named solvers available for hash generation
+
+
+    QPU solvers should be matched to those generally available through Leap.
+    This list can be updated to reflect availability.
+    Additions to the solver list should be paired with additions to the
+    ENERGY_TIME_RESCALING dictionary in src/values.py and embeddings
+    should also be created (see README Per-QPU calibration).
+
+    Simulated (aka BOOTSTRAP) solvers use independently sampled witnesses, with
+    the distributions parameterized by saved (offline) QPU experimental data.
+    Distributions are provided only for the set of generally-available QPUs used
+    in the study https://arxiv.org/pdf/2503.14462
+    """
+
     SOLVER1 = "Advantage_system4.1"
     SOLVER2 = "Advantage_system6.4"
     SOLVER3 = "Advantage2_system1.11"
-    BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"  # No longer general access
+
+    BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"  # No longer generally available
     BOOTSTRAP2 = "simulated_Advantage_system4.1"
     BOOTSTRAP3 = "simulated_Advantage_system6.4"
     BOOTSTRAP4 = "simulated_Advantage_system7.1"  # Offline
+
 
 SolverParams = namedtuple(
     "SolverParams",
     ["solver_name", "profile"],
     defaults=(None, None),
 )
+
 
 class HashSolver(ABC):
     @abstractmethod
@@ -123,7 +142,9 @@ class BootstrappingHashSolver(HashSolver):
                 If fewer/more reads are to be simulated, relative to the value used in data correction we can scale accordingly.
         """
         if solver_name is None and mean_witnesses is None:
-            raise Exception("Witness must be provided or a solver associated to a source file specified")
+            raise Exception(
+                "Witness must be provided or a solver associated to a source file specified"
+            )
         if mean_witnesses is None:
             self._solver_name = solver_name
             mean_filepath = os.path.join(bootstrap_path, self.solver_name + "_mean.npy")
@@ -136,7 +157,7 @@ class BootstrappingHashSolver(HashSolver):
             if var_witnesses is None:
                 var_witnesses = np.zeros(shape=mean_witnesses.shape)
         if var_rescaling_factor is None:
-            var_rescaling_factor = float(BOOTSTRAP_DATA_NUM_READS)/float(DEFAULT_NUM_READS)
+            var_rescaling_factor = float(BOOTSTRAP_DATA_NUM_READS) / float(DEFAULT_NUM_READS)
         self.var_witnesses = var_rescaling_factor * var_witnesses
         self.num_witnesses = self.mean_witnesses.size
 
@@ -208,7 +229,7 @@ class QuantumHashSolver(HashSolver):
             num_reads: number of QPU reads per hash calculation
             reference_annealing_time: targeted evolution time with respect to Advantage2_prototype2 schedule.
             energy_time_rescaling: problem Hamiltonian and time rescaling factors required
-                 to emulate Advantage2_prototype2 dynamics with given solver.
+                 to emulate Advantage2_prototype2 dynamics with the given solver.
             embedding_directory: Location of embeddings
             sampler: A `dimod.Sampler`, when not specified the solver name and profile is used to select
                 a QPU with the Leap client, and a suitable embedding is loaded. non-QPU samplers
@@ -220,9 +241,11 @@ class QuantumHashSolver(HashSolver):
         if energy_time_rescaling is None:
             if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
                 raise ValueError(
-                    "Unsupported {solver_name}: See examples/ for generation of energy-time rescaling values and embeddings"
+                    "Unsupported {solver_name}: See calibration/ for generation of energy-time rescaling values and embeddings"
                 )
-            problem_hamiltonian_rescaling, time_rescaling = DEFAULT_ENERGY_TIME_RESCALING[solver_name]
+            problem_hamiltonian_rescaling, time_rescaling = DEFAULT_ENERGY_TIME_RESCALING[
+                solver_name
+            ]
         else:
             problem_hamiltonian_rescaling, time_rescaling = energy_time_rescaling
 

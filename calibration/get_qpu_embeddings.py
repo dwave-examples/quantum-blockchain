@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+import os
 import sys
 
 sys.path.append("../")
@@ -32,18 +33,26 @@ def main(
     subgraph_embedding_timeout: float | int = 60,
     parallel_embedding_timeout: float | int = 600,
     seed: int = 1,
+    embedding_directory: str = EMBEDDINGS_PATH,
     verbose: bool = True,
     overwrite: bool = False,
 ) -> list[dict]:
-    """Finds embeddings for a specific qpu/sampler combination, producing embedding files 
-    which are saved in examples/ directory.
+    """Finds embeddings for a specific qpu/sampler combination
 
-    See verbose statements for operational summary. A file is saved to the
-    local directory when embedding succeeds, overwriting any other local
-    copy (same edgelist for qpu and target model). Note that for this 
-    embedding to be used by the blockchain demo code, the file must
-    be moved or copied to the directory named in the EMBEDDINGS_PATH
-    filepath, which can be found in /directory_paths.py
+    For embeddings to be used as part of the demo they should be saved to
+    the EMBEDDINGS_PATH
+
+    find_subgraph is a complete method, guaranteed to return a 1:1 embedding
+    (also called a subgraph isomorphism), should it exist (given sufficient time).
+    This routine is called iteratively
+    to determine disjoint embeddings with the find_multiple_embeddings routine.
+    The result is returned either when no further subgraphs can be found,
+    timeouts are reached in either routine, or the routine is interrupted.
+    Different seeds may impact the sequence of embeddings
+    found and the maximum number of embeddings.
+    Since unitary dynamics are parallelized across embeddings with results aggregated
+    more embeddings results typically results in better sampling error and higher
+    cross-validation.
 
     Note that, for typical applications, initial subgraph searches are fast
     and only the final (unsuccessful) search is slow. Default settings
@@ -65,6 +74,7 @@ def main(
         verbose: Print a method summary and information on search completion.
         overwrite: If an embedding exists in the cache, load it rather than
             overwriting.
+        embedding_directory: path for loading and writing embeddings.
     Returns:
         A list of embeddings
     """
@@ -72,26 +82,7 @@ def main(
     if verbose:
         print(f"Solving for chip_id {qpu.properties['chip_id']}")
         print()
-        print(
-            "find_subgraph is a complete method, guaranteed to return a 1:1 embedding "
-            "(also called a subgraph isomorphism), should it exist (given sufficient time). "
-            "This routine is called iteratively "
-            "to determine disjoint embeddings with the find_multiple_embeddings routine. "
-            "The result is returned either when no further subgraphs can be found, "
-            "timeouts are reached in either routine, or the routine is interrupted. "
-            "Different seeds may impact the sequence of embeddings "
-            "found and the maximum number of embeddings. "
-            "Since unitary dynamics are parallelized across embeddings with results aggregated "
-            "more embeddings results typically results in better sampling error and higher "
-            "cross-validation."
-        )
-        print()
-        print(
-            f"The parallel embedding timeout is set to {parallel_embedding_timeout} seconds, "
-            f"and the find_subgraph_timeout is set to {subgraph_embedding_timeout} seconds, "
-            f"which guarantees completion within {(parallel_embedding_timeout + subgraph_embedding_timeout)/60.0} minutes. "
-            "Typically less time is required."
-        )
+
     node_list_source, edge_list_source = create_lattice()
     node_labels = (
         source_dimer_orientation(node_list_source),
@@ -102,38 +93,62 @@ def main(
         "node_labels": node_labels,
         "seed": seed,
     }
-    embeddings = get_embeddings(
+    embedding_filename = get_embeddings_filename(
         edge_list_source=edge_list_source,
         edge_list_target=qpu.edgelist,
-        embedding_directory="./",  # EMBEDDINGS_PATH,
-        embedding_timeout=parallel_embedding_timeout,
-        max_num_emb=None,
-        load_from_cache=not overwrite,
-        save_to_cache=True,
-        verify_embeddings=True,
-        find_subgraph_kwargs=find_subgraph_kwargs,
+        embedding_directory=embedding_directory,
     )
-    if verbose:
-        fn = get_embeddings_filename(
+    if os.path.isfile(embedding_filename) and not overwrite:
+        print(
+            f"A suitable file {embedding_filename} exists on the "
+            "specified path and will not be overwritten. "
+            "Set the overwrite flag to replace the "
+            "file, or modify the directory_path to "
+            "write to a new location."
+        )
+        embeddings = None
+    else:
+        if verbose:
+            print(
+                f"A set of disjoint 1:1 embeddings (subgraph isomorphisms) is sought by recursive "
+                "use of the complete find_subgraph method. "
+                f"The parallel embedding timeout is set to {parallel_embedding_timeout} seconds, "
+                f"and the find_subgraph_timeout is set to {subgraph_embedding_timeout} seconds, "
+                f"which guarantees completion within {(parallel_embedding_timeout + subgraph_embedding_timeout)/60.0} minutes. "
+                "Typically less time is required."
+            )
+        embeddings = get_embeddings(
             edge_list_source=edge_list_source,
             edge_list_target=qpu.edgelist,
-            embedding_directory="./",
+            embedding_directory=embedding_directory,
+            embedding_timeout=parallel_embedding_timeout,
+            max_num_emb=None,
+            load_from_cache=not overwrite,
+            save_to_cache=True,
+            verify_embeddings=True,
+            find_subgraph_kwargs=find_subgraph_kwargs,
         )
-        print(
-            f"A list of disjoint embeddings of length {len(embeddings)} has been created "
-            f"and saved to {fn}. For this file to be used by the blockchain demo code, "
-            f"it should be copied to the directory {EMBEDDINGS_PATH}. "
-            "An energy-time rescaling should also be specified, see get_time_energy_rescaling.py"
-        )
+        if verbose:
+            if len(embeddings) > 0:
+
+                print(
+                    f"A list of disjoint embeddings of length {len(embeddings)} has been created "
+                    f"and saved to {embedding_filename}."
+                )
+            else:
+                print(
+                    "No embeddings were found, the solver graph cannot be supported. "
+                    "Larger timeouts may resolve this problem."
+                )
 
     return embeddings
 
 
 if __name__ == "__main__":
     description = (
-        "Create per-QPU (or per QPU graph change) embeddings for cubic or biclique lattices "
-        "to allow hash generation in the context of the blockchain example. "
-        "Typically examples/get_energy_time_rescaling.py should also be run "
+        "Create per-QPU (or per QPU graph change) embeddings for cubic lattices "
+        "to allow hash generation in the context of the blockchain demo. "
+        "Typically calibration/get_energy_time_rescaling.py should also be run "
         "per QPU, to approximate necessary blockchain parameters."
     )
     parser = argparse.ArgumentParser(description=description)
@@ -173,6 +188,13 @@ if __name__ == "__main__":
         default=1,
     )
     parser.add_argument(
+        "-D",
+        "--embedding_directory",
+        type=str,
+        help="directory in which to seek and write embeddings",
+        default=EMBEDDINGS_PATH,
+    )
+    parser.add_argument(
         "--verbose_off",
         action="store_true",
         help="Use this flag to switch off majority of print() statements.",
@@ -193,6 +215,7 @@ if __name__ == "__main__":
         subgraph_embedding_timeout=args.subgraph_embedding_timeout,
         parallel_embedding_timeout=args.parallel_embedding_timeout,
         seed=args.seed,
+        embedding_directory=args.embedding_directory,
         verbose=verbose,
         overwrite=args.overwrite,
     )

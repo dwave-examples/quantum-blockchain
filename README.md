@@ -154,9 +154,27 @@ After the sampleset is collected, it is post-processed to nearest neighbor corre
 
 ### Per-QPU One-Time Calibration:
 
-The unitary evolution is adjusted by selection of a QPU-specific energy-time rescaling and embedding,
-precalculated for a restricted set of available solvers.
-The files `examples/get_qpu_enery_time_rescaling.py` and `examples/get_qpu_embeddings.py` can be used to generate parameters for a currently unsupported solver. 
+The unitary evolution is adjusted by selection of a QPU-specific energy-time
+rescaling and embedding, precalculated for a restricted set of available solvers.
+
+A new online solver specified by name solver_name, or a change of a processor graph, typically dictates the creation of new embeddings as one time work. This can be done by running
+```bash
+python get_qpu_embeddings.py -S solver_name
+```
+from the calibration/ directory.
+Embeddings are automatically saved to a location suitable for use by the demo.
+
+Different solvers are characterized by different energy scales. In order for a solver to emulate a reference unitary dynamics it is possible to either rescale upwards the time (if the energy scale is too low), or scale down the problem Hamiltonian (if the energy scale is too high). Estimates are determined by using
+```bash
+python get_qpu_energy_time_rescaling.py -S solver_name
+```
+again from the calibration/ directory.
+Function customizations can be listed using the --help flag.
+
+In order to access a new solver in the demo:
+1. The solver_name should also be enumerated as a SOLVER in src/protocols/hash_calculator.py
+2. The solver_name and energy-time rescaling tuple should be added as a key-value pair to DEFAULT_ENERGY_TIME_RESCALING dictionary in src/values.py .
+
 
 ## References
 

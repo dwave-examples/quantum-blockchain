@@ -16,9 +16,6 @@ from datetime import datetime  # To set genesis block
 
 import numpy as np  # To set effective number of samples (sampling noise)
 
-# TO DO, THIS FILE CONTAINS UNUSED CONSTANTS (APPEARING NOWHERE ELSE IN REPO). TO BE REMOVED
-# SOME CONSTANTS NEED TO BE MOVED TO/FROM, OR IMPORTED TO/FROM demo_configs.py . MOST IMPORTANTLY CONFUSING AND DUPLICATED ONES, LIKE MAX_MINERS.
-
 # ===================================================================================
 #                      PoW Protocol Definitions
 # ===================================================================================
@@ -37,7 +34,7 @@ DEFAULT_ANNEALING_TIME = (
 DEFAULT_CUBIC_LATTICE_SHAPE = (4, 4, 4)  # Default dimensions of dimerized cubic lattice.
 DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
 # Energy time rescalings required to emulate Advantage2_system2.6 at
-# full problem energy scale (see examples/). For systems of lower energy scale,
+# full problem energy scale (see calibration/). For systems of lower energy scale,
 # anneals must be run for longer, for systems of higher energy scale, the
 # problem Hamiltonian (energy) scale is reduced.
 DEFAULT_ENERGY_TIME_RESCALING = {
@@ -49,10 +46,7 @@ DEFAULT_ENERGY_TIME_RESCALING = {
 #                      Global Trial Definitions
 # ===================================================================================
 
-MAX_MINERS = 100
-MAX_BLOCKS = 4096
 MAX_MINING_ATTEMPTS = 100000
-DEFAULT_BLOCK_SCORE = 0.0
 W_0_ALPHA = 0.0
 DEFAULT_NUM_READS = 600  # NB - Smaller than arXiv:2503.14462.
 BOOTSTRAP_DATA_NUM_READS = 3860  # Value used for Advantage_system4.1 in arXiv:2503.14462. The num reads was fixed to use 1 second of QPU access time (maximum for single-programming). For the simulated data, this is the relevant value.

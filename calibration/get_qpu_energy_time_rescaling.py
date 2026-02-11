@@ -94,9 +94,9 @@ def fit_rescaling_to_kibble_zurek_form(
     kappa_R: float | None = None,
     res_en_target: float | None = None,
     annealing_time_model: float | None = None,
-    energy_time_rescaling: tuple[float,float] | None = None,  # Initial guess
+    energy_time_rescaling: tuple[float, float] | None = None,  # Initial guess
     ground_state_estimates: np.ndarray | None = None,
-) -> tuple[tuple[float,float], tuple[float,float], np.ndarray]:
+) -> tuple[tuple[float, float], tuple[float, float], np.ndarray]:
     r"""Determine a time (or as necessary energy) rescaling to match a reference Kibble-Zurek curve.
 
 
@@ -143,11 +143,11 @@ def fit_rescaling_to_kibble_zurek_form(
         ground_state_estimates: An array of ground state energies.
 
     Returns:
-        energy_rescaling_proposal (float, float): estimate of the problem Hamiltonian 
-            rescaling required to emulate the reference residual energy curve 
-        time_rescaling_proposal (float, float): estimate of the annealing time rescaling 
+        energy_rescaling_proposal (float, float): estimate of the problem Hamiltonian
+            rescaling required to emulate the reference residual energy curve
+        time_rescaling_proposal (float, float): estimate of the annealing time rescaling
             required to emulate the reference residual energy curve
-        residual_energies (np.ndarray): mean energy of each problem, minus estimated 
+        residual_energies (np.ndarray): mean energy of each problem, minus estimated
             ground-state energy
     """
     if energy_time_rescaling is None:
@@ -168,8 +168,8 @@ def fit_rescaling_to_kibble_zurek_form(
     if kappa_R is None:
         kappa_R = ADV2_PROTOTYPE2_FIT["kappa_R"]
     if ground_state_estimates is None:
-        # A single QPU programming with 100 microsecond annealing and 1000 samples 
-        # (other values left at default) solves these problems to optimality with 
+        # A single QPU programming with 100 microsecond annealing and 1000 samples
+        # (other values left at default) solves these problems to optimality with
         # high (sufficient) probability:
         ground_state_estimates = np.array(
             [
@@ -240,7 +240,7 @@ def main(
 
     See :code:`fit_rescaling_to_kibble_zurek_form`.
 
-    This function performs a basic fit, more careful parameterization may allow 
+    This function performs a basic fit, more careful parameterization may allow
     higher cross-validation rates.
 
     Args:
@@ -258,7 +258,7 @@ def main(
             "expected energy for all Advantage and Advantage2 processors given a suitable "
             "selection of the device and ensemble specific parameters. "
             "<Hp> = E_0 + E_1 (t_a/t_0)^{-kappa_t} (J/R_0)^{-kappa_R}. "
-            "A fit to the Advantage2_prototype2_x_internal system yields all but the time (t_0) "
+            "A fit to the Advantage2_prototype2.6 system yields all but the time (t_0) "
             "and energy (R_0) rescaling factors. These are determined by fitting the R_0 or t_0 "
             "to the experimental average energy from 25 QPU programmings. A short delay applies "
             "during data collection."
@@ -277,12 +277,7 @@ def main(
         print(f"The following energy-rescaling option is viable: {energy_option}")
     if verbose:
         print(
-            "This solver-name key, and rescaling value can be added to "
-            "the DEFAULT_ENERGY_TIME_RESCALING dictionary in src/values.py"
-        )
-        print(
-            "The solver_name should also be enumerated as a SOLVER in "
-            "src/protocols/hash_calculator.py"
+            "Follow README instructions to make this value available to the demo."
         )
 
     return candidate
@@ -290,9 +285,9 @@ def main(
 
 if __name__ == "__main__":
     description = (
-        "Create per-QPU energy-time rescalings for cubic or biclique lattices "
-        "to allow cross-validation between QPUs in the context of the blockchain example. "
-        "Typically one should first run examples/get_embeddings.py to generate embeddings."
+        "Create per-QPU energy-time rescalings for cubic lattices to "
+        "allow cross-validation between QPUs in the context of the blockchain demo. "
+        "Typically one should first run calibration/get_embeddings.py to generate embeddings."
     )
 
     parser = argparse.ArgumentParser(description=description)
