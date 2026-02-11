@@ -37,7 +37,7 @@ DEFAULT_ANNEALING_TIME = (
 DEFAULT_CUBIC_LATTICE_SHAPE = (4, 4, 4)  # Default dimensions of dimerized cubic lattice.
 DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
 # Energy time rescalings required to emulate Advantage2_system2.6 at
-# full problem energy scale (see examples/). For systems of lower energy scale,
+# full problem energy scale (see calibration/). For systems of lower energy scale,
 # anneals must be run for longer, for systems of higher energy scale, the
 # problem Hamiltonian (energy) scale is reduced.
 DEFAULT_ENERGY_TIME_RESCALING = {
