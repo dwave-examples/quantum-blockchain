@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import math
-from typing import Optional
 
 import plotly.graph_objects as go
 
@@ -406,7 +405,7 @@ class SpiralPlotter:
 
         return traces
 
-    def draw_spiral(self, active_blocks: list[str], active_block_cutoff: Optional[int] = None, mining_block: Optional[BlockNode] = None):
+    def draw_spiral(self, active_blocks: list[str], active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
         """Assuming all the points and edges have been plotted, draws them on the figure, coloring and sizing them
         according to the pre-defined color and size schema. This will draw two distinct sorts of elements onto the
         graph area: points and lines. Each branch of the graph will have one set of points (indicating the blocks
@@ -524,8 +523,8 @@ class SpiralPlotter:
         self,
         tree: BlockScoreTree,
         active_blocks: list[str],
-        active_block_cutoff: Optional[int] = None,
-        mining_block: Optional[BlockNode] = None,
+        active_block_cutoff: int | None = None,
+        mining_block: BlockNode | None = None,
     ):
         """Given a BlockScoreTree object, creates a spiral plot displaying that tree. Calls
         all the necessary SpiralPlotter functions in order.

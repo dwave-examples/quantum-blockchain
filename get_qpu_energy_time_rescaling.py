@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import argparse
-from typing import Literal, Optional
+from typing import Literal
 
 import dimod
 import numpy as np
@@ -37,7 +37,7 @@ def get_energy(
     annealing_time: float = 0.005,
     fast_anneal: bool = True,
     num_reads: int = 1000,
-    seed_bqm: Optional[int] = None,
+    seed_bqm: int | None = None,
     statistic_type: Literal["mean-energy", "min-energy"] = "mean-energy",
 ) -> float:
     """Return the expected energy by embedding
@@ -87,12 +87,12 @@ def fit_rescaling_to_kibble_zurek_form(
     qpu: DWaveSampler,
     *,
     num_bqms: int = 25,
-    kappa_t: Optional[float] = None,
-    kappa_R: Optional[float] = None,
-    res_en_target: Optional[float] = None,
-    annealing_time_model: Optional[float] = None,
-    energy_time_rescaling: Optional[tuple[float, float]] = None,  # Initial guess
-    ground_state_estimates: Optional[np.ndarray] = None,
+    kappa_t: float | None = None,
+    kappa_R: float | None = None,
+    res_en_target: float | None = None,
+    annealing_time_model: float | None = None,
+    energy_time_rescaling: tuple[float, float] | None = None,  # Initial guess
+    ground_state_estimates: np.ndarray | None = None,
 ) -> tuple[tuple[float, float], tuple[float, float], np.ndarray]:
     r"""Determine a time (or as necessary energy) rescaling to match a reference Kibble-Zurek curve.
 

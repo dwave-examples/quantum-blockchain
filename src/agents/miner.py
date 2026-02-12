@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import numpy as np
 
@@ -91,7 +90,7 @@ class Miner:
             ]
             self.blockchain.promote_to_trunk(best_branch)
 
-    def assemble_new_block(self, previous_block_hash: Optional[str] = None) -> Block:
+    def assemble_new_block(self, previous_block_hash: str | None = None) -> Block:
         """Assembles a new block
 
         Returns:
@@ -105,7 +104,7 @@ class Miner:
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
-    def attempt_mine(self, mining_block: Optional[Block] = None) -> tuple[Block, float, str]:
+    def attempt_mine(self, mining_block: Block | None = None) -> tuple[Block, float, str]:
         """Attempts to mine a new block, choosing the nonce at random, calculating the quantum hash
             and the block hash and validating against the PoW requirement.
 

@@ -16,7 +16,6 @@ import hashlib
 import os
 import pickle
 from itertools import product
-from typing import Optional
 
 import networkx as nx
 import numpy as np
@@ -66,7 +65,7 @@ def get_embeddings(
     *,
     embedding_directory: str = EMBEDDINGS_PATH,
     embedding_timeout: int = 0,
-    max_num_emb: Optional[int] = None,
+    max_num_emb: int | None = None,
     load_from_cache: bool = True,
     save_to_cache: bool = True,
     verify_embeddings: bool = True,
@@ -185,7 +184,7 @@ def dimerize_coupling_3d(
     return node1 + (d1,), node2 + (d2,)
 
 
-def displace_n_by_c(n: tuple, c: tuple, lattice_dims: Optional[tuple] = None):
+def displace_n_by_c(n: tuple, c: tuple, lattice_dims: tuple | None = None):
     """Displace a coordinate by c, lattice_dims a lattice dimension.
 
     Args:
@@ -249,7 +248,7 @@ def create_lattice(
 
 
 def create_model(
-    seed: Optional[int] = None,
+    seed: int | None = None,
     problem_energy_scale=1.0,
 ) -> tuple[dict, dict]:
     """Create binary quadratic models compatible with DOI: 10.1126/science.ado6285

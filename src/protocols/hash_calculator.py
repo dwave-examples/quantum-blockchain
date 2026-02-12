@@ -18,7 +18,6 @@ import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from enum import Enum
-from typing import Optional
 
 import dimod
 import numpy as np
@@ -74,7 +73,7 @@ SolverParams = namedtuple(
 class HashSolver(ABC):
     @abstractmethod
     def calculate_quantum_hash(
-        self, hash_length: int, rng_seed: Optional[int] = None
+        self, hash_length: int, rng_seed: int | None = None
     ) -> tuple[str, np.ndarray, float]:
         """Template for the method to calculate quantum hash values. Implementation will vary by solver type,
         but input and return values should stay consistent.
@@ -125,9 +124,9 @@ class SimulatedHashSolver(HashSolver):
         solver_name: str = None,
         *,
         simulated_path: str = SIMULATED_PATH,
-        mean_witnesses: Optional[np.ndarray] = None,
-        var_witnesses: Optional[np.ndarray] = None,
-        var_rescaling_factor: Optional[float] = None,
+        mean_witnesses: np.ndarray | None = None,
+        var_witnesses: np.ndarray | None = None,
+        var_rescaling_factor: float | None = None,
     ) -> None:
         """Initializes a simulated solver from a source file or by provision of numpy arrays.
 
@@ -209,15 +208,15 @@ class QuantumHashSolver(HashSolver):
 
     def __init__(
         self,
-        solver_name: Optional[str] = None,
+        solver_name: str | None = None,
         *,
         profile: str = None,
         num_reads: int = DEFAULT_NUM_READS,
         reference_annealing_time: float = DEFAULT_ANNEALING_TIME,
-        energy_time_rescaling: Optional[tuple[float, float]] = None,
+        energy_time_rescaling: tuple[float, float] | None = None,
         embedding_directory: str = EMBEDDINGS_PATH,
-        sampler_kwargs: Optional[dict] = None,
-        sampler: Optional[dimod.Sampler] = None,
+        sampler_kwargs: dict | None = None,
+        sampler: dimod.Sampler | None = None,
     ) -> None:
         """Initializes the QuantumHashSolver object, which will create and maintain a connection to the
         indicated D-Wave Solver as long as this object in instantiated.

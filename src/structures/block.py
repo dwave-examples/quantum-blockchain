@@ -14,7 +14,6 @@
 
 import json
 from datetime import datetime
-from typing import Optional
 
 from src.utilities.crypto_utils import basic_compound_hash, calculate_hash
 from src.values import EMPTY_QUANTUM_HASH
@@ -66,7 +65,7 @@ class Block:
         self,
         miner_id: str,
         previous_block_hash: str,
-        timestamp: Optional[float] = None,  # Adding any further transactions after block is declared will overwrite passed timestamp.
+        timestamp: float | None = None,  # Adding any further transactions after block is declared will overwrite passed timestamp.
         nonce: int = 0,
     ):
         """Initializes a new Block object with the data provided. Intent is to allow user to either add all the block data immediately, or

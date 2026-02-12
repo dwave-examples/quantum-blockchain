@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import json
-from typing import Optional
 
 from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 
@@ -65,7 +64,7 @@ class BlockScoreTree:
     the child branch.
     """
 
-    def __init__(self, genesis_block: Optional[BlockNode]=None, score_predicate: 'Optional[function]'=None):
+    def __init__(self, genesis_block: BlockNode | None = None, score_predicate: 'function | None'=None):
 
         self.trunk = ScoreTreeBranch()
         self.hash_to_branch_lookup = {}
@@ -531,7 +530,7 @@ class BlockScoreTree:
         return new_tree
 
     @staticmethod
-    def from_json_file(filename: str, cutoff: Optional[int] = None) -> "BlockScoreTree":
+    def from_json_file(filename: str, cutoff: int | None = None) -> "BlockScoreTree":
         """Given an appropriately formatted file, loads a BlockScoreTree object.
         Ought to keep the same graph structure and scores under realistic circumstances
         (but this is difficult to guarantee in all cases). If provided a positive value for
