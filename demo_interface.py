@@ -15,6 +15,7 @@
 """This file stores the Dash HTML layout for the app."""
 
 from __future__ import annotations
+
 from collections import namedtuple
 
 import dash_mantine_components as dmc
@@ -29,17 +30,17 @@ from demo_configs import (
     INTRO_TEXT,
     LOADING_TEXT,
     MAIN_HEADER,
+    MINER_NAMES,
     MINER_SLIDER,
+    MINING_BLOCK_BORDER_COLOR,
     NUM_BLOCKS,
+    NUM_MINER_VIEWS,
     THUMBNAIL,
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
-    MINING_BLOCK_BORDER_COLOR,
-    MINER_NAMES,
-    NUM_MINER_VIEWS,
 )
-from src.utilities.get_solvers import get_solver_lists
 from src.demo_enums import SolverMode
+from src.utilities.get_solvers import get_solver_lists
 
 THEME_COLOR = "#2d4376"
 
@@ -47,12 +48,12 @@ ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_nam
 
 VIEW_OPTS = [
     ViewOption(
-        menu_select="Global View", 
-        graph_name="global_view_graph", 
-        wrapper_name="global_view_wrapper", 
-        miner_number=-1 
+        menu_select="Global View",
+        graph_name="global_view_graph",
+        wrapper_name="global_view_wrapper",
+        miner_number=-1,
     )
-] + [ 
+] + [
     ViewOption(
         menu_select=f"{MINER_NAMES[i]} View",
         graph_name=f"{MINER_NAMES[i].lower()}_view_graph",
@@ -114,7 +115,9 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
     )
 
 
-def radio(label: str, id: str, options: list, value: int, inline: bool = True, class_name = "") -> html.Div:
+def radio(
+    label: str, id: str, options: list, value: int, inline: bool = True, class_name=""
+) -> html.Div:
     """Radio element for option selection.
 
     Args:
@@ -186,7 +189,7 @@ def generate_settings_form() -> html.Div:
             "solver-mode-select",
             solver_mode_options,
             solver_mode_options[0]["value"],
-            class_name="display-none" if HIDE_SIMULATED_SOLVERS else ""
+            class_name="display-none" if HIDE_SIMULATED_SOLVERS else "",
         ),
         html.Div(
             id="qpu-dropdown",
@@ -368,14 +371,59 @@ def create_interface():
                                                     ),
                                                     html.Div(
                                                         [
-                                                            html.P([html.Span(style={"background": TRUNK_POINT_COLOR}), "Consensus"]),
-                                                            html.P([html.Span(style={"background": ABANDONED_BRANCH_POINT_COLOR}), "Abandoned"]),
-                                                            html.P([html.Span(style={"background": ACTIVE_BRANCH_POINT_COLOR}), "Undecided"]),
-                                                            html.P([html.Span(style={"background": TRUNK_TIP_COLOR}), "Available to Mine"]),
-                                                            html.P([html.Span(style={"border-color": MINING_BLOCK_BORDER_COLOR}), "Currently Mining"]),
+                                                            html.P(
+                                                                [
+                                                                    html.Span(
+                                                                        style={
+                                                                            "background": TRUNK_POINT_COLOR
+                                                                        }
+                                                                    ),
+                                                                    "Consensus",
+                                                                ]
+                                                            ),
+                                                            html.P(
+                                                                [
+                                                                    html.Span(
+                                                                        style={
+                                                                            "background": ABANDONED_BRANCH_POINT_COLOR
+                                                                        }
+                                                                    ),
+                                                                    "Abandoned",
+                                                                ]
+                                                            ),
+                                                            html.P(
+                                                                [
+                                                                    html.Span(
+                                                                        style={
+                                                                            "background": ACTIVE_BRANCH_POINT_COLOR
+                                                                        }
+                                                                    ),
+                                                                    "Undecided",
+                                                                ]
+                                                            ),
+                                                            html.P(
+                                                                [
+                                                                    html.Span(
+                                                                        style={
+                                                                            "background": TRUNK_TIP_COLOR
+                                                                        }
+                                                                    ),
+                                                                    "Available to Mine",
+                                                                ]
+                                                            ),
+                                                            html.P(
+                                                                [
+                                                                    html.Span(
+                                                                        style={
+                                                                            "border-color": MINING_BLOCK_BORDER_COLOR
+                                                                        }
+                                                                    ),
+                                                                    "Currently Mining",
+                                                                ]
+                                                            ),
                                                         ],
                                                         className="graph-legend",
-                                                    )
+                                                    ),
                                                 ]
                                             ),
                                             html.Div(html.Table(id="miner-status-table")),

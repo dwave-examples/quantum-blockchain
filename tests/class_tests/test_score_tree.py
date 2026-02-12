@@ -14,6 +14,7 @@
 
 import os
 from pathlib import Path
+
 import pytest
 
 from src.structures.block_score_tree import BlockScoreTree

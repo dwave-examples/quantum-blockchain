@@ -14,8 +14,8 @@
 import argparse
 import os
 
-from src.values import EMBEDDINGS_PATH
 from dwave.system import DWaveSampler
+
 from src.utilities.quantum_cubic_utils import (
     create_lattice,
     get_embeddings,
@@ -23,6 +23,7 @@ from src.utilities.quantum_cubic_utils import (
     source_dimer_orientation,
     target_dimer_orientation,
 )
+from src.values import EMBEDDINGS_PATH
 
 
 def main(

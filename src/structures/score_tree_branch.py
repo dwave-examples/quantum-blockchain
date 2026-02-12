@@ -106,13 +106,13 @@ class ScoreTreeBranch:
 
     @property
     def high_score(self) -> float:
-        """Returns the highest total_score of any block currently stored in this branch""" 
+        """Returns the highest total_score of any block currently stored in this branch"""
         return max([node.total_score for node in self.node_list])
-    
+
     @property
     def high_score_hash(self) -> float:
         """Returns the hash of the block with the highest total score in this branch"""
-        max_block = max(self.node_list, key= lambda x: x.total_score)
+        max_block = max(self.node_list, key=lambda x: x.total_score)
         return max_block.hash
 
     def __getitem__(self, index: int) -> BlockNode:
@@ -224,18 +224,18 @@ class ScoreTreeBranch:
     def get_score_map(self):
         score_map = [node.total_score for node in self.node_list]
         return score_map
-    
+
     def get_longest_child(self):
-        """ Returns the child of the current branch with the highest-numbered tip block,
-            if it is higher than the block number of this branch's tip. This is a helper 
-            function for BlockScoreTree.refactor_branches, used to find the branches that
-            will extend the farthest (when drawn with the graphing logic in SpiralPlotter),
-            so they can be positioned to avoid overlaps.
-            
-            Returns:
-                longest_child (ScoreTreeBranch): child branch of this branch whose
-                    tip has the highest block_number"""
-        
+        """Returns the child of the current branch with the highest-numbered tip block,
+        if it is higher than the block number of this branch's tip. This is a helper
+        function for BlockScoreTree.refactor_branches, used to find the branches that
+        will extend the farthest (when drawn with the graphing logic in SpiralPlotter),
+        so they can be positioned to avoid overlaps.
+
+        Returns:
+            longest_child (ScoreTreeBranch): child branch of this branch whose
+                tip has the highest block_number"""
+
         highest_block_num = self.tip.block_number
         longest_child = None
         for child in self.children:
@@ -356,7 +356,7 @@ class ScoreTreeBranch:
         for i in range(num_removals):
             next_block = moving_blocks.pop()
             # Thus when we pop them off of moving_blocks, we get them in the correct order to add them to the new branch.
-            new_branch.append_block(next_block)  
+            new_branch.append_block(next_block)
 
         assert (
             len(moving_blocks) == 0

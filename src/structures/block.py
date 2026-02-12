@@ -65,7 +65,9 @@ class Block:
         self,
         miner_id: str,
         previous_block_hash: str,
-        timestamp: float | None = None,  # Adding any further transactions after block is declared will overwrite passed timestamp.
+        timestamp: (
+            float | None
+        ) = None,  # Adding any further transactions after block is declared will overwrite passed timestamp.
         nonce: int = 0,
     ):
         """Initializes a new Block object with the data provided. Intent is to allow user to either add all the block data immediately, or
@@ -73,7 +75,7 @@ class Block:
         nonce is found, the block should be locked to prevent further alteration."""
 
         if timestamp is None:  # If value is still at default, replace with current timestamp.
-            timestamp = datetime.timestamp(datetime.now()) 
+            timestamp = datetime.timestamp(datetime.now())
         self._locked = False  # Used to indicate a finalized block that should not be altered.
         self._transactions = []
 
@@ -90,7 +92,7 @@ class Block:
             assert isinstance(other, Block)
 
             # Block hashes uniquely encode all block data: no need to compare anything but the hashes.
-            assert (self.hash == other.hash)
+            assert self.hash == other.hash
 
             return True
         except AssertionError:
@@ -292,7 +294,7 @@ class Block:
         return block_data
 
     @property
-    def to_json(self) -> str:  
+    def to_json(self) -> str:
         return json.dumps(self.to_dict)
 
     @staticmethod

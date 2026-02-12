@@ -14,6 +14,7 @@
 
 import random
 from logging import warning
+
 import numpy as np
 from scipy.special import erf
 
@@ -21,6 +22,7 @@ from src.protocols.hash_calculator import HashSolver
 from src.structures.block import Block
 from src.utilities.crypto_utils import compare_hashes, validate_zeroes
 from src.values import DELTA_W_0_ALPHA, MIN_SCORE, W_0_ALPHA
+
 
 class ProofOfWorkProtocol:
     """This class implements the Proof of Work Protocol for a node on the blockchain. In practice, that means the
@@ -121,7 +123,7 @@ class ProofOfWorkProtocol:
 
         new_quantum_hash, dot_vector, _ = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
-        validation_bits = [1]*self.quantum_hash_length
+        validation_bits = [1] * self.quantum_hash_length
         block.set_hash()
         assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
 
@@ -161,16 +163,18 @@ class ProofOfWorkProtocol:
             dot_vector = []
             sample_time = 0
 
-        block_score = self.calculate_confidence_score(validation_bits, self.allowable_err, dot_vector)
+        block_score = self.calculate_confidence_score(
+            validation_bits, self.allowable_err, dot_vector
+        )
         return block_score, sample_time
 
     def calculate_confidence_score(
-        self, valid_bits: np.ndarray, allowable_err: int|float, dot_vector: np.ndarray
+        self, valid_bits: np.ndarray, allowable_err: int | float, dot_vector: np.ndarray
     ) -> float:
-        """Confidence-based scoring, as defined in the quantum blockchain paper (see README for details). In practice 
-        this is quite sensitive to quantum_hash_length, allowable_err, solver schemas and num_reads. Some trial and 
+        """Confidence-based scoring, as defined in the quantum blockchain paper (see README for details). In practice
+        this is quite sensitive to quantum_hash_length, allowable_err, solver schemas and num_reads. Some trial and
         error is required to find sets of values that allow for reasonable validation rates.
-        
+
         Args:
             valid_bits (np.ndarray): a vector of binary values representing which bits of the original hash appeared
                 to be valid (i.e matched the validator's calculated hash). Will hold 1 if the corresponding hash bit
@@ -179,12 +183,12 @@ class ProofOfWorkProtocol:
                 this by 1 compensates for one extra maximum-uncertainty bit (i.e. a bit in which the confidence is 50%).
                 A low value means only an extremely high-confidence hash vector will earn a positive score. A low value
                 means a hash vector with many highly-uncertain bits can still earn a positive score. However, bit
-                errors high-confidence bits will reduce the confidence by far more than 1, so even a few serious 
+                errors high-confidence bits will reduce the confidence by far more than 1, so even a few serious
                 errors can overwhelm this threshold at any reasonable value.
             dot_vector (np.ndarray): Vector that contains the dot products of the hash vector with the normal vectors
                 of hyperplanes chosen by the random projection operation. This vector is used to calculate the bitwise
                 confidence scores. If the value in some coordinate is very far from the mean (W_0_ALPHA), it will have
-                very high confidence (close to 1). If it is near the mean, it will have low confidence (close to 0.5). 
+                very high confidence (close to 1). If it is near the mean, it will have low confidence (close to 0.5).
 
         Returns:
             confidence_score (float): the validator's overall log confidence that the hash is correct to within

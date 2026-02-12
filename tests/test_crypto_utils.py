@@ -116,9 +116,7 @@ def test_signature_functions():
     assert (
         not bad_validation
     ), f"Successfully validated message {message} with pub key {eve_pub}, which should have required pub key {alice_pub}"
-    eve_spoofed_sig = crypto_utils.sign_message(
-        message=message, private_key=eve_priv
-    )
+    eve_spoofed_sig = crypto_utils.sign_message(message=message, private_key=eve_priv)
     attempted_spoof = crypto_utils.validate_signature(
         message=message, signature=eve_spoofed_sig, pub_key=alice_pub
     )

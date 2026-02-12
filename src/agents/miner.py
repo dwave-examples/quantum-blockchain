@@ -39,18 +39,17 @@ class Miner:
         self.pow = pow_protocol
 
         # Holds block that is currently being mined but not yet finalized or broadcast.
-        self.mining_block = None  
+        self.mining_block = None
         self.mined_block = None
         self.mined_block_score = None
 
     def re_initialize_blockchain(self, node_list: list[dict]):
 
         for block_entry in node_list:
-            scores = block_entry["scores"]  
+            scores = block_entry["scores"]
             score = scores[self.id]
             block = Block.from_json(block_entry["block_json"])
             self.add_block_to_chain(block=block, block_score=score)
-
 
     def add_block_to_chain(self, block: Block, block_score: float = 0.0):
         """Adds a block to the blockchain memory stored in self.blockchain, which also
@@ -166,7 +165,7 @@ class Miner:
             raise Exception(
                 f"Block {block.hash} failed required protocol validation checks for miner {self.id}"
             )
-        
+
         return score, solver
 
     def broadcast_mined_block(self) -> str:

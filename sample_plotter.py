@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tests.data_generation.tree_generation import generate_random_tree
 from src.utilities.spiral_plotter import SpiralPlotter
+from tests.data_generation.tree_generation import generate_random_tree
 
 """ This script is not part of the core demo code, it is a utility to generate randomized plots with SpiralPlotter.
     The purpose is to make it easier to debug and evaluate cosmetic changes to SpiralPlotter, as it allows
@@ -25,5 +25,7 @@ last_active_block = test_tree.trunk[-15]
 active_block_cutoff = last_active_block.block_number
 my_plotter = SpiralPlotter()
 mining_block_hash = test_tree.trunk.tip.hash
-test_plot = my_plotter.create_plot_from_tree(test_tree, active_block_cutoff=active_block_cutoff, mining_block_hash=mining_block_hash)
+test_plot = my_plotter.create_plot_from_tree(
+    test_tree, active_block_cutoff=active_block_cutoff, mining_block_hash=mining_block_hash
+)
 test_plot.show()

@@ -16,6 +16,7 @@
 from src.protocols.hash_calculator import SolverName, initialize_solver
 from src.values import DEFAULT_ENERGY_TIME_RESCALING
 
+
 def get_solver_lists():
 
     qpu_solver_list = []

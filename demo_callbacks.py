@@ -25,14 +25,20 @@ from dash import MATCH, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES, MIN_SIMULATION_LOOP_TIME
-from src.utilities.get_solvers import get_solver_lists
+from demo_configs import (
+    ALLOWABLE_ERR,
+    MIN_SIMULATION_LOOP_TIME,
+    MINER_NAMES,
+    N_ZEROES,
+    QUANTUM_HASH_LENGTH,
+)
 from demo_interface import VIEW_OPTS
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode
-from src.utilities.display_update import render_miner_status
-from src.utilities.spiral_plotter import SpiralPlotter
 from src.structures.block import Block
+from src.utilities.display_update import render_miner_status
+from src.utilities.get_solvers import get_solver_lists
+from src.utilities.spiral_plotter import SpiralPlotter
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -117,9 +123,11 @@ def simulation(
     dropdown_idx, solvers = mode_config[solver_mode]
 
     if dropdown_idx > 0:
-        solvers = [solvers[dropdown_idx-1]]
+        solvers = [solvers[dropdown_idx - 1]]
 
-    manager = TrialManager(num_blocks, MINER_NAMES[:num_miners], solvers, QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR)
+    manager = TrialManager(
+        num_blocks, MINER_NAMES[:num_miners], solvers, QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR
+    )
 
     block_dict_template = {
         "block_json": "",
@@ -131,7 +139,6 @@ def simulation(
     current_block_dict = copy.deepcopy(block_dict_template)
     current_blockchain = []
 
-    
     if len(blockchain_structure) > 0:
         current_idx = len(blockchain_structure)
         print(f"Restarting trial at block {current_idx}")
@@ -156,9 +163,11 @@ def simulation(
         update_current_block_data(current_block_dict)
         current_block = Block.from_json(current_block_dict["block_json"])
         for miner_id, miner in manager.miners.items():
-            assert current_block.previous_hash in miner.blockchain.hash_to_branch_lookup, f"{miner_id} failed to have latest block {current_block.hash} with tree structure {miner.blockchain}"
+            assert (
+                current_block.previous_hash in miner.blockchain.hash_to_branch_lookup
+            ), f"{miner_id} failed to have latest block {current_block.hash} with tree structure {miner.blockchain}"
         current_blockchain = blockchain_structure
-        
+
         print("Finished all restart logic.")
 
     view_miners = {
@@ -168,7 +177,7 @@ def simulation(
     while manager.blocks_mined <= num_blocks:
         iter_start_time = time.time()
         if manager.round_progress == 0 and manager.blocks_mined == num_blocks:
-            break 
+            break
         mined, miner_id, block_score, solver = manager.single_step()
         if mined:
             current_block_dict = copy.deepcopy(block_dict_template)
@@ -203,15 +212,17 @@ def simulation(
             if "global" in view_miners[miner_id]:
                 last_shared_block = manager.get_last_common_trunk_block()
                 miner_fig = plotter.create_plot_from_tree(
-                    manager.miners[miner_id].blockchain, 
-                    active_blocks = active_hashes,
-                    active_block_cutoff=last_shared_block, 
-                    mining_block=most_recent_block
+                    manager.miners[miner_id].blockchain,
+                    active_blocks=active_hashes,
+                    active_block_cutoff=last_shared_block,
+                    mining_block=most_recent_block,
                 )
             else:
-                miner_fig = plotter.create_plot_from_tree(manager.miners[miner_id].blockchain, 
-                                                          active_blocks = active_hashes,
-                                                          mining_block=most_recent_block)
+                miner_fig = plotter.create_plot_from_tree(
+                    manager.miners[miner_id].blockchain,
+                    active_blocks=active_hashes,
+                    mining_block=most_recent_block,
+                )
 
             miner_graph_name = view_miners[miner_id]
 
@@ -224,7 +235,10 @@ def simulation(
                 paper_bgcolor="white",
                 plot_bgcolor="white",
             )
-            set_props(miner_graph_name, {"figure": miner_fig},)
+            set_props(
+                miner_graph_name,
+                {"figure": miner_fig},
+            )
 
         iter_end_time = time.time()
         iter_total_time = iter_end_time - iter_start_time
@@ -271,7 +285,6 @@ def update_miner_display(
     block_status_text = f"Currently mining block number {block_number}"
 
     miner_table_body = render_miner_status(current_block_data, num_miners, show_solvers)
-
 
     return "", "display-none", block_status_text, miner_table_body
 
@@ -438,7 +451,7 @@ def reset_simulation(reset_click: int) -> ResetSimulationReturn:
     ],
     prevent_initial_call=True,
 )
-def toggle_graph_display(selected_view): 
+def toggle_graph_display(selected_view):
     """Toggles the visibility of the four different graph displays. Will default to showing the Global
     View graph. When triggered, will hide three of the graph displays and make the selected one visible.
     """

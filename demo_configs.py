@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" This file stores input parameters for the app and various configuration values that
-    will change the appearance (but generally not the functionality) of the demo as it runs."""
+"""This file stores input parameters for the app and various configuration values that
+will change the appearance (but generally not the functionality) of the demo as it runs."""
 
 THUMBNAIL = "static/dwave_logo.svg"
 
@@ -36,25 +36,25 @@ MIN_SIMULATION_LOOP_TIME = 1.1
 #######################################
 # Graph Visual Elements              #
 #######################################
-TRUNK_POINT_COLOR = "#1F74DA" # Blocks that are considered valid parts of the main chain
-TRUNK_EDGE_COLOR = "#7AAEEC" # Spiral segments connecting the valid blocks
-ABANDONED_BRANCH_POINT_COLOR = "#D9610C" # Blocks that are not considered valid
-ABANDONED_BRANCH_EDGE_COLOR = "#F5924B" # Spiral segments connecting invalid blocks
-ACTIVE_BRANCH_POINT_COLOR = "#929292" # Differentiates 'disputed' blocks from 'consensus' blocks
-ACTIVE_BRANCH_EDGE_COLOR = "#C5C5C5" 
-MINING_BLOCK_BORDER_COLOR = "#17BEBB" # Block that is currently (or most recently) being mined on
-TRUNK_TIP_COLOR = "black" # Block at the end of the trunk and other 'active' blocks in global view
-GRAPH_RADIAL_LINE_COLOR = "#E6E6E6" # Radial lines that help with graph readability
-GRAPH_RADIAL_LINE_WIDTH = 0.7 # Width of the radial lines
+TRUNK_POINT_COLOR = "#1F74DA"  # Blocks that are considered valid parts of the main chain
+TRUNK_EDGE_COLOR = "#7AAEEC"  # Spiral segments connecting the valid blocks
+ABANDONED_BRANCH_POINT_COLOR = "#D9610C"  # Blocks that are not considered valid
+ABANDONED_BRANCH_EDGE_COLOR = "#F5924B"  # Spiral segments connecting invalid blocks
+ACTIVE_BRANCH_POINT_COLOR = "#929292"  # Differentiates 'disputed' blocks from 'consensus' blocks
+ACTIVE_BRANCH_EDGE_COLOR = "#C5C5C5"
+MINING_BLOCK_BORDER_COLOR = "#17BEBB"  # Block that is currently (or most recently) being mined on
+TRUNK_TIP_COLOR = "black"  # Block at the end of the trunk and other 'active' blocks in global view
+GRAPH_RADIAL_LINE_COLOR = "#E6E6E6"  # Radial lines that help with graph readability
+GRAPH_RADIAL_LINE_WIDTH = 0.7  # Width of the radial lines
 
-GRAPH_POINT_MIN_SIZE = 5 # Points drawn nearer the center of the graph will be closer to this size
+GRAPH_POINT_MIN_SIZE = 5  # Points drawn nearer the center of the graph will be closer to this size
 # Points drawn closer to the edge of the graph will be closer to this size
 GRAPH_POINT_MAX_SIZE = 15
 
 # Determines how large the branch points are relative to the trunk points.
 GRAPH_BRANCH_POINT_SCALING = 0.65
 GRAPH_MAX_POINTS_PER_REVOLUTION = 36  # Set to a multiple of 4 to keep dynamic adjustments nice
-GRAPH_MIN_POINTS_PER_REVOLUTION = 8 # How many points are drawn in one full 'turn' of the spiral
+GRAPH_MIN_POINTS_PER_REVOLUTION = 8  # How many points are drawn in one full 'turn' of the spiral
 
 # Controls how many straight segments are used to connect each graph point. More segments make a
 # smoother curve. Dynamically adjusted to the size of the graph.
