@@ -260,7 +260,10 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-            dcc.Store(id="is-running-status", data=False),
+            #The data in this first store is irrelevant: it acts as a pass-through to trigger the
+            #simulation callback when targeted by other callbacks.
+            dcc.Store(id="run-trigger-target", data=False),
+            dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
             # Header brand banner

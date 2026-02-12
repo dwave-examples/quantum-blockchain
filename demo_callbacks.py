@@ -46,7 +46,7 @@ from src.structures.block import Block
     Output("pause-button", "className", allow_duplicate=True),
     Output("block-status", "className", allow_duplicate=True),
     inputs=[
-        Input("is-running-status", "data"),
+        Input("run-trigger-target", "data"),
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
@@ -54,9 +54,8 @@ from src.structures.block import Block
         State("simulated-solver-select", "value"),
         State("solver-mode-select", "value"),
     ],
-    progress=[
-        Output("current-block-data", "data"),
-    ],
+    progress=[Output("current-block-data", "data"),],
+    running = [(Output("is-active-simulation", "data"), True, False),],
     cancel=[Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
     background=True,
@@ -102,7 +101,7 @@ def simulation(
         pause-button: hides the 'pause' button
     """
 
-    if not is_running or ctx.triggered_id != "is-running-status":
+    if not is_running or ctx.triggered_id != "run-trigger-target":
         raise PreventUpdate
 
     solver_mode = SolverMode(solver_mode)
@@ -294,25 +293,30 @@ class RunSimulationReturn(NamedTuple):
     blocks_input_disabled: bool = True
     qpu_solver_select_disabled: bool = True
     simulated_solver_select_disabled: bool = True
+    simulation_is_active: bool = True
 
 
 @dash.callback(
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("is-running-status", "data", allow_duplicate=True),
+    Output("run-trigger-target", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
+    Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
-        State("blocks-input", "value"),
+        State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
 )
-def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
+def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationReturn:
     """Runs a simulation with the selected number of miners and blocks."""
+    if simulation_is_active:
+        raise PreventUpdate()
+
     return RunSimulationReturn()
 
 
@@ -323,6 +327,7 @@ def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
+    Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
     ],
@@ -343,7 +348,7 @@ def pause_simulation(pause_click: int):
         resume-button (str): makes visible
         pause-button (str): hides"""
 
-    return "", "", "display-none"
+    return "", "", "display-none", False
 
 
 # ========================================================================================
@@ -353,13 +358,15 @@ def pause_simulation(pause_click: int):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("is-running-status", "data", allow_duplicate=True),
+    Output("run-trigger-target", "data", allow_duplicate=True),
+    Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
+        State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
 )
-def resume_simulation(pause_click: int):
+def resume_simulation(pause_click: int, simulation_is_active: bool):
     """Resumes a paused simulation. In practice, this means starting a new instance of the
     'simulation' callback, but without resetting the blockchain data. The simulation
     will then reconstruct its previous state and pick up where it left off.
@@ -371,7 +378,11 @@ def resume_simulation(pause_click: int):
         reset-button (str): hides
         resume-button (str): hides
         pause-button (str): makes visible
-        is-running-status (bool): sets to 'True', indicating that simulation should resume."""
+        run-trigger-target (bool): Altering this Store (even from True to True) triggers the
+            'simulation' callback, in this case resuming an in-progress simulation."""
+    
+    if simulation_is_active:
+        raise PreventUpdate()
 
     return "display-none", "display-none", "", True
 
@@ -407,7 +418,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
-    Output("is-running-status", "data", allow_duplicate=True),
+    Output("run-trigger-target", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
