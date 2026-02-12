@@ -163,22 +163,22 @@ def generate_random_tree(
     branch_end_prob=0.25,
     earliest_branch: int = 1,
 ):
-    """Procedurally generates a random tree with the specified number of nodes. Each time a new 
+    """Procedurally generates a random tree with the specified number of nodes. Each time a new
     block is added, a branch among the active branches (which always include the trunk) is selected
     at random. The block is either added to the end of that branch or (with probability defined by
-    branch_probability param), added as the start of a child branch of that branch, at a random 
-    location. To ensure that the trunk is overall the dominant branch, each branch has a chance of 
-    becoming inactive each time a block is added, at which point it will never be extended (though 
+    branch_probability param), added as the start of a child branch of that branch, at a random
+    location. To ensure that the trunk is overall the dominant branch, each branch has a chance of
+    becoming inactive each time a block is added, at which point it will never be extended (though
     its children might).
 
     Args:
         num_nodes (int): how many BlockNodes will be added to the tree in total
-        branch_probability (float): the chance that a newly added block starts a new branch. 
+        branch_probability (float): the chance that a newly added block starts a new branch.
             Increments of less than 0.01 do nothing in practice.
-        branch_range (int): controls how far back along the parent branch a new branch is likely to 
+        branch_range (int): controls how far back along the parent branch a new branch is likely to
             form. Probability is a falling exponential: there's a 50% chance of a branch forming in
             the first branch_range blocks, a 25% in the next branch_range blocks and so on.
-        branch_end_prob (float): Chance that a branch will become inactive each time a block is 
+        branch_end_prob (float): Chance that a branch will become inactive each time a block is
             added to it. This keeps the number of branches from growing too large.
         earliest_branch (int): Lowest index a child branch can appear on a parent branch.
     """

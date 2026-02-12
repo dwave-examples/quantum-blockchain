@@ -18,8 +18,8 @@ import pytest
 from dwave.system import DWaveSampler
 
 from src.protocols.hash_calculator import (
-    SimulatedHashSolver,
     QuantumHashSolver,
+    SimulatedHashSolver,
     SolverName,
     initialize_solver,
 )

@@ -32,13 +32,13 @@ from demo_configs import (
     GRAPH_RADIAL_LINE_COLOR,
     GRAPH_RADIAL_LINE_WIDTH,
     GRAPH_SEGMENTS_PER_REVOLUTION,
+    MINING_BLOCK_BORDER_COLOR,
     TRUNK_EDGE_COLOR,
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
-    MINING_BLOCK_BORDER_COLOR
 )
 from src.structures.block_score_tree import BlockScoreTree
-from src.structures.score_tree_branch import ScoreTreeBranch, BlockNode
+from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 
 
 class GraphBranch(ScoreTreeBranch):
@@ -70,7 +70,7 @@ class GraphBranch(ScoreTreeBranch):
         self.y_edges = []
         self.x_points = []
         self.y_points = []
-        self.point_colors = [point_color]*len(self.node_list)
+        self.point_colors = [point_color] * len(self.node_list)
         self.edge_color = edge_color
         self.edge_color_cutoff = -1
         self.depth_adjustment = 0
@@ -149,7 +149,7 @@ class SpiralPlotter:
     @property
     def trunk(self):
         return self.tree.trunk
-    
+
     @property
     def branches(self):
         return self.tree.branches
@@ -208,7 +208,6 @@ class SpiralPlotter:
                 parent_branch = self.tree.hash_to_branch_lookup[branch.root_hash]
                 parent_branch.link_child_branch(branch)
 
-
     def calculate_points_per_rev(self):
         """Calculates how many points will be drawn in a single turn of the spiral. This changes
         dynamically so that graphs with small numbers of points will still have a distinctly
@@ -219,7 +218,9 @@ class SpiralPlotter:
 
         Returns:
             points_per_rev (int): the number of points that will be drawn in a single revolution."""
-        allowed_vals = list(range(GRAPH_MIN_POINTS_PER_REVOLUTION, GRAPH_MAX_POINTS_PER_REVOLUTION + 1, 4))
+        allowed_vals = list(
+            range(GRAPH_MIN_POINTS_PER_REVOLUTION, GRAPH_MAX_POINTS_PER_REVOLUTION + 1, 4)
+        )
         if self.num_nodes <= GRAPH_MIN_POINTS_PER_REVOLUTION * 1.5:
             return GRAPH_MIN_POINTS_PER_REVOLUTION
         elif self.num_nodes >= GRAPH_MAX_POINTS_PER_REVOLUTION * 1.5:
@@ -362,7 +363,7 @@ class SpiralPlotter:
             raise Exception(
                 f"No block number matching provided cutoff {trunk_cutoff} found in trunk"
             )
-        
+
         for branch in self.branches:
             if branch != self.trunk and branch.root.block_number >= trunk_cutoff:
                 branch.point_colors = [ACTIVE_BRANCH_POINT_COLOR for _ in range(len(branch))]
@@ -373,7 +374,7 @@ class SpiralPlotter:
                         branch.point_colors[block_index] = TRUNK_TIP_COLOR
 
         if cutoff_index == len(self.trunk) - 1:
-            return 
+            return
 
         self.trunk.point_colors = [TRUNK_POINT_COLOR for _ in range(cutoff_index + 1)] + [
             ACTIVE_BRANCH_POINT_COLOR for _ in range(cutoff_index + 1, len(self.trunk))
@@ -385,7 +386,6 @@ class SpiralPlotter:
                 self.trunk.point_colors[block_index] = TRUNK_TIP_COLOR
 
         self.trunk.edge_color_cutoff = trunk_cutoff * self.segs_per_point
-
 
     def draw_radial_lines(self):
         """Draws radial lines at the pre-defined angles at which blocks will be plotted."""
@@ -405,7 +405,12 @@ class SpiralPlotter:
 
         return traces
 
-    def draw_spiral(self, active_blocks: list[str], active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
+    def draw_spiral(
+        self,
+        active_blocks: list[str],
+        active_block_cutoff: int | None = None,
+        mining_block: BlockNode | None = None,
+    ):
         """Assuming all the points and edges have been plotted, draws them on the figure, coloring and sizing them
         according to the pre-defined color and size schema. This will draw two distinct sorts of elements onto the
         graph area: points and lines. Each branch of the graph will have one set of points (indicating the blocks
@@ -430,7 +435,9 @@ class SpiralPlotter:
             self._plot_spiral_curves(branch, trunk=bool(branch == self.trunk))
 
         if active_block_cutoff is not None:
-            self._color_for_global_view(active_blocks=active_blocks, trunk_cutoff=active_block_cutoff)
+            self._color_for_global_view(
+                active_blocks=active_blocks, trunk_cutoff=active_block_cutoff
+            )
 
         plot_data = self.draw_radial_lines()
 
@@ -449,15 +456,19 @@ class SpiralPlotter:
             mining_y = [mining_branch.y_points.pop()]
             mining_size = mining_branch.size_chart.pop()
             mining_trace = go.Scatter(
-                    x=mining_x,
-                    y=mining_y,
-                    mode="markers",
-                    marker={"color": mining_block_color, "opacity": 1, "size": mining_size, 
-                            "line":{"width":4, "color": MINING_BLOCK_BORDER_COLOR}},
-                    )
+                x=mining_x,
+                y=mining_y,
+                mode="markers",
+                marker={
+                    "color": mining_block_color,
+                    "opacity": 1,
+                    "size": mining_size,
+                    "line": {"width": 4, "color": MINING_BLOCK_BORDER_COLOR},
+                },
+            )
         else:
             mining_branch = None
-        
+
         trunk_edge_traces = []
         if active_block_cutoff is None or active_block_cutoff >= self.trunk.tip.block_number:
             edge_section = go.Scatter(
@@ -539,6 +550,6 @@ class SpiralPlotter:
         plot = self.draw_spiral(
             active_blocks=active_blocks,
             active_block_cutoff=active_block_cutoff,
-            mining_block=mining_block
+            mining_block=mining_block,
         )
         return plot

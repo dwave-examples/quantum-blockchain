@@ -23,17 +23,15 @@ import dimod
 import numpy as np
 from dwave.system import DWaveSampler
 
-from src.values import (
-    SIMULATED_PATH,
-    EMBEDDINGS_PATH,
-)
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
 from src.values import (
-    SIMULATED_DATA_NUM_READS,
     DEFAULT_ANNEALING_TIME,
     DEFAULT_ENERGY_TIME_RESCALING,
     DEFAULT_NUM_READS,
+    EMBEDDINGS_PATH,
+    SIMULATED_DATA_NUM_READS,
+    SIMULATED_PATH,
 )
 
 

@@ -66,8 +66,8 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
 
     Returns:
         passes_validation (bool): True if the hash passes, False otherwise."""
-    
-    if 4*len(hash) < num_zeroes:
+
+    if 4 * len(hash) < num_zeroes:
         raise Exception(f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
                         represents only {4*len(hash)} binary digits.")
 

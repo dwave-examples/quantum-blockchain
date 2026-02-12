@@ -14,6 +14,7 @@
 
 import os
 from datetime import datetime
+
 import pytest
 
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -49,14 +50,14 @@ def test_creation():
             prev_hash = blocks[-1].previous_hash
         else:
             prev_hash = ""
-        if i%2 == 0:
+        if i % 2 == 0:
             next_timestamp = datetime.timestamp(datetime.now())
             timestamps.append(next_timestamp)
             new_block = Block(
                 miner_id="test_miner",
                 previous_block_hash=prev_hash,
                 nonce=nonce,
-                timestamp=next_timestamp
+                timestamp=next_timestamp,
             )
         else:
             new_block = Block(
@@ -96,9 +97,9 @@ def test_creation():
 
     assert len(blocks) == NUM_BLOCKS, f"Wrong number of blocks. Expected \
                                          {NUM_BLOCKS}, received {len(blocks)}"
-    
-    for i in range(len(timestamps)-1):
-        assert timestamps[i] < timestamps[i+1], f"Timestamp {i} with value {timestamps[i]} and \
+
+    for i in range(len(timestamps) - 1):
+        assert timestamps[i] < timestamps[i + 1], f"Timestamp {i} with value {timestamps[i]} and \
                                         timestamp {i+1} with value {timestamps[i+1]} out of order."
 
 
@@ -110,7 +111,7 @@ def test_validation():
 
 
 def test_data_protection():
-    """This function tests the data protection functionality of Block, specifically checking that 
+    """This function tests the data protection functionality of Block, specifically checking that
     certain operations properly strip away previously-set quantum hashes and prevent the block hash
     from being set until a current quantum hash is added back."""
 
@@ -122,7 +123,7 @@ def test_data_protection():
         else:
             prev_hash = ""
 
-        new_block = Block(miner_id="test_miner",previous_block_hash=prev_hash, nonce=nonce)
+        new_block = Block(miner_id="test_miner", previous_block_hash=prev_hash, nonce=nonce)
         quantum_hash = calculate_hash(hash_seed[: -min(i, len(hash_seed) - 1)])
         new_block.set_quantum_hash(quantum_hash)
 

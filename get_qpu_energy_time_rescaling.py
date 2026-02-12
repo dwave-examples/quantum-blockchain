@@ -271,9 +271,7 @@ def main(
         print(f"The following energy-rescaling option is viable: {energy_option}")
 
     if verbose:
-        print(
-            "Follow README instructions to make this value available to the demo."
-        )
+        print("Follow README instructions to make this value available to the demo.")
 
     return candidate
 

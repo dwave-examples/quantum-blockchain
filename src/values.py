@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from datetime import datetime  # To set genesis block
 
 import numpy as np  # To set effective number of samples (sampling noise)
-
-import os
 
 # ===================================================================================
 #                      PoW Protocol Definitions
@@ -75,4 +74,3 @@ REPO_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 STATIC_PATH = os.path.join(REPO_PATH, "static")
 SIMULATED_PATH = os.path.join(STATIC_PATH, "simulated_data")
 EMBEDDINGS_PATH = os.path.join(STATIC_PATH, "embeddings")
-
