@@ -45,8 +45,8 @@ class GraphBranch(ScoreTreeBranch):
     """This class holds a single branch of a BlockScore tree object, storing necessary
     data to plot that branch in a spiral plot alongside the standard branch data from
     the ScoreTreeBranch class. Coordinates for points and edge sections will initialize
-    to empty lists: the must be computed and appended by the relevant methods from
-    the SpiralPlotter class."""
+    to empty lists (they must be computed and appended by the relevant methods from
+    the SpiralPlotter class)."""
 
     def __init__(
         self,
@@ -70,7 +70,7 @@ class GraphBranch(ScoreTreeBranch):
         self.y_edges = []
         self.x_points = []
         self.y_points = []
-        self.point_colors = [point_color for _ in range(len(self.node_list))]
+        self.point_colors = [point_color]*len(self.node_list)
         self.edge_color = edge_color
         self.edge_color_cutoff = -1
         self.depth_adjustment = 0
@@ -79,8 +79,8 @@ class GraphBranch(ScoreTreeBranch):
     def start_idx(self):
         if self.parent is None:
             return 0
-        else:
-            return self.root.block_number + 1
+
+        return self.root.block_number + 1
 
     @property
     def final_idx(self):
@@ -92,8 +92,8 @@ class GraphBranch(ScoreTreeBranch):
 
     def create_size_chart(self, master_size_chart: list, size_scale: float = 1.0):
         """Creates a size chart, assigning a size to each point in the branch. This
-        must be based on a master size chart, which defines the size progression:
-        this method merely allows all the points in the branch to be proportionally
+        must be based on a master size chart, which defines the size progression.
+        This method allows all the points in the branch to be proportionally
         scaled down.
 
         Args:
@@ -113,8 +113,8 @@ class GraphBranch(ScoreTreeBranch):
         """Assigns a depth adjustment to the branch, indicating how far away from the trunk
         it must be drawn so as not to collide with any other branches. This function is
         called recursively on all the children of the branch, as the children of a branch
-        should not be assigned independently of one-another: optimal assignment depends on
-        assigning them in order."""
+        should not be assigned independently of one-another (optimal assignment depends on
+        assigning them in order)."""
 
         local_depth_adjustment = None
         for depth in range(parent_adjusted_depth, len(depth_limits)):
@@ -124,9 +124,8 @@ class GraphBranch(ScoreTreeBranch):
                 depth_limits[depth] = self.root.block_number
                 break
 
-        if (
-            local_depth_adjustment is None
-        ):  # In this case, we exceeded the max depth in depth_limits without finding a space
+        # In this case, we exceeded the max depth in depth_limits without finding a space
+        if local_depth_adjustment is None:
             depth_limits.append(self.root.block_number)  # So we extend depth_limits to accommodate
             local_depth_adjustment = len(depth_limits) - self.depth
 
@@ -220,20 +219,20 @@ class SpiralPlotter:
 
         Returns:
             points_per_rev (int): the number of points that will be drawn in a single revolution."""
-        allowed_vals = [i for i in range(GRAPH_MIN_POINTS_PER_REVOLUTION, GRAPH_MAX_POINTS_PER_REVOLUTION + 1, 4)]
+        allowed_vals = list(range(GRAPH_MIN_POINTS_PER_REVOLUTION, GRAPH_MAX_POINTS_PER_REVOLUTION + 1, 4))
         if self.num_nodes <= GRAPH_MIN_POINTS_PER_REVOLUTION * 1.5:
             return GRAPH_MIN_POINTS_PER_REVOLUTION
         elif self.num_nodes >= GRAPH_MAX_POINTS_PER_REVOLUTION * 1.5:
             return GRAPH_MAX_POINTS_PER_REVOLUTION
-        else:
-            allowed_index = 0
-            for idx, val in enumerate(allowed_vals):
-                if self.num_nodes < val * 1.5:
-                    break
-                else:
-                    allowed_index = idx
 
-            return allowed_vals[allowed_index]
+        allowed_index = 0
+        for idx, val in enumerate(allowed_vals):
+            if self.num_nodes < val * 1.5:
+                break
+
+            allowed_index = idx
+
+        return allowed_vals[allowed_index]
 
     def _calculate_r(self, node_num: int | float):
         """Calculates the distance from the center at which a point should be drawn. The logic
@@ -264,8 +263,7 @@ class SpiralPlotter:
         """Queries the overall structure of the tree, and modifies the depth_adjustment
         attribute of branches as necessary to allow every branch to be graphed on the
         tree without any crossing or overlapping. This relies partially on the
-        refactor_branches() method of BlockScoreTree (which should have been called
-        as soon as the tree was imported), which ensures that the branches are
+        refactor_branches() method of BlockScoreTree, which ensures that the branches are
         arranged such that this can be done simply and efficiently."""
 
         bottom_level_branches = [branch for branch in self.branches if branch.depth == 1]
@@ -308,13 +306,13 @@ class SpiralPlotter:
         defined by the self.segs_per_point attribute. Plotly accepts these as lists
         of x- and y-coordinates, between which it will draw the lines. These coordinates
         include all of the coordinates of points on the graph, but also many points
-        between them so as to create a smooth curve:
+        between them so as to create a smooth curve.
 
         Args:
             branch (GraphBranch): the branch to be plotted
             trunk (bool): Defaults to 'True'. Flag to signal whether the branch
             is the trunk: non-trunk branches need a 'stem' segment drawn
-            to connect them to their parent branch."""
+                to connect them to their parent branch."""
 
         if not trunk:  # Adds straight "stem" segment connecting branch to parent
             root_idx = branch.parent.hash_to_index_lookup[branch.root_hash]
@@ -335,8 +333,8 @@ class SpiralPlotter:
             branch.y_edges.append(y_i)
             if i == stop_idx:
                 break
-            for j in range(self.segs_per_point - 1):
 
+            for j in range(self.segs_per_point - 1):
                 r_ij = self.fractional_radii[i][j] * adjustment
                 theta_ij = self.fractional_angles[i % self.points_per_rev][j]
                 x_ij = self.center[0] + r_ij * math.cos(theta_ij)
@@ -521,10 +519,15 @@ class SpiralPlotter:
         fig = go.Figure(plot_data)
         return fig
 
-    def create_plot_from_tree(self, tree: BlockScoreTree, active_blocks: list[str], active_block_cutoff: int | None = None, mining_block: BlockNode | None = None):
+    def create_plot_from_tree(
+        self,
+        tree: BlockScoreTree,
+        active_blocks: list[str],
+        active_block_cutoff: int | None = None,
+        mining_block: BlockNode | None = None,
+    ):
         """Given a BlockScoreTree object, creates a spiral plot displaying that tree. Calls
-        all the necessary SpiralPlotter functions in order. For typical usage, this should
-        be the only method that's necessary to call outside the class.
+        all the necessary SpiralPlotter functions in order.
 
         Args:
             tree (BlockScoreTree): the BlockScoreTree object you wish to plot.
@@ -533,5 +536,9 @@ class SpiralPlotter:
                 the graph as a global view."""
 
         self.import_plotting_data(tree_data=tree)
-        plot = self.draw_spiral(active_blocks = active_blocks, active_block_cutoff=active_block_cutoff, mining_block=mining_block)
+        plot = self.draw_spiral(
+            active_blocks=active_blocks,
+            active_block_cutoff=active_block_cutoff,
+            mining_block=mining_block
+        )
         return plot

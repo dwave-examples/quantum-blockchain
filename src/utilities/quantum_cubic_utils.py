@@ -31,7 +31,7 @@ from dwave.system import DWaveSampler
 from dwave.system.composites import ParallelEmbeddingComposite
 from minorminer.utils.parallel_embeddings import find_multiple_embeddings
 
-from directory_paths import EMBEDDINGS_PATH
+from src.values import EMBEDDINGS_PATH
 from src.values import DEFAULT_CUBIC_BOUNDARY_CONDITIONS, DEFAULT_CUBIC_LATTICE_SHAPE
 
 
@@ -92,7 +92,7 @@ def get_embeddings(
             succeeds. A value of zero can be used to disable generation on the fly.
             The value is applied to find_multiple_embeddings, if find_subgraph_kwargs
             is None, it is also used as the timeout for find_subgraph_kwargs.
-        max_num_emb: max_num_emb to seek when loading from files fails. This
+        max_num_emb: the max number of embeddings to seek when loading from files fails. This
             parameter is ignored if loading succeeds.
         load_from_cache: attempt to load from the src.static.embeddings directory.
         save_to_cache: save new embeddings to the src.static.embeddings directory.
@@ -130,7 +130,7 @@ def get_embeddings(
             if len(embeddings) and save_to_cache:
                 with open(embedding_filename, "wb") as f:
                     pickle.dump(embeddings, f)
-                print(f" Embeddings are saved to {embedding_filename} for reuse.")
+                print(f"Embeddings are saved to {embedding_filename} for reuse.")
         else:
             embeddings = []
 
@@ -200,8 +200,8 @@ def displace_n_by_c(n: tuple, c: tuple, lattice_dims: tuple | None = None):
     """
     if lattice_dims is None:
         return tuple((n[i] + c[i]) for i in range(len(n)))
-    else:
-        return tuple((n[i] + c[i]) % lattice_dims[i] for i in range(len(n)))
+
+    return tuple((n[i] + c[i]) % lattice_dims[i] for i in range(len(n)))
 
 
 def create_lattice(
@@ -213,7 +213,7 @@ def create_lattice(
     Args:
         lattice_dims: lattice dimensions
         dim_periodicity: periodic boundary specification in each of the dimensions.
-            A tuple of bools of length matching lattice_dims each endicating if the
+            A tuple of bools of length matching lattice_dims each indicating if the
             dimension is periodic or open.
 
     Returns:
@@ -221,12 +221,12 @@ def create_lattice(
     """
     if len(dim_periodicity) != len(lattice_dims):
         raise ValueError("There should be a periodicity setting for every dimension")
+
     ndim = len(lattice_dims)
     node_list = list(product(*[range(l) for l in lattice_dims]))
     node_set = set(node_list)
-    # We generate 3 edges per node, wrap around those corresponding to
-    # periodic dimensions, and set non-periodic dimensions big enough
-    # to avoid wrap-around (dimension + 1):
+    # We generate 3 edges per node, wrap around those corresponding to periodic dimensions, and set
+    # non-periodic dimensions big enough to avoid wrap-around (dimension + 1)
     dim_wrap_around = tuple((1 + (not i)) * l for l, i in zip(lattice_dims, dim_periodicity))
     geometric_displacements = tuple(tuple(int(i == j) for i in range(ndim)) for j in range(ndim))
     edge_list = [
@@ -334,6 +334,7 @@ def target_dimer_orientation(qpu: DWaveSampler) -> dict:
         dim_orientation = 2
     else:
         raise ValueError("Unknown orientation")
+
     int_to_str = {0: "vertical", 1: "horizontal"}
     return {n: int_to_str[to_coordinates(n)[dim_orientation]] for n in qpu.nodelist}
 
@@ -360,7 +361,6 @@ def generate_default_sampler(
 ) -> dimod.Sampler:
     """This function generates a sampler (either a QPU or a SA sampler), appropriately
     parameterized based on the input to this function.
-
 
     Args:
         source_edge_list: A list of couplers relevant to the programmed Hamiltonian

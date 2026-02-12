@@ -19,13 +19,13 @@ from src.values import DEFAULT_ENERGY_TIME_RESCALING
 def get_solver_lists():
 
     qpu_solver_list = []
-    bootstrap_list = []
+    simulated_list = []
 
     for solver_name in SolverName:
         name = str(solver_name.value)
         if "simulated" in name:
             next_solver = initialize_solver(name)
-            bootstrap_list.append(next_solver)
+            simulated_list.append(next_solver)
         else:
             try:
                 if name not in DEFAULT_ENERGY_TIME_RESCALING:
@@ -40,4 +40,4 @@ def get_solver_lists():
     if len(qpu_solver_list) <= 0:
         raise Exception("Cannot connect to any solvers. Unable to run.")
 
-    return qpu_solver_list, bootstrap_list
+    return qpu_solver_list, simulated_list

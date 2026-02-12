@@ -21,17 +21,16 @@ from enum import Enum
 
 import dimod
 import numpy as np
-from dwave.cloud import Client
 from dwave.system import DWaveSampler
 
-from directory_paths import (
-    BOOTSTRAP_PATH,
+from src.values import (
+    SIMULATED_PATH,
     EMBEDDINGS_PATH,
 )
 from src.utilities import quantum_cubic_utils
 from src.utilities.random_projection import RandomProjectionHasher
 from src.values import (
-    BOOTSTRAP_DATA_NUM_READS,
+    SIMULATED_DATA_NUM_READS,
     DEFAULT_ANNEALING_TIME,
     DEFAULT_ENERGY_TIME_RESCALING,
     DEFAULT_NUM_READS,
@@ -48,7 +47,7 @@ class SolverName(Enum):
     ENERGY_TIME_RESCALING dictionary in src/values.py and embeddings
     should also be created (see README Per-QPU calibration).
 
-    Simulated (aka BOOTSTRAP) solvers use independently sampled witnesses, with
+    Simulated solvers use independently sampled witnesses, with
     the distributions parameterized by saved (offline) QPU experimental data.
     Distributions are provided only for the set of generally-available QPUs used
     in the study https://arxiv.org/pdf/2503.14462
@@ -58,10 +57,10 @@ class SolverName(Enum):
     SOLVER2 = "Advantage_system6.4"
     SOLVER3 = "Advantage2_system1.11"
 
-    BOOTSTRAP1 = "simulated_Advantage2_prototype2.6"  # No longer generally available
-    BOOTSTRAP2 = "simulated_Advantage_system4.1"
-    BOOTSTRAP3 = "simulated_Advantage_system6.4"
-    BOOTSTRAP4 = "simulated_Advantage_system7.1"  # Offline
+    SIMULATED1 = "simulated_Advantage2_prototype2.6"  # No longer generally available
+    SIMULATED2 = "simulated_Advantage_system4.1"
+    SIMULATED3 = "simulated_Advantage_system6.4"
+    SIMULATED4 = "simulated_Advantage_system7.1"  # Offline
 
 
 SolverParams = namedtuple(
@@ -89,8 +88,7 @@ class HashSolver(ABC):
 
         Returns:
             hash_bits: a np vector whose values should be exclusively 0s and 1s, defining the quantum hash.
-                    Note that this will be processed into a hex string and stored as such by the Block class: it's
-                    more convenient to leave it as raw bits here.
+                    Note that this will be processed into a hex string and stored as such by the Block class.
             dot_vector: a np vector encoding the hyperplane distance for each bit (that is, the dot product of the
                         hash vector and the hyperplane's normal vector)
             sample_time: the time required by the sampler to generate the sampler_output
@@ -115,17 +113,17 @@ def initialize_solver(solver_name: str) -> HashSolver:
             f"Unrecognized solver name {solver_name} passed. Allowed names are {[str(n.value) for n in SolverName]}"
         )
     elif "simulated" in solver_name:
-        return BootstrappingHashSolver(solver_name)
+        return SimulatedHashSolver(solver_name)
     else:
         return QuantumHashSolver(solver_name)
 
 
-class BootstrappingHashSolver(HashSolver):
+class SimulatedHashSolver(HashSolver):
     def __init__(
         self,
         solver_name: str = None,
         *,
-        bootstrap_path: str = BOOTSTRAP_PATH,
+        simulated_path: str = SIMULATED_PATH,
         mean_witnesses: np.ndarray | None = None,
         var_witnesses: np.ndarray | None = None,
         var_rescaling_factor: float | None = None,
@@ -134,10 +132,10 @@ class BootstrappingHashSolver(HashSolver):
 
         Args:
             solver_name: The solver_name which specifies a lookup file for loading witness statistics.
-            bootstrap_path: Path to the directory containing the witness data.
+            simulated_path: Path to the directory containing the witness data.
             mean_witnesses: A numpy array of expected witness values.
             var_witnesses: A numpy array of expected witness variances.
-            var_rescaling: Variance rescaling allows emulation of variable sampling error (or high frequency control error) .
+            var_rescaling: Variance rescaling allows emulation of variable sampling error (or high frequency control error).
                 Resampled witnesses are distributed as ~ N(mean, variance*variance_rescaling)).
                 If fewer/more reads are to be simulated, relative to the value used in data correction we can scale accordingly.
         """
@@ -147,8 +145,8 @@ class BootstrappingHashSolver(HashSolver):
             )
         if mean_witnesses is None:
             self._solver_name = solver_name
-            mean_filepath = os.path.join(bootstrap_path, self.solver_name + "_mean.npy")
-            var_filepath = os.path.join(bootstrap_path, self.solver_name + "_var.npy")
+            mean_filepath = os.path.join(simulated_path, self.solver_name + "_mean.npy")
+            var_filepath = os.path.join(simulated_path, self.solver_name + "_var.npy")
             self.mean_witnesses = np.load(mean_filepath)
             var_witnesses = np.load(var_filepath)
         else:
@@ -157,15 +155,15 @@ class BootstrappingHashSolver(HashSolver):
             if var_witnesses is None:
                 var_witnesses = np.zeros(shape=mean_witnesses.shape)
         if var_rescaling_factor is None:
-            var_rescaling_factor = float(BOOTSTRAP_DATA_NUM_READS) / float(DEFAULT_NUM_READS)
+            var_rescaling_factor = float(SIMULATED_DATA_NUM_READS) / float(DEFAULT_NUM_READS)
         self.var_witnesses = var_rescaling_factor * var_witnesses
         self.num_witnesses = self.mean_witnesses.size
 
     def calculate_quantum_hash(
         self, hash_length: int, rng_seed: int
     ) -> tuple[str, np.ndarray, float]:
-        """Implementation of quantum hash calculation for solvers simulated using bootstrapping. Requires
-            Bootstrapping files for the current solver to be in place in order to function.
+        """Implementation of quantum hash calculation for simulated solvers. Requires
+            Simulated files for the current solver to be in place in order to function.
 
         Args:
             hash_length (int): length of the quantum hash to use, in bits
@@ -176,7 +174,7 @@ class BootstrappingHashSolver(HashSolver):
                 this means that the length will be 1/4 (rounded up) of the passed hash length
                 since a hex digit can store 4 binary digits.
             dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence
-            sample_time (float): sampling time. Not much interest when bootstrapping, but must be
+            sample_time (float): sampling time. Not much interest when simulating, but must be
                 included to match the output signature of the QPU version."""
 
         sample_start = time.perf_counter()
@@ -232,7 +230,7 @@ class QuantumHashSolver(HashSolver):
                  to emulate Advantage2_prototype2 dynamics with the given solver.
             embedding_directory: Location of embeddings
             sampler: A `dimod.Sampler`, when not specified the solver name and profile is used to select
-                a QPU with the Leap client, and a suitable embedding is loaded. non-QPU samplers
+                a QPU with the Leap client, and a suitable embedding is loaded. Non-QPU samplers
                 are used for testing.
             sampler_kwargs: Arguments for the dimod sampler, defaulted to QPU fast annealing
                 arguments when not specified. Non defaulted arguments are used for testing.
@@ -241,7 +239,7 @@ class QuantumHashSolver(HashSolver):
         if energy_time_rescaling is None:
             if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
                 raise ValueError(
-                    "Unsupported {solver_name}: See calibration/ for generation of energy-time rescaling values and embeddings"
+                    "Unsupported {solver_name}: See the `calibration` directory for generation of energy-time rescaling values and embeddings"
                 )
             problem_hamiltonian_rescaling, time_rescaling = DEFAULT_ENERGY_TIME_RESCALING[
                 solver_name

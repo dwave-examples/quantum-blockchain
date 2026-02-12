@@ -41,19 +41,19 @@ def test_get_embeddings_filename():
     edge_list_target = [(-1, -2)] + [
         (n1 + 3 * i, n2 + 3 * i) for i in range(2) for n1, n2 in edge_list_source
     ]  # Target nodes are ints
-    fn = get_embeddings_filename(
+    embeddings_filename = get_embeddings_filename(
         edge_list_source=edge_list_source,
         edge_list_target=edge_list_target,
         embedding_directory="./",
     )
     assert (
-        fn
+        embeddings_filename
         == "./emb_S4abb167c7ffc10734f8b864460b50c6a8127177cc2edf0fdd3de9b2cd1960b57_T17bdefd0180e09b59c098e35bb9fc510355f075d9b06a3dad0f94dec3e05cb9f.pkl"
     )
 
 
 def test_get_embeddings():
-    # Improvemnet, test some graph known to be in the repo and verify embeddings.
+    # Improvement, test some graph known to be in the repo and verify embeddings.
     edge_list_source = [(0, 1), (1, 2)]  # source nodes are ints.
     edge_list_target = [(-1, -2)] + [
         (n1 + 3 * i, n2 + 3 * i) for i in range(2) for n1, n2 in edge_list_source

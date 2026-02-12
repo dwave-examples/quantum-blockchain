@@ -39,6 +39,7 @@ def calculate_hash(data_in: str, hash_function: HashFunction = HashFunction.SHA2
     """
     if type(data_in) != str:
         raise Exception(f"Passed non-string data {data_in} of type {type(data_in)}")
+
     data = bytearray(data_in, "utf-8")
     if hash_function == HashFunction.SHA256:
         h = SHA256.new()
@@ -64,7 +65,7 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
         num_zeroes (int): the number of leading zeroes required to pass validation
 
     Returns:
-        passes_validation (bool): True if the hash passes, false otherwise."""
+        passes_validation (bool): True if the hash passes, False otherwise."""
     
     if 4*len(hash) < num_zeroes:
         raise Exception(f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
@@ -76,15 +77,13 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
 
     if np.any(numpy_bits[:num_zeroes]):
         return False
-    else:
-        return True
+
+    return True
 
 
 def basic_compound_hash(hash_seed: str, quantum_hash: str, quantum_signature: str = "") -> str:
     """Concatenates two or three strings and hashes the result. Intended use is to combine the basic header data
-    and the quantum hash into a single hash value. This could be done with the existing functions,
-    this is mostly a placeholder for something that we may want to replace with a more complicated
-    hash calculation procedure later.
+    and the quantum hash into a single hash value. This could be done with the existing functions.
 
     Args:
         hash_seed (str): the hash seed of the original block header. See block.py for full definition
@@ -161,7 +160,7 @@ def validate_signature(message: str, signature: str, pub_key: str) -> bool:
 
     Args:
         message (str): The message to be validated, formatted as a hex string.
-        signature (str):  The signature to be validated, formatted as a hex string.
+        signature (str): The signature to be validated, formatted as a hex string.
         pub_key (str): The public key of the signer, formatted as a hex string.
 
     Returns:
@@ -202,7 +201,9 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
         numpy_bits2
     ), f"Attempted to compare hashes of different lengths, {len(numpy_bits1)} vs {len(numpy_bits2)}"
     comparison_vector = np.zeros(shape=(len(numpy_bits1)), dtype=np.int8)
+
     for i in range(len(numpy_bits1)):
         if numpy_bits1[i] == numpy_bits2[i]:
             comparison_vector[i] = 1
+
     return comparison_vector

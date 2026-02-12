@@ -16,6 +16,8 @@ from datetime import datetime  # To set genesis block
 
 import numpy as np  # To set effective number of samples (sampling noise)
 
+import os
+
 # ===================================================================================
 #                      PoW Protocol Definitions
 # ===================================================================================
@@ -23,7 +25,7 @@ import numpy as np  # To set effective number of samples (sampling noise)
 EMPTY_QUANTUM_HASH = ""
 MIN_SCORE = -(
     2**14
-)  # Large enough to outweigh any legitimate score, small enough to work on essentially all platforms.
+)  # Large enough to outweigh any legitimate score, small enough to work on all platforms.
 
 # ===================================================================================
 #                      Unitary dynamics parameterization
@@ -49,11 +51,28 @@ DEFAULT_ENERGY_TIME_RESCALING = {
 MAX_MINING_ATTEMPTS = 100000
 W_0_ALPHA = 0.0
 DEFAULT_NUM_READS = 600  # NB - Smaller than arXiv:2503.14462.
-BOOTSTRAP_DATA_NUM_READS = 3860  # Value used for Advantage_system4.1 in arXiv:2503.14462. The num reads was fixed to use 1 second of QPU access time (maximum for single-programming). For the simulated data, this is the relevant value.
-DELTA_W_0_ALPHA = 0.16 * np.sqrt(
-    BOOTSTRAP_DATA_NUM_READS / DEFAULT_NUM_READS
-)  # Set per the description of arXiv:arXiv:2503.14462 subject to two difference: (1) NUM_READS can be (is by default) smaller, so variance is scaled accordingly (conservatively: in line with sampling noise and ignoring control noise) (2) the generally available compute environment is different (measured d_Walpha=0.16 over 3 solvers available January 21 2026, as opposed to 0.18 the 4 GA solvers at the time of the paper).
+
+# Value used for Advantage_system4.1 in arXiv:2503.14462. Num reads was fixed to use 1 second of QPU
+# access time (maximum for single-programming). For the simulated data, this is the relevant value.
+SIMULATED_DATA_NUM_READS = 3860
+
+# Set per the description of arXiv:arXiv:2503.14462 subject to two difference:
+# (1) NUM_READS can be (is by default) smaller, so variance is scaled accordingly (conservatively:
+# in line with sampling noise and ignoring control noise)
+# (2) the generally available compute environment is different (measured d_Walpha=0.16 over 3
+# solvers available January 21 2026, as opposed to 0.18 the 4 GA solvers at the time of the paper).
+DELTA_W_0_ALPHA = 0.16 * np.sqrt(SIMULATED_DATA_NUM_READS / DEFAULT_NUM_READS)
 
 GENESIS_BLOCK_TIMESTAMP = datetime.timestamp(datetime.fromisoformat("2025-01-01 00:00:00.000"))
 GENESIS_BLOCK_PREV_HASH = "begin_blockchain"
 GENESIS_MINER_ID = "genesis"
+
+# ===================================================================================
+#                      Directory Definitions
+# ===================================================================================
+
+REPO_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+STATIC_PATH = os.path.join(REPO_PATH, "static")
+SIMULATED_PATH = os.path.join(STATIC_PATH, "simulated_data")
+EMBEDDINGS_PATH = os.path.join(STATIC_PATH, "embeddings")
+

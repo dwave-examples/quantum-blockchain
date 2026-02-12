@@ -25,8 +25,8 @@ from dash import MATCH, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES, MIN_SIMULATION_LOOP_TIME, GRAPH_LAYOUT_DICT
-from demo_solvers import get_solver_lists
+from demo_configs import QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR, MINER_NAMES, MIN_SIMULATION_LOOP_TIME
+from src.utilities.get_solvers import get_solver_lists
 from demo_interface import VIEW_OPTS
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode
@@ -215,7 +215,15 @@ def simulation(
 
             miner_graph_name = view_miners[miner_id]
 
-            miner_fig.update_layout(**GRAPH_LAYOUT_DICT)
+            miner_fig.update_layout(
+                autosize=False,
+                showlegend=False,
+                xaxis=dict(showticklabels=False),
+                yaxis=dict(showticklabels=False),
+                margin=dict(l=0, r=0, b=0, t=0, pad=4),
+                paper_bgcolor="white",
+                plot_bgcolor="white",
+            )
             set_props(miner_graph_name, {"figure": miner_fig},)
 
         iter_end_time = time.time()
@@ -452,7 +460,7 @@ def toggle_graph_display(selected_view):
     ],
 )
 def toggle_solver_mode(solver_mode):
-    """Toggles between QPU Solver mode and Bootstrapping Solver Mode"""
+    """Toggles between QPU Solver mode and Simulated Solver Mode"""
     solver_mode = SolverMode(solver_mode)
 
     if solver_mode is SolverMode.QPU:

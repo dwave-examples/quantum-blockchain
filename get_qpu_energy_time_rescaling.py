@@ -13,15 +13,12 @@
 # limitations under the License.
 
 import argparse
-import sys
 from typing import Literal
 
 import dimod
 import numpy as np
-from dwave.samplers import SimulatedAnnealingSampler
 from dwave.system import DWaveSampler
 
-sys.path.append("../")
 from src.utilities.quantum_cubic_utils import create_lattice, create_model, generate_default_sampler
 
 ADV2_PROTOTYPE2_FIT = {
@@ -82,8 +79,8 @@ def get_energy(
         )
     elif statistic_type == "min-energy":
         return energy_rescaling * result.first.energy
-    else:
-        raise ValueError("Unknown statistic")
+
+    raise ValueError("Unknown statistic")
 
 
 def fit_rescaling_to_kibble_zurek_form(
@@ -207,9 +204,11 @@ def fit_rescaling_to_kibble_zurek_form(
             "approach the ground state and/or if ground state energies "
             "are overestimated."
         )
+
     lin_target = np.log(mean_residual_energy / res_en_target)
     proposed_t = time_rescaling * np.exp(-lin_target / kappa_t)
     proposed_R = energy_rescaling * np.exp(-lin_target / kappa_R)
+
     if proposed_R < 1:
         print(
             f"Inviable problem-energy rescaling {proposed_R}, out of standard range 1/|J| in [1,infty)"
@@ -223,13 +222,11 @@ def fit_rescaling_to_kibble_zurek_form(
         print(
             f"Inviable annealing time rescaling {annealing_time}, out of programmable annealing_time range"
         )
+
     candidate_energy_rescaling = (float(proposed_R), time_rescaling)
     candidate_time_rescaling = (energy_rescaling, float(proposed_t))
-    return (
-        candidate_energy_rescaling,
-        candidate_time_rescaling,
-        residual_energies,
-    )
+
+    return candidate_energy_rescaling, candidate_time_rescaling, residual_energies
 
 
 def main(
@@ -251,8 +248,7 @@ def main(
     """
 
     if verbose:
-        print(f"Solving for chip_id {qpu.properties['chip_id']}")
-        print()
+        print(f"Solving for chip_id {qpu.properties['chip_id']}\n")
         print(
             "A Kibble-Zurek model model provides a good description of the ensemble-average "
             "expected energy for all Advantage and Advantage2 processors given a suitable "
@@ -263,18 +259,17 @@ def main(
             "to the experimental average energy from 25 QPU programmings. A short delay applies "
             "during data collection."
         )
-    (
-        energy_option,
-        time_option,
-        _,
-    ) = fit_rescaling_to_kibble_zurek_form(qpu)
+
+    energy_option, time_option, _ = fit_rescaling_to_kibble_zurek_form(qpu)
     print()  # NEW LINE
+
     if time_option[1] < 1:
         candidate = time_option
         print(f"The following time-rescaling option is viable: {time_option}")
     else:
         candidate = energy_option
         print(f"The following energy-rescaling option is viable: {energy_option}")
+
     if verbose:
         print(
             "Follow README instructions to make this value available to the demo."
@@ -302,7 +297,7 @@ if __name__ == "__main__":
         "-P",
         "--profile",
         type=str,
-        help="profile used for the client connection",
+        help="Profile used for the client connection",
         default=None,
     )
     parser.add_argument(
@@ -315,11 +310,7 @@ if __name__ == "__main__":
     verbose = not args.verbose_off
     if verbose:
         print(description)
-    qpu = DWaveSampler(
-        solver=args.solver_name,
-        profile=args.profile,
-    )
-    main(
-        qpu=qpu,
-        verbose=verbose,
-    )
+
+    qpu = DWaveSampler(solver=args.solver_name, profile=args.profile)
+
+    main(qpu=qpu, verbose=verbose)

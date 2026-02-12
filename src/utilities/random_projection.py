@@ -67,6 +67,5 @@ class RandomProjectionHasher:
             np.ndarray: The hashed vector.
         """
         dot = np.dot(input_vector, self.plane_norms.T)
-        # bool_vector = dot > 0
-        # binary_vector = bool_vector.astype(int)
+
         return dot  # binary_vector

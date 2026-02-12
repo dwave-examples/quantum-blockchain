@@ -17,7 +17,6 @@ import pytest
 
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 
-from src.utilities.crypto_utils import get_key_set
 from tests.data_generation.block_generation import BlockGenerator
 from tests.data_generation.tree_generation import (
     append_scores,
@@ -29,7 +28,7 @@ from tests.data_generation.tree_generation import (
 
 
 @pytest.fixture(scope="module")
-def block_gen(transaction_gen):
+def block_gen():
     return BlockGenerator()
 
 

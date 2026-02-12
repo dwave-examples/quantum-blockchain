@@ -26,16 +26,16 @@ from src.values import EMPTY_QUANTUM_HASH
 
 
 class Block:
-    """Class representing a block, the fundamental unit of the quantum blockchian. Most of the logic in this class deals
+    """Class representing a block, the fundamental unit of the quantum blockchain. Most of the logic in this class deals
     with block creation which is a complicated process with multiple steps that must be completed in the right order,
     some of which require QPU access and must be handled external to the Block class. Once a valid block has been created
     it should be locked with the Block.lock() method, ensuring that all its data is now treated as immutable. Once a block
     is locked in can be summarized as a dict with the Block.to_dict method, or serialized into a JSON object with the
     Block.to_json method. A serialized block can be recovered with the static Block.from_json method, which will return a
     locked Block object (as not unlocked block should ever be serialized). The serialized block data will include a hash value,
-    but the deserialization process will allow the hash value to be recalculated: the calculated and transmitted values are
-    compared as a checksum to guard against data corruption: this is important in real network conditions as even a single
-    bit-error in a block will render the entire Block invalid and incompatible with the wider blockchian.
+    but the deserialization process will allow the hash value to be recalculated. The calculated and transmitted values are
+    compared as a checksum to guard against data corruption. This is important in real network conditions as even a single
+    bit-error in a block will render the entire Block invalid and incompatible with the wider blockchain.
 
     The steps to Block creation are as follows:
 
@@ -43,7 +43,7 @@ class Block:
         miner's public key, a timestamp and a nonce value. Everything except the previous block hash may be amended or altered
         later (though the timestamp will never be modified directly)
     2. If new transactions are added after the block is first instantiated, they can be added with the Block.add_transactions()
-        method. This will automatically update the timestamp (which should always post-date the most ,recent transaction), and
+        method. This will automatically update the timestamp (which should always post-date the most recent transaction), and
         invalidate any other hash or signature fields, which will need to be recalculated or re-added. The Merkle Root will be
         automatically recomputed and updated.
     3. Once all the transactions are finalized, the only thing that can be easily altered is the nonce. A miner can then iterate
@@ -57,7 +57,7 @@ class Block:
 
     Note that any alteration made to transactions or nonce after step 4 will cause the currently-stored quantum hash to be removed:
     this is important as any such alterations will render the quantum hash invalid and prevent the block from passing validation.
-    Likewise any alterations made after step 5 will remove both the classical and quantum hashes to be removed, as none of them are
+    Likewise any alterations made after step 5 will cause both the classical and quantum hashes to be removed, as none of them are
     valid if the internal data is altered.
     """
 
@@ -88,9 +88,10 @@ class Block:
     def __eq__(self, other):
         try:
             assert isinstance(other, Block)
-            assert (
-                self.hash == other.hash
-            )  # Block hashes uniquely encode all block data: no need to compare anything but the hashes.
+
+            # Block hashes uniquely encode all block data: no need to compare anything but the hashes.
+            assert (self.hash == other.hash)
+
             return True
         except AssertionError:
             return False
@@ -106,10 +107,7 @@ class Block:
 
     @property
     def current_block_hash(self) -> bool:
-        if "hash" in self._header:
-            return True
-        else:
-            return False
+        return "hash" in self._header
 
     @property
     def header(self) -> dict:
@@ -153,15 +151,12 @@ class Block:
         """Returns the current value of the quantum hash as a hex-formatted string."""
         if self.current_quantum_hash:
             return self._header["quantum_hash"]
-        else:
-            raise Exception("No quantum hash has been added.")
+
+        raise Exception("No quantum hash has been added.")
 
     @property
     def current_quantum_hash(self) -> bool:
-        if "quantum_hash" in self._header:
-            return True
-        else:
-            return False
+        return "quantum_hash" in self._header
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -213,9 +208,6 @@ class Block:
         """Calculates the block hash, storing the result in the 'hash' entry of self._header. This will overwrite
             any existing hash, though the result will be identical if the data has not been altered since the last
             time this function was called.
-
-        Args:
-            None
 
         Modifies:
             self._header["hash:]: sets the hash value
@@ -288,10 +280,7 @@ class Block:
         a finalized hash value."""
 
         block_hash = basic_compound_hash(self.hash_seed, self.quantum_hash)
-        if block_hash == self.hash:
-            return True
-        else:
-            return False
+        return block_hash == self.hash
 
     @property
     def to_dict(self):
@@ -339,7 +328,7 @@ class Block:
 
     @staticmethod
     def from_json(json_block: str, validate_hash: bool = True) -> "Block":
-        """Deserializes a blocked stored as json into a locked Block object. Calls from_dict,
+        """Deserializes a blocked stored as JSON into a locked Block object. Calls from_dict,
         which performs a check on the hash of the reconstructed Block to ensure integrity."""
 
         block_dict = json.loads(json_block)

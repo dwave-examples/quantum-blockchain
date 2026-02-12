@@ -13,10 +13,8 @@
 # limitations under the License.
 import argparse
 import os
-import sys
 
-sys.path.append("../")
-from directory_paths import EMBEDDINGS_PATH
+from src.values import EMBEDDINGS_PATH
 from dwave.system import DWaveSampler
 from src.utilities.quantum_cubic_utils import (
     create_lattice,
@@ -37,7 +35,7 @@ def main(
     verbose: bool = True,
     overwrite: bool = False,
 ) -> list[dict]:
-    """Finds embeddings for a specific qpu/sampler combination
+    """Finds embeddings for a specific qpu/sampler combination.
 
     For embeddings to be used as part of the demo they should be saved to
     the EMBEDDINGS_PATH
@@ -72,7 +70,7 @@ def main(
             time is the sum of subgraph and parallel embedding timeouts.
         seed: Used for reproducible randomization in the search.
         verbose: Print a method summary and information on search completion.
-        overwrite: If an embedding exists in the cache, load it rather than
+        overwrite: If False and an embedding exists in the cache, load it rather than
             overwriting.
         embedding_directory: path for loading and writing embeddings.
     Returns:
@@ -80,8 +78,7 @@ def main(
     """
 
     if verbose:
-        print(f"Solving for chip_id {qpu.properties['chip_id']}")
-        print()
+        print(f"Solving for chip_id {qpu.properties['chip_id']}\n")
 
     node_list_source, edge_list_source = create_lattice()
     node_labels = (
@@ -163,7 +160,7 @@ if __name__ == "__main__":
         "-P",
         "--profile",
         type=str,
-        help="profile used for the client connection",
+        help="Profile used for the client connection",
         default=None,
     )
     parser.add_argument(
