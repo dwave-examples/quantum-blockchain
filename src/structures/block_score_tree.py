@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,44 +26,45 @@ TRUNCATED_HASH_LEN = 5
 
 
 class BlockScoreTree:
-    """Class for tracking structure and score of a blockchain. Each block is represented by a 6-element
-    named BlockNode tuple (see score_tree_branch.py for definition) formatted as
+    """ Class for tracking structure and score of a blockchain. Each block is represented by a 
+        6-element named BlockNode tuple (see score_tree_branch.py for definition) formatted as
 
-    (block_hash, previous_block_hash, block_score, total_score, block_height, block_number)
+        (block_hash, previous_block_hash, block_score, total_score, block_height, block_number)
 
-    where total_score is the total score of the chain that ends with that block, block_height is the total length of
-    the chain extending from the genesis block to this block and block_number is the ordinal number in which the block
-    was added to the chain.
+        where total_score is the total score of the chain that ends with that block, block_height 
+        is the total length of the chain extending from the genesis block to this block and 
+        block_number is the ordinal number in which the block was added to the chain.
 
-    With the previous_block_hash references defining edges connecting one block to another, the chain will take the
-    form of a directed tree (in the graph-theory sense) and under typical usage will have a single very long path starting
-    at a leaf and extending back to the root, with a number of much shorter branches joining this path at various points. Built
-    from this assumption, the main data structure is referred to as the "trunk" and stored in the "self.trunk" list. A
-    large part of the design and usage is build around the centrality of the trunk.
+        With the previous_block_hash references defining edges connecting one block to another, 
+        the chain will take the form of a directed tree (in the graph-theory sense) and under 
+        typical usage will have a single very long path starting at a leaf and extending back to 
+        the root, with a number of much shorter branches joining this path at various points. Built
+        from this assumption, the main data structure is referred to as the "trunk" and stored in 
+        the "self.trunk" list. A large part of the design and usage is build around the centrality 
+        of the trunk.
 
-    In blockchain terms, the trunk represents the canonical chain: the chain that the owner of the object considers
-    to be the authoritative one, containing valid blocks and transactions.
+        In blockchain terms, the trunk represents the canonical chain: the chain that the owner of 
+        the object considers to be the authoritative one, containing valid blocks and transactions.
+        The decision on which blocks should end up in the trunk should thus be determined at a high
+        level, by the scores the user assigns the blocks before they are passed into BlockScoreTree. 
+        This class is designed to depend as little as possible on the details of the users scoring
+        schema; the only assumptions encoded into the structure of the class are  1. higher scores 
+        are preferred to lower scores, 2. total scores are determined additively (that is, the total 
+        score of a block is the sum of its block_score and the block_score of all its predecessors) 
+        and that 3. blocks with negative-scores default to being put in secondary branches rather
+        than in the trunk.
 
-    Branches are instantiated as members of the ScoreTreeBranch class, with each maintained as a
-    single, linear list of blocks. Each list will contain only the blocks that diverge from its
-    predecessor, thus only the trunk will form a 'complete' chain while every non-trunk chain
-    will consist of multiple branch-sections terminating in a trunk section.
+        Branches are instantiated as members of the ScoreTreeBranch class, with each maintained as 
+        a single, linear list of blocks. Each list will contain only the blocks that diverge from 
+        its predecessor, thus only the trunk will form a 'complete' chain while every non-trunk 
+        chain will consist of multiple branch-sections terminating in a trunk section.
 
-    The trunk is specifically intended to represent the main or "canonical" chain in this blockchain:
-    those blocks which are considered valid and whose transactions can be expected to be honored by
-    other blockchain users. Which blocks will be in the trunk is determined at a high-level, based
-    on what scores the user assigns to the blocks before passing them into the BlockScoreTree. The only
-    scoring assumptions encoded into the structure of this class is that 1. higher scores are preferred
-    to lower scores, 2. total scores are determined additively (that is, the total score of a block is the sum
-    of its block_score and the block_score of all its predecessors) and that 3. blocks with negative-scores are
-    by-default not considered part of the main chain.
-
-    Outside of the trunk, the choice of which section of blocks belong to a parent branch and which belong to a child
-    is largely arbitrary: both chains extending from the fork point must be tracked, but neither has inherently special
-    status compared to the other. Parent-child relationships between the post-fork sections can be modified with the
-    self.promote_branch() method, exchanging the last section of the parent branch (everything after the fork point) with
-    the child branch.
-    """
+        Outside of the trunk, the choice of which section of blocks belong to a parent branch and 
+        which belong to a child is largely arbitrary: both chains extending from the fork point 
+        must be tracked, but neither has inherently special status compared to the other. 
+        Parent-child relationships between the post-fork sections can be modified with the
+        self.promote_branch() method, exchanging the last section of the parent branch (everything
+        after the fork point) with the child branch. """
 
     def __init__(
         self, genesis_block: BlockNode | None = None, score_predicate: "function | None" = None

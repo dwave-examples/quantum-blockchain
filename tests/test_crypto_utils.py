@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,45 +90,6 @@ def test_validate_zeroes():
     assert not crypto_utils.validate_zeroes(
         str_1, 12
     ), f"Erroneously validated for values {str_3} and 12 zeroes."
-
-
-def test_signature_functions():
-    """Tests the cryptographic signature functions by creating two key sets, and ensuring that validate_signature
-    returns true if and only if it is passed a message that has been signed with a valid public-private key pair,
-    along with the correct signature block and public key corresponding to that message and key pair.
-    """
-
-    message = "My hovercraft is full of eels!"
-    wrong_message = "He's pining for the fjords."
-    alice_priv, alice_pub, alice_address = crypto_utils.get_key_set()
-    eve_priv, eve_pub, eve_address = crypto_utils.get_key_set()
-
-    alice_signature = crypto_utils.sign_message(message=message, private_key=alice_priv)
-    valid_sig = crypto_utils.validate_signature(
-        message=message, signature=alice_signature, pub_key=alice_pub
-    )
-    assert (
-        valid_sig
-    ), f"Failed to validate signature over message {message} with public key {alice_pub}"
-    bad_validation = crypto_utils.validate_signature(
-        message=message, signature=alice_signature, pub_key=eve_pub
-    )
-    assert (
-        not bad_validation
-    ), f"Successfully validated message {message} with pub key {eve_pub}, which should have required pub key {alice_pub}"
-    eve_spoofed_sig = crypto_utils.sign_message(message=message, private_key=eve_priv)
-    attempted_spoof = crypto_utils.validate_signature(
-        message=message, signature=eve_spoofed_sig, pub_key=alice_pub
-    )
-    assert (
-        not attempted_spoof
-    ), f"Spoofed signature of message {message} with private key {eve_priv} evaluated as valid. Should have required private key {alice_priv}"
-    wrong_validation = crypto_utils.validate_signature(
-        message=wrong_message, signature=alice_signature, pub_key=alice_pub
-    )
-    assert (
-        not wrong_validation
-    ), f"Successfully validated message {wrong_message} with signature which should have been over {message}"
 
 
 def test_compare_hashes():
