@@ -87,7 +87,7 @@ def test_creation():
 
         assert (
             len(lock_fails) == 0
-        ), f"Block with previous hash {new_block.previous_hash} allowed\
+        ), f"Block with previous hash {new_block.previous_hash} allowed \
                                      improper locking at steps {lock_fails}"
 
         new_block.set_hash()

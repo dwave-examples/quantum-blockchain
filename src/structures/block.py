@@ -306,7 +306,7 @@ class Block:
         """Reconstitutes a (locked) Block object from a dictionary of its data, such as that
             created by the to_dict method. If validate_hash is left at its default value of True,
             will raise an exception if the block hash calculated from the stored data does not
-            match the stored hash value. This is to ensure the integrity f the stored data, so
+            match the stored hash value. This is to ensure the integrity of the stored data, so
             that invalid blocks are never treated as valid.
 
         Args:

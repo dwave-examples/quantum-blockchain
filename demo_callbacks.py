@@ -336,7 +336,12 @@ class RunSimulationReturn(NamedTuple):
     prevent_initial_call=True,
 )
 def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationReturn:
-    """Runs a simulation with the selected number of miners and blocks."""
+    """Runs a simulation with the selected number of miners and blocks.
+    
+    Args:
+        run_click (int): unused
+        simulation_is_active (bool): Returns 'True.' Flag to signal that one instance of
+            'simulation' callback is already running, so another should not be started"""
     if simulation_is_active:
         raise PreventUpdate()
 
@@ -396,6 +401,8 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
 
     Args:
         pause_click (int): Unused.
+        simulation_is_active (bool): Returns 'True.' Flag to signal that one instance of
+            'simulation' callback is already running, so another should not be started
 
     Returns:
         reset-button (str): hides
@@ -407,7 +414,7 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
     if simulation_is_active:
         raise PreventUpdate()
 
-    return "display-none", "display-none", "", True
+    return "display-none", "display-none", "", True, True
 
 
 # ========================================================================================
