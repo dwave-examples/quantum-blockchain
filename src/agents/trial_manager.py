@@ -6,15 +6,15 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software distributed under the License
-# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express 
-# or implied. See the License for the specific language governing permissions and limitations under 
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
 # the License.
 #
 # The use of code in the quantum-blockchain repository with a quantum computing system is protected
 # by the intellectual property rights of D-Wave Quantum Inc. and its affiliates.
 #
-# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will 
-# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud 
+# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will
+# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud
 # Subscription Agreement available at:
 # https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
@@ -62,7 +62,7 @@ def initialize_genesis_block(
 class TrialManager:
     """This class manages a trial of blockchain mining. The purpose of this
     class is to be able to iterate through a series of blocks and maintain
-    the state of the trial as it progresses. 
+    the state of the trial as it progresses.
     """
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,18 +85,18 @@ class TrialManager:
         Args:
             num_blocks (int): the number of blocks the trial will run before it concludes
             miner_names (list[str]): a list of unique strings to use as names of miners in the
-                trial. TrialManager will use all such names passed, thus the length of the list 
+                trial. TrialManager will use all such names passed, thus the length of the list
                 will determine the number of miners in the trial.
             solvers (list[HashSolver]): a list of HashSolver objects. One will be selected each
                 time a miner attempts to mine or validate. To run a trial with a single solver,
                 pass a list containing only that solver.
             quantum_hash_length (int): length in bits of the quantum hash. This partly determines
                 the cross-validation difficulty for the trial.
-            n_zeroes (int): the number of leading zeros a block hash must have to pass the PoW 
+            n_zeroes (int): the number of leading zeros a block hash must have to pass the PoW
                 requirement. This determines how difficult mining is: each extra 0 will (on
                 average) double the number of attempts required to mine successfully.
             allowable_err (int): how much error is allowed in cross validation. Increasing
-                this will make cross-validation easier: see the 'scoring' function 
+                this will make cross-validation easier: see the 'scoring' function
                 in the ProofOfWorkProtocol class for a full mathematical description.
 
         Instantiates:
@@ -214,7 +214,7 @@ class TrialManager:
         return mined, miner_id, block_score, solver
 
     def run_trial(self, num_blocks: int = None):
-        """ Runs the trial through some number of complete block mining and validation events. By 
+        """Runs the trial through some number of complete block mining and validation events. By
             default it will run until the trial finishes, but this can be overridden by passing a
             smaller number as an argument.
 

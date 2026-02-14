@@ -18,6 +18,7 @@ from enum import Enum
 import numpy as np
 from Crypto.Hash import RIPEMD160, SHA256
 
+
 class HashFunction(Enum):
     SHA256 = "sha256"
     RIPEMD160 = "ripemd160"
@@ -65,8 +66,10 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
         passes_validation (bool): True if the hash passes, False otherwise."""
 
     if 4 * len(hash) < num_zeroes:
-        raise Exception(f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
-                        represents only {4*len(hash)} binary digits.")
+        raise Exception(
+            f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
+                        represents only {4*len(hash)} binary digits."
+        )
 
     q_hash_bytes = binascii.unhexlify(hash.encode(encoding="utf-8"))
     numpy_bytes = np.frombuffer(np.array(q_hash_bytes), dtype="B")
@@ -76,6 +79,7 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
         return False
 
     return True
+
 
 def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     """Performs a bitwise comparison of two hashes, applying the XNOR logical operation to each pair of bits, yielding
@@ -90,10 +94,7 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
         hash_comparison (str): a hexidecimal string encoding the bits where the two hashes match and those where they don't.
     """
 
-    hash_bytes = [
-        binascii.unhexlify(hash_bits)
-        for hash_bits in (first_hash, second_hash)
-    ]
+    hash_bytes = [binascii.unhexlify(hash_bits) for hash_bits in (first_hash, second_hash)]
     numpy_bytes = [np.frombuffer(np.array(q_hash_bytes), dtype="B") for q_hash_bytes in hash_bytes]
     numpy_bits1 = np.unpackbits(numpy_bytes[0])
     numpy_bits2 = np.unpackbits(numpy_bytes[1])

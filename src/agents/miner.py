@@ -6,18 +6,17 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software distributed under the License
-# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express 
-# or implied. See the License for the specific language governing permissions and limitations under 
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
 # the License.
 #
 # The use of code in the quantum-blockchain repository with a quantum computing system is protected
 # by the intellectual property rights of D-Wave Quantum Inc. and its affiliates.
 #
-# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will 
-# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud 
+# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will
+# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud
 # Subscription Agreement available at:
 # https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
-
 
 
 import numpy as np
@@ -25,6 +24,7 @@ import numpy as np
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.structures.block_score_tree import BlockScoreTree
+
 
 class Miner:
     """This class is intended to encapsulate all necessary functions for running a miner
@@ -58,7 +58,7 @@ class Miner:
             self.add_block_to_chain(block=block, block_score=score)
 
     def add_block_to_chain(self, block: Block, block_score: float = 0.0):
-        """ Adds a block to the block_score_tree object stored in self.blockchain. Updates 
+        """Adds a block to the block_score_tree object stored in self.blockchain. Updates
             blockchain beliefs based on the logic of the update_blockchain_beliefs function.
 
         Args:
@@ -72,12 +72,12 @@ class Miner:
         self.blockchain.add_block(block.hash, block.previous_hash, block_score)
 
         # Only need to update on blocks that are good and not already in trunk
-        if self.blockchain.score_predicate(block_score):  
-            self.update_blockchain_beliefs() 
+        if self.blockchain.score_predicate(block_score):
+            self.update_blockchain_beliefs()
 
     def update_blockchain_beliefs(self):
-        """ Updates the blockchain tree so that the branch containing the highest scoring block is now the trunk.
-            
+        """Updates the blockchain tree so that the branch containing the highest scoring block is now the trunk.
+
 
         Modifies:
            self.blockchain.tree: the representation of the miner's chain structure"""
@@ -98,7 +98,7 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2**15)
+        nonce = np.random.randint(0, 2 ** 15)
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
@@ -125,7 +125,7 @@ class Miner:
         return new_block, block_score, solver
 
     def receive_block(self, new_block_str) -> tuple[float, str]:
-        """ Processes a new block that has been received as a JSON-formatted string, validates it
+        """Processes a new block that has been received as a JSON-formatted string, validates it
             and adds it to the miner's blockchain.
 
         Args:
@@ -140,10 +140,10 @@ class Miner:
         return score, solver
 
     def validate_block(self, block: Block) -> tuple[float, str]:
-        """ Validates the Block's compliance with the Proof of Work protocol. The Miner's 
+        """Validates the Block's compliance with the Proof of Work protocol. The Miner's
             ProofOfWork Object calls its own validate_block function to check the main block hash,
-            the N_zeroes requirement, the Merkle root and the quantum hash, with the later 
-            assigning a float-values score rather than a strict pass or fail boolean flag. This 
+            the N_zeroes requirement, the Merkle root and the quantum hash, with the later
+            assigning a float-values score rather than a strict pass or fail boolean flag. This
             final score is the only thing returned by this method (any other validation issue will
             raise an Exception).
 
@@ -177,8 +177,10 @@ class Miner:
             raise Exception(f"Miner {self.id} attempted to broadcast with no block ready")
 
         if self.mined_block_score is None:
-            raise Exception(f"Attempted to broadcast mined block with hash \
-                            {self.mined_block.hash}, but it had not been scored.")
+            raise Exception(
+                f"Attempted to broadcast mined block with hash \
+                            {self.mined_block.hash}, but it had not been scored."
+            )
         else:
             self.add_block_to_chain(self.mined_block, self.mined_block_score)
 

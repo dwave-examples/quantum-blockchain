@@ -38,7 +38,7 @@ class RandomProjectionHasher:
         else:
             self.plane_norms = prng.random(size=(nbits, input_dimension))
         if orthogonal_to is not None:
-            orthogonal_to /= np.sqrt(np.sum(orthogonal_to**2))
+            orthogonal_to /= np.sqrt(np.sum(orthogonal_to ** 2))
             coeffs = self.plane_norms @ orthogonal_to[:, np.newaxis]
             self.plane_norms = self.plane_norms - orthogonal_to[np.newaxis, :] * coeffs
 

@@ -85,21 +85,29 @@ def test_creation():
         except:
             pass
 
-        assert len(lock_fails) == 0, f"Block with previous hash {new_block.previous_hash} allowed\
+        assert (
+            len(lock_fails) == 0
+        ), f"Block with previous hash {new_block.previous_hash} allowed\
                                      improper locking at steps {lock_fails}"
 
         new_block.set_hash()
         new_block.lock()
         assert new_block.locked, f"Block {i} did not lock properly."
-        assert new_block.quantum_hash == quantum_hash, f"Quantum hash for block {i} was \
+        assert (
+            new_block.quantum_hash == quantum_hash
+        ), f"Quantum hash for block {i} was \
                                                 {new_block.quantum_hash} expected {quantum_hash}"
         blocks.append(new_block)
 
-    assert len(blocks) == NUM_BLOCKS, f"Wrong number of blocks. Expected \
+    assert (
+        len(blocks) == NUM_BLOCKS
+    ), f"Wrong number of blocks. Expected \
                                          {NUM_BLOCKS}, received {len(blocks)}"
 
     for i in range(len(timestamps) - 1):
-        assert timestamps[i] < timestamps[i + 1], f"Timestamp {i} with value {timestamps[i]} and \
+        assert (
+            timestamps[i] < timestamps[i + 1]
+        ), f"Timestamp {i} with value {timestamps[i]} and \
                                         timestamp {i+1} with value {timestamps[i+1]} out of order."
 
 

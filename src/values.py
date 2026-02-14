@@ -23,7 +23,7 @@ import numpy as np  # To set effective number of samples (sampling noise)
 
 EMPTY_QUANTUM_HASH = ""
 MIN_SCORE = -(
-    2**14
+    2 ** 14
 )  # Large enough to outweigh any legitimate score, small enough to work on all platforms.
 
 # ===================================================================================

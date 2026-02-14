@@ -6,15 +6,15 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software distributed under the License
-# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express 
-# or implied. See the License for the specific language governing permissions and limitations under 
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
 # the License.
 #
 # The use of code in the quantum-blockchain repository with a quantum computing system is protected
 # by the intellectual property rights of D-Wave Quantum Inc. and its affiliates.
 #
-# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will 
-# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud 
+# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will
+# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud
 # Subscription Agreement available at:
 # https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
@@ -78,7 +78,7 @@ SolverParams = namedtuple(
 class HashSolver(ABC):
     @abstractmethod
     def calculate_quantum_hash(self, hash_length: int, rng_seed: int) -> tuple[str, np.ndarray]:
-        """ Template for the method to calculate quantum hash values. Implementation will vary by 
+        """Template for the method to calculate quantum hash values. Implementation will vary by
             solver type, but input and return values should stay consistent.
 
         Args:
@@ -90,11 +90,11 @@ class HashSolver(ABC):
                 sampling of offline data models.
 
         Returns:
-            hash_bits: a np vector whose values should be exclusively 0s and 1s, defining the 
-                quantum hash. Note that this will be processed into a hex string and stored as 
+            hash_bits: a np vector whose values should be exclusively 0s and 1s, defining the
+                quantum hash. Note that this will be processed into a hex string and stored as
                 such by the Block class.
-            dot_vector: a np vector encoding the hyperplane distance for each bit (that is, the 
-                dot product of the hash vector and the hyperplane's normal vector)  """
+            dot_vector: a np vector encoding the hyperplane distance for each bit (that is, the
+                dot product of the hash vector and the hyperplane's normal vector)"""
 
     @property
     def solver_name(self) -> str:
@@ -102,13 +102,13 @@ class HashSolver(ABC):
 
 
 def initialize_solver(solver_name: str) -> HashSolver:
-    """ Function to allow a HashSolver of either type to be initiated from a SolverParams tuple, 
+    """Function to allow a HashSolver of either type to be initiated from a SolverParams tuple,
         without having to check which type of solver it is and invoke either subclass directly.
 
     Args:
         solver_name: A SolverName compatible value used to initialize a QPU or simulated solver.
     Returns:
-        A HashSolver """
+        A HashSolver"""
 
     if solver_name not in [str(n.value) for n in SolverName]:
         raise Exception(
@@ -138,11 +138,11 @@ class SimulatedHashSolver(HashSolver):
             simulated_path (str): Path to the directory containing the witness data.
             mean_witnesses (np.ndarray): A numpy array of expected witness values.
             var_witnesses (np.ndarray): A numpy array of expected witness variances.
-            var_rescaling (float): Variance rescaling allows emulation of variable sampling error 
-                (or high frequency control error). Resampled witnesses are distributed as 
-                ~ N(mean, variance*variance_rescaling)). If fewer/more reads are to be simulated, 
-                relative to the value used in data correction we can scale accordingly. """
-        
+            var_rescaling (float): Variance rescaling allows emulation of variable sampling error
+                (or high frequency control error). Resampled witnesses are distributed as
+                ~ N(mean, variance*variance_rescaling)). If fewer/more reads are to be simulated,
+                relative to the value used in data correction we can scale accordingly."""
+
         if solver_name is None and mean_witnesses is None:
             raise Exception(
                 "Witness must be provided or a solver associated to a source file specified"
@@ -163,9 +163,7 @@ class SimulatedHashSolver(HashSolver):
         self.var_witnesses = var_rescaling_factor * var_witnesses
         self.num_witnesses = self.mean_witnesses.size
 
-    def calculate_quantum_hash(
-        self, hash_length: int, rng_seed: int
-    ) -> tuple[str, np.ndarray]:
+    def calculate_quantum_hash(self, hash_length: int, rng_seed: int) -> tuple[str, np.ndarray]:
         """Implementation of quantum hash calculation for simulated solvers. Requires
             Simulated files for the current solver to be in place in order to function.
 
@@ -218,23 +216,23 @@ class QuantumHashSolver(HashSolver):
         sampler_kwargs: dict | None = None,
         sampler: dimod.Sampler | None = None,
     ) -> None:
-        """ Initializes the QuantumHashSolver object, which will create and maintain a connection 
+        """Initializes the QuantumHashSolver object, which will create and maintain a connection
             to the indicated D-Wave Solver as long as this object in instantiated.
 
         Args:
             solver_name (str): The name of the QPU solver
             profile (str): client profile
             num_reads (int): number of QPU reads per hash calculation
-            reference_annealing_time (float): targeted evolution time with respect to 
+            reference_annealing_time (float): targeted evolution time with respect to
                 Advantage2_prototype2 schedule.
-            energy_time_rescaling (tuple[float, float]): problem Hamiltonian and time rescaling 
+            energy_time_rescaling (tuple[float, float]): problem Hamiltonian and time rescaling
                 factors required to emulate Advantage2_prototype2 dynamics with the given solver.
             embedding_directory (str): Location of embeddings
             sampler_kwargs (dict): Arguments for the dimod sampler, defaulted to QPU fast annealing
                 arguments when not specified. Non defaulted arguments are used for testing.
-            sampler (`dimod.Sampler`): when not specified the solver name and profile is used to 
-                select a QPU with the Leap client, and a suitable embedding is loaded. Non-QPU 
-                samplers are used for testing. """
+            sampler (`dimod.Sampler`): when not specified the solver name and profile is used to
+                select a QPU with the Leap client, and a suitable embedding is loaded. Non-QPU
+                samplers are used for testing."""
 
         if energy_time_rescaling is None:
             if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
@@ -273,9 +271,7 @@ class QuantumHashSolver(HashSolver):
         else:
             self.sampler = sampler
 
-    def calculate_quantum_hash(
-        self, hash_length: int, rng_seed: int
-    ) -> tuple[str, np.ndarray]:
+    def calculate_quantum_hash(self, hash_length: int, rng_seed: int) -> tuple[str, np.ndarray]:
         """Implementation of quantum hash calculation for QPU samplers
 
         Args:
