@@ -58,7 +58,7 @@ from src.utilities.spiral_plotter import SpiralPlotter
     Output("pause-button", "className", allow_duplicate=True),
     Output("block-status", "className", allow_duplicate=True),
     inputs=[
-        Input("run-trigger-target", "data"),
+        Input("start-simulation", "data"),
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
@@ -77,8 +77,8 @@ from src.utilities.spiral_plotter import SpiralPlotter
     background=True,
 )
 def simulation(
-    update_current_block_data: dict,
-    is_running: bool,
+    set_progress_miner_table, #set_progress function for 'progress' argument
+    start_simulation: bool,
     num_miners: int,
     num_blocks: int,
     blockchain_structure: list,
@@ -117,7 +117,7 @@ def simulation(
         pause-button: hides the 'pause' button
     """
 
-    if not is_running or ctx.triggered_id != "run-trigger-target":
+    if ctx.triggered_id != "start-simulation":
         raise PreventUpdate
 
     solver_mode = SolverMode(solver_mode)
@@ -169,7 +169,7 @@ def simulation(
         manager.round_order = finished_miners + unfinished_miners
         current_block_dict = last_block
         manager.blocks_mined = current_block_dict["block_number"]
-        update_current_block_data(current_block_dict)
+        set_progress_miner_table(current_block_dict)
         current_block = Block.from_json(current_block_dict["block_json"])
         for miner_id, miner in manager.miners.items():
             assert (
@@ -208,7 +208,7 @@ def simulation(
         set_props("blockchain-structure-data", {"data": current_blockchain})
         time.sleep(0.2)
 
-        update_current_block_data(current_block_dict)
+        set_progress_miner_table(current_block_dict)
 
         time.sleep(0.2)
 
@@ -323,7 +323,7 @@ class RunSimulationReturn(NamedTuple):
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("run-trigger-target", "data", allow_duplicate=True),
+    Output("start-simulation", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
@@ -386,7 +386,7 @@ def pause_simulation(pause_click: int):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("run-trigger-target", "data", allow_duplicate=True),
+    Output("start-simulation", "data", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
@@ -408,7 +408,7 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
         reset-button (str): hides
         resume-button (str): hides
         pause-button (str): makes visible
-        run-trigger-target (bool): Altering this Store (even from True to True) triggers the
+        start-simulation (bool): Altering this Store (even from True to True) triggers the
             'simulation' callback, in this case resuming an in-progress simulation."""
 
     if simulation_is_active:
@@ -428,7 +428,6 @@ class ResetSimulationReturn(NamedTuple):
     reset_button_classname: str = "display-none"
     resume_button_classname: str = "display-none"
     prelim_text_classname: str = ""
-    is_running: bool = False
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
     qpu_solver_select_disabled: bool = False
@@ -448,7 +447,6 @@ class ResetSimulationReturn(NamedTuple):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
-    Output("run-trigger-target", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),

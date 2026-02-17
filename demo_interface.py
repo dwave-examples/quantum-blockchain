@@ -265,7 +265,7 @@ def create_interface():
             ),
             # The data in this first store is irrelevant: it acts as a pass-through to trigger the
             # simulation callback when targeted by other callbacks.
-            dcc.Store(id="run-trigger-target", data=False),
+            dcc.Store(id="start-simulation", data=False),
             dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),

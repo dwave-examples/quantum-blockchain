@@ -34,7 +34,7 @@ class Block:
     Once a block is locked in can be summarized as a dict with the Block.to_dict method, or
     serialized into a JSON object with the Block.to_json method. A serialized block can be
     recovered with the static Block.from_json method, which will return a locked Block object
-    (as not unlocked block should ever be serialized). The serialized block data will include a
+    (as no unlocked block should ever be serialized). The serialized block data will include a
     hash value, but the deserialization process will allow the hash value to be recalculated.
     The calculated and transmitted values are compared as a checksum to guard against data
     corruption. This is important in real network conditions as even a single bit-error in a
