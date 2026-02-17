@@ -1,16 +1,22 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Unless required by applicable law or agreed to in writing, software distributed under the License
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
+# the License.
+#
+# The use of code in the quantum-blockchain repository with a quantum computing system is protected
+# by the intellectual property rights of D-Wave Quantum Inc. and its affiliates.
+#
+# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will
+# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud
+# Subscription Agreement available at:
+# https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
 from __future__ import annotations
 
@@ -52,7 +58,7 @@ from src.utilities.spiral_plotter import SpiralPlotter
     Output("pause-button", "className", allow_duplicate=True),
     Output("block-status", "className", allow_duplicate=True),
     inputs=[
-        Input("is-running-status", "data"),
+        Input("start-simulation", "data"),
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
@@ -63,13 +69,16 @@ from src.utilities.spiral_plotter import SpiralPlotter
     progress=[
         Output("current-block-data", "data"),
     ],
+    running=[
+        (Output("is-active-simulation", "data"), True, False),
+    ],
     cancel=[Input("pause-button", "n_clicks")],
     prevent_initial_call=True,
     background=True,
 )
 def simulation(
-    update_current_block_data: dict,
-    is_running: bool,
+    set_progress_miner_table, #set_progress function for 'progress' argument
+    start_simulation: bool,
     num_miners: int,
     num_blocks: int,
     blockchain_structure: list,
@@ -87,7 +96,7 @@ def simulation(
 
     Args:
         update_current_block_data: the progress function for providing updates while the callback is running
-        is_running (bool): flag to signal that the 'run' button has been clicked. Passing it this way
+        start_simulation (bool): flag to signal that the 'run' button has been clicked. Passing it this way
             (instead of the 'run' button itself being used as an input), allows certain UI updates (such as
             disabling/hiding components) to be processed immediately on clicking 'run', before the simulation starts
         num_miners (int): the value of the the miner slider: determines how many miners the trial has.
@@ -108,7 +117,7 @@ def simulation(
         pause-button: hides the 'pause' button
     """
 
-    if not is_running or ctx.triggered_id != "is-running-status":
+    if ctx.triggered_id != "start-simulation":
         raise PreventUpdate
 
     solver_mode = SolverMode(solver_mode)
@@ -160,7 +169,7 @@ def simulation(
         manager.round_order = finished_miners + unfinished_miners
         current_block_dict = last_block
         manager.blocks_mined = current_block_dict["block_number"]
-        update_current_block_data(current_block_dict)
+        set_progress_miner_table(current_block_dict)
         current_block = Block.from_json(current_block_dict["block_json"])
         for miner_id, miner in manager.miners.items():
             assert (
@@ -199,7 +208,7 @@ def simulation(
         set_props("blockchain-structure-data", {"data": current_blockchain})
         time.sleep(0.2)
 
-        update_current_block_data(current_block_dict)
+        set_progress_miner_table(current_block_dict)
 
         time.sleep(0.2)
 
@@ -302,30 +311,40 @@ class RunSimulationReturn(NamedTuple):
     run_button_classname: str = "display-none"
     reset_button_classname: str = "display-none"
     pause_button_classname: str = ""
-    is_running: bool = True
+    start_simulation: bool = True
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
     qpu_solver_select_disabled: bool = True
     simulated_solver_select_disabled: bool = True
+    simulation_is_active: bool = True
 
 
 @dash.callback(
     Output("run-button", "className", allow_duplicate=True),
     Output("reset-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("is-running-status", "data", allow_duplicate=True),
+    Output("start-simulation", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
+    Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
-        State("blocks-input", "value"),
+        State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
 )
-def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
-    """Runs a simulation with the selected number of miners and blocks."""
+def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationReturn:
+    """Runs a simulation with the selected number of miners and blocks.
+    
+    Args:
+        run_click (int): unused
+        simulation_is_active (bool): Returns 'True.' Flag to signal that one instance of
+            'simulation' callback is already running, so another should not be started"""
+    if simulation_is_active:
+        raise PreventUpdate()
+
     return RunSimulationReturn()
 
 
@@ -336,6 +355,7 @@ def run_simulation(run_click: int, num_blocks: int) -> RunSimulationReturn:
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
+    Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
     ],
@@ -356,7 +376,7 @@ def pause_simulation(pause_click: int):
         resume-button (str): makes visible
         pause-button (str): hides"""
 
-    return "", "", "display-none"
+    return "", "", "display-none", False
 
 
 # ========================================================================================
@@ -366,27 +386,35 @@ def pause_simulation(pause_click: int):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("pause-button", "className", allow_duplicate=True),
-    Output("is-running-status", "data", allow_duplicate=True),
+    Output("start-simulation", "data", allow_duplicate=True),
+    Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("resume-button", "n_clicks"),
+        State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
 )
-def resume_simulation(pause_click: int):
+def resume_simulation(pause_click: int, simulation_is_active: bool):
     """Resumes a paused simulation. In practice, this means starting a new instance of the
     'simulation' callback, but without resetting the blockchain data. The simulation
     will then reconstruct its previous state and pick up where it left off.
 
     Args:
         pause_click (int): Unused.
+        simulation_is_active (bool): Returns 'True.' Flag to signal that one instance of
+            'simulation' callback is already running, so another should not be started
 
     Returns:
         reset-button (str): hides
         resume-button (str): hides
         pause-button (str): makes visible
-        is-running-status (bool): sets to 'True', indicating that simulation should resume."""
+        start-simulation (bool): Altering this Store (even from True to True) triggers the
+            'simulation' callback, in this case resuming an in-progress simulation."""
 
-    return "display-none", "display-none", "", True
+    if simulation_is_active:
+        raise PreventUpdate()
+
+    return "display-none", "display-none", "", True, True
 
 
 # ========================================================================================
@@ -400,7 +428,6 @@ class ResetSimulationReturn(NamedTuple):
     reset_button_classname: str = "display-none"
     resume_button_classname: str = "display-none"
     prelim_text_classname: str = ""
-    is_running: bool = False
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
     qpu_solver_select_disabled: bool = False
@@ -420,7 +447,6 @@ class ResetSimulationReturn(NamedTuple):
     Output("reset-button", "className", allow_duplicate=True),
     Output("resume-button", "className", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
-    Output("is-running-status", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),

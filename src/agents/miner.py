@@ -1,16 +1,22 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Unless required by applicable law or agreed to in writing, software distributed under the License
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
+# the License.
+#
+# The use of code in the quantum-blockchain repository with a quantum computing system is protected
+# by the intellectual property rights of D-Wave Quantum Inc. and its affiliates.
+#
+# The use of code in the quantum-blockchain repository with D-Wave's  quantum computing system will
+# require access to D-Wave’s LeapTM quantum cloud service and will be governed by the Leap Cloud
+# Subscription Agreement available at:
+# https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
 
 import numpy as np
@@ -52,9 +58,8 @@ class Miner:
             self.add_block_to_chain(block=block, block_score=score)
 
     def add_block_to_chain(self, block: Block, block_score: float = 0.0):
-        """Adds a block to the blockchain memory stored in self.blockchain, which also
-        adds its info to the score tree. Updates blockchain beliefs based on the logic of
-        the update_blockchain_beliefs function. Writes the block data and its score to file.
+        """Adds a block to the block_score_tree object stored in self.blockchain. Updates
+            blockchain beliefs based on the logic of the update_blockchain_beliefs function.
 
         Args:
             block (Block): a block
@@ -64,9 +69,7 @@ class Miner:
             self.blockchain: the miner's blockchain
         """
 
-        self.blockchain.add_block(
-            block_hash=block.hash, prev_block_hash=block.previous_hash, block_score=block_score
-        )
+        self.blockchain.add_block(block.hash, block.previous_hash, block_score)
 
         # Only need to update on blocks that are good and not already in trunk
         if self.blockchain.score_predicate(block_score):
@@ -74,11 +77,7 @@ class Miner:
 
     def update_blockchain_beliefs(self):
         """Updates the blockchain tree so that the branch containing the highest scoring block is now the trunk.
-            Updates the mempool to reflect the change: transactions from blocks that are being moved off the trunk
-            are returned to the mempool, transactions from blocks being moved onto the trunk are removed (often this will
-            add and then remove many of the same transactions). When with function is called and
-            how it should work may need to change when miner behavior is allowed to be more flexible (i.e. different
-            scoring functions or chain management policies).
+
 
         Modifies:
            self.blockchain.tree: the representation of the miner's chain structure"""
@@ -99,7 +98,7 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2**15)
+        nonce = np.random.randint(0, 2 ** 15)
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
@@ -126,10 +125,8 @@ class Miner:
         return new_block, block_score, solver
 
     def receive_block(self, new_block_str) -> tuple[float, str]:
-        """Processes a new block that has been received as a broadcast. This includes logging the broadcast in the Owner's
-            broadcast log, reconstructing the JSON data into a Block object, and adding the new block to the Owner's queue of
-            received blocks. This will not add the block to the Owner's blockchain (that should be done by calling
-            append_block_to_chain()).
+        """Processes a new block that has been received as a JSON-formatted string, validates it
+            and adds it to the miner's blockchain.
 
         Args:
             new_block_str (str): A new block, serialized into a JSON-formatted string.
@@ -143,11 +140,12 @@ class Miner:
         return score, solver
 
     def validate_block(self, block: Block) -> tuple[float, str]:
-        """Validates the Block's compliance with the Proof of Work protocol. The Miner's ProofOfWork Object
-            calls its own validate_block function to check the main block hash, the N_zeroes requirement,
-            the Merkle root and the quantum hash, with the later assigning a float-values score rather
-            than a strict pass or fail boolean flag. This final score is the only thing returned
-            by this method (any other validation issue will raise an Exception).
+        """Validates the Block's compliance with the Proof of Work protocol. The Miner's
+            ProofOfWork Object calls its own validate_block function to check the main block hash,
+            the N_zeroes requirement, the Merkle root and the quantum hash, with the later
+            assigning a float-values score rather than a strict pass or fail boolean flag. This
+            final score is the only thing returned by this method (any other validation issue will
+            raise an Exception).
 
         Args:
             block (Block): the Block object to be validated.
@@ -180,7 +178,8 @@ class Miner:
 
         if self.mined_block_score is None:
             raise Exception(
-                f"Attempted to broadcast mined block with hash {self.mined_block.hash}, but it had not been scored."
+                f"Attempted to broadcast mined block with hash \
+                            {self.mined_block.hash}, but it had not been scored."
             )
         else:
             self.add_block_to_chain(self.mined_block, self.mined_block_score)

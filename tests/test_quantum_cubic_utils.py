@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ def test_create_lattice():
             assert len(node_list) == L * L * L * 2
             simple_num_edges = 3 * L * L * (L - 1) + int(dim_periodicity[2]) * L * L
             assert (
-                len(edge_list) == simple_num_edges + L**3
+                len(edge_list) == simple_num_edges + L ** 3
             ), "Expected simple-lattice edges plus one additional edge per dimer"
 
 

@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -263,7 +263,10 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-            dcc.Store(id="is-running-status", data=False),
+            # The data in this first store is irrelevant: it acts as a pass-through to trigger the
+            # simulation callback when targeted by other callbacks.
+            dcc.Store(id="start-simulation", data=False),
+            dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
             # Header brand banner

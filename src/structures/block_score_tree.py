@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,48 +22,49 @@ from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 # =====================================================================================================
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-TRUNCATED_HASH_LEN = 5
+SHORT_HASH_LEN = 5
 
 
 class BlockScoreTree:
-    """Class for tracking structure and score of a blockchain. Each block is represented by a 6-element
-    named BlockNode tuple (see score_tree_branch.py for definition) formatted as
+    """Class for tracking structure and score of a blockchain. Each block is represented by a
+    6-element named BlockNode tuple (see score_tree_branch.py for definition) formatted as
 
     (block_hash, previous_block_hash, block_score, total_score, block_height, block_number)
 
-    where total_score is the total score of the chain that ends with that block, block_height is the total length of
-    the chain extending from the genesis block to this block and block_number is the ordinal number in which the block
-    was added to the chain.
+    where total_score is the total score of the chain that ends with that block, block_height
+    is the total length of the chain extending from the genesis block to this block and
+    block_number is the ordinal number in which the block was added to the chain.
 
-    With the previous_block_hash references defining edges connecting one block to another, the chain will take the
-    form of a directed tree (in the graph-theory sense) and under typical usage will have a single very long path starting
-    at a leaf and extending back to the root, with a number of much shorter branches joining this path at various points. Built
-    from this assumption, the main data structure is referred to as the "trunk" and stored in the "self.trunk" list. A
-    large part of the design and usage is build around the centrality of the trunk.
+    With the previous_block_hash references defining edges connecting one block to another,
+    the chain will take the form of a directed tree (in the graph-theory sense) and under
+    typical usage will have a single very long path starting at a leaf and extending back to
+    the root, with a number of much shorter branches joining this path at various points. Built
+    from this assumption, the main data structure is referred to as the "trunk" and stored in
+    the "self.trunk" list. A large part of the design and usage is build around the centrality
+    of the trunk.
 
-    In blockchain terms, the trunk represents the canonical chain: the chain that the owner of the object considers
-    to be the authoritative one, containing valid blocks and transactions.
+    In blockchain terms, the trunk represents the canonical chain: the chain that the owner of
+    the object considers to be the authoritative one, containing valid blocks and transactions.
+    The decision on which blocks should end up in the trunk should thus be determined at a high
+    level, by the scores the user assigns the blocks before they are passed into BlockScoreTree.
+    This class is designed to depend as little as possible on the details of the users scoring
+    schema; the only assumptions encoded into the structure of the class are  1. higher scores
+    are preferred to lower scores, 2. total scores are determined additively (that is, the total
+    score of a block is the sum of its block_score and the block_score of all its predecessors)
+    and that 3. blocks with negative-scores default to being put in secondary branches rather
+    than in the trunk.
 
-    Branches are instantiated as members of the ScoreTreeBranch class, with each maintained as a
-    single, linear list of blocks. Each list will contain only the blocks that diverge from its
-    predecessor, thus only the trunk will form a 'complete' chain while every non-trunk chain
-    will consist of multiple branch-sections terminating in a trunk section.
+    Branches are instantiated as members of the ScoreTreeBranch class, with each maintained as
+    a single, linear list of blocks. Each list will contain only the blocks that diverge from
+    its predecessor, thus only the trunk will form a 'complete' chain while every non-trunk
+    chain will consist of multiple branch-sections terminating in a trunk section.
 
-    The trunk is specifically intended to represent the main or "canonical" chain in this blockchain:
-    those blocks which are considered valid and whose transactions can be expected to be honored by
-    other blockchain users. Which blocks will be in the trunk is determined at a high-level, based
-    on what scores the user assigns to the blocks before passing them into the BlockScoreTree. The only
-    scoring assumptions encoded into the structure of this class is that 1. higher scores are preferred
-    to lower scores, 2. total scores are determined additively (that is, the total score of a block is the sum
-    of its block_score and the block_score of all its predecessors) and that 3. blocks with negative-scores are
-    by-default not considered part of the main chain.
-
-    Outside of the trunk, the choice of which section of blocks belong to a parent branch and which belong to a child
-    is largely arbitrary: both chains extending from the fork point must be tracked, but neither has inherently special
-    status compared to the other. Parent-child relationships between the post-fork sections can be modified with the
-    self.promote_branch() method, exchanging the last section of the parent branch (everything after the fork point) with
-    the child branch.
-    """
+    Outside of the trunk, the choice of which section of blocks belong to a parent branch and
+    which belong to a child is largely arbitrary: both chains extending from the fork point
+    must be tracked, but neither has inherently special status compared to the other.
+    Parent-child relationships between the post-fork sections can be modified with the
+    self.promote_branch() method, exchanging the last section of the parent branch (everything
+    after the fork point) with the child branch."""
 
     def __init__(
         self, genesis_block: BlockNode | None = None, score_predicate: "function | None" = None
@@ -72,7 +73,7 @@ class BlockScoreTree:
         self.trunk = ScoreTreeBranch()
         self.hash_to_branch_lookup = {}
         self.branches = [self.trunk]
-        self.short_hash_len = TRUNCATED_HASH_LEN
+        self.short_hash_len = SHORT_HASH_LEN
         if score_predicate is None:
             default_predicate = lambda x: bool(x > 0)
             self.score_predicate = default_predicate
@@ -300,14 +301,16 @@ class BlockScoreTree:
                 try:
                     assert branch.root_hash in branch.parent
                 except:
-                    self.to_text_file(f"error_tree\
-                                    {self.trunk.tip.hash[:TRUNCATED_HASH_LEN]}.txt")
+                    self.to_text_file(
+                        f"error_tree\
+                                    {self.trunk.tip.hash[:SHORT_HASH_LEN]}.txt"
+                    )
                     branch_txt = [
-                        (br.hash[:TRUNCATED_HASH_LEN], br.prev_hash[:TRUNCATED_HASH_LEN])
+                        (br.hash[:SHORT_HASH_LEN], br.prev_hash[:SHORT_HASH_LEN])
                         for br in branch.node_list
                     ]
                     parent_txt = [
-                        (br.hash[:TRUNCATED_HASH_LEN], br.prev_hash[:TRUNCATED_HASH_LEN])
+                        (br.hash[:SHORT_HASH_LEN], br.prev_hash[:SHORT_HASH_LEN])
                         for br in branch.parent.node_list
                     ]
                     raise Exception(
@@ -340,12 +343,17 @@ class BlockScoreTree:
         # Can't promote the trunk. No other branches without no parents: if there are
         # final 'else' clause will raise an exception
         if branch_to_promote.parent is not None:
+            branch1_rep = [
+                (bn.hash[:SHORT_HASH_LEN], bn.prev_hash[:SHORT_HASH_LEN])
+                for bn in branch_to_promote
+            ]
+            branch2_rep = [
+                (bn.hash[:SHORT_HASH_LEN], bn.prev_hash[:SHORT_HASH_LEN])
+                for bn in branch_to_promote.parent
+            ]
             assert (
                 branch_to_promote.depth > 0
-            ), f"Branch {[(bn.hash[:TRUNCATED_HASH_LEN], bn.prev_hash[:TRUNCATED_HASH_LEN]) \
-                for bn in branch_to_promote]} had depth {branch_to_promote.depth}, parent \
-                {[(bn.hash[:TRUNCATED_HASH_LEN], bn.prev_hash[:TRUNCATED_HASH_LEN]) 
-                for bn in branch_to_promote.parent]}"
+            ), f"Branch {branch1_rep} had depth {branch_to_promote.depth}, parent {branch2_rep}"
             base_branch = branch_to_promote.parent
 
             # This chunk and the assert at the end of the 'if' are validation to give visibility
@@ -367,19 +375,25 @@ class BlockScoreTree:
                 demoted_section = base_branch.cut_branch_section(join_loc)
                 self.branches.append(demoted_section)  # Cut section is added as its own branch.
                 for child in demoted_section.children:
-                    assert child.parent == demoted_section, f"Child-parent mismatch. Child had \
+                    assert (
+                        child.parent == demoted_section
+                    ), f"Child-parent mismatch. Child had \
                                                 parent {child.parent}, expected {demoted_section}"
                 for block in demoted_section:
                     self.hash_to_branch_lookup.update({block.hash: demoted_section})
                 base_branch.link_child_branch(demoted_section)
                 demoted_len = len(demoted_section)
-                assert demoted_section.parent == base_branch, f"Branch with root \
+                assert (
+                    demoted_section.parent == base_branch
+                ), f"Branch with root \
                                                         {demoted_section.root} had parent \
                                                         with root {demoted_section.parent.root}.\
                                                         Expected {base_branch.root}"
 
             base_branch.concatenate_branch(branch_to_promote)
-            assert len(base_branch) + demoted_len == total_len, f"Missing blocks. Demoted: \
+            assert (
+                len(base_branch) + demoted_len == total_len
+            ), f"Missing blocks. Demoted: \
                                                         {demoted_len}, promoted: {promoted_len},\
                                                          Orig: {orig_len}, Final {len(base_branch)}"
             return base_branch
@@ -469,8 +483,10 @@ class BlockScoreTree:
             if current_block is not None:
                 node_list.append(current_block)
             else:
-                raise Exception(f"Reached a dead end in the tree before reaching a termination \
-                                condition. Last node accessed was {node_list[-1].hash}")
+                raise Exception(
+                    f"Reached a dead end in the tree before reaching a termination \
+                                condition. Last node accessed was {node_list[-1].hash}"
+                )
 
         return node_list
 

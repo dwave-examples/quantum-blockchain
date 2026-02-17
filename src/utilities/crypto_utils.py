@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ from enum import Enum
 
 import numpy as np
 from Crypto.Hash import RIPEMD160, SHA256
-from Crypto.PublicKey import RSA
-from Crypto.Signature import pkcs1_15
 
 
 class HashFunction(Enum):
@@ -68,8 +66,10 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
         passes_validation (bool): True if the hash passes, False otherwise."""
 
     if 4 * len(hash) < num_zeroes:
-        raise Exception(f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
-                        represents only {4*len(hash)} binary digits.")
+        raise Exception(
+            f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
+                        represents only {4*len(hash)} binary digits."
+        )
 
     q_hash_bytes = binascii.unhexlify(hash.encode(encoding="utf-8"))
     numpy_bytes = np.frombuffer(np.array(q_hash_bytes), dtype="B")
@@ -79,102 +79,6 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
         return False
 
     return True
-
-
-def basic_compound_hash(hash_seed: str, quantum_hash: str, quantum_signature: str = "") -> str:
-    """Concatenates two or three strings and hashes the result. Intended use is to combine the basic header data
-    and the quantum hash into a single hash value. This could be done with the existing functions.
-
-    Args:
-        hash_seed (str): the hash seed of the original block header. See block.py for full definition
-        quantum_hash (str): the quantum hash of the block
-        quantum_signature (str, optional): Defaults to the empty string. Digital signature over the quantum
-            hash of the block.
-
-    Returns:
-        compound_hash (str): the hash of the concatenation of the strings"""
-    return calculate_hash(hash_seed + quantum_hash + quantum_signature)
-
-
-def get_key_set(private_key_string: str = None, hexlify_private=False) -> tuple[str, str, str]:
-    """Takes a hex-string formatted RSA private key and uses it to create the corresponding
-    public key and blockchain address (which is just the public key hashed twice). If no
-    private key is provided, it will generate a new one and work from that instead.
-
-    Args:
-        private_key_string: (str) an RSA private key, formatted as a hexidecimal string.
-        If "None" is passed, will generate a new RSA private key and pass that.
-        hexlify_private: (book) flag to determine whether to return the private key as
-            an RSA private key object (default) or as a hexidecimal string.
-
-    Returns:
-        private_key: either an RSA private key object imported from the passed string, or the same
-            passed private key string.
-        public_key_hex: the public key corresponding to the private key, formatted as a hexidecimal string.
-        public_key_hash: the blockchain address corresponding to the public key, which is just the public key
-                            hashed sequentially with ripemd160 and SHA256"""
-
-    if private_key_string is None:
-        private_key = RSA.generate(2048)
-    else:
-        private_key = RSA.importKey(private_key_string)
-
-    public_key = private_key.publickey().export_key("DER")
-    public_key_hex = binascii.hexlify(public_key).decode("utf-8")
-    public_key_hash = calculate_hash(
-        calculate_hash(public_key_hex, hash_function=HashFunction.SHA256),
-        hash_function=HashFunction.RIPEMD160,
-    )
-
-    if hexlify_private:
-        private_key = private_key.export_key().decode("utf-8")
-
-    return private_key, public_key_hex, public_key_hash
-
-
-def sign_message(message: str, private_key: str) -> str:
-    """Implements an pkcs1_15 digital signature algorithm to sign the message passed as a string.
-    This function simply handles the formatting in order to smoothly use the functions included
-    in the pkcs1_15 module of the Crypto.Signature package so that data typing can be kept consistent
-    in the rest of the codebase.
-
-    Args:
-        message: (str) The message to be signed, formatted as a Python string
-        private_key: (str) the private key of the party wishing to sign the message.
-                         This should never be bound to any non-instance variable, as it
-                         must stay private to the agent that owns it in order to be secure.
-
-    Returns:
-        signature_hex (str): the digital signature, formatted as a hex string"""
-
-    message_bytes = bytearray(message, "utf-8")
-    hash_object = SHA256.new(message_bytes)
-    signature = pkcs1_15.new(private_key).sign(hash_object)
-    signature_hex = binascii.hexlify(signature).decode("utf-8")
-    return signature_hex
-
-
-def validate_signature(message: str, signature: str, pub_key: str) -> bool:
-    """Counterpart to the sign_message function above, uses the pkcs1_15 to validate a signature
-        generated by that function.
-
-    Args:
-        message (str): The message to be validated, formatted as a hex string.
-        signature (str): The signature to be validated, formatted as a hex string.
-        pub_key (str): The public key of the signer, formatted as a hex string.
-
-    Returns:
-        is_valid (bool): True if the signature is valid, False otherwise"""
-    signature_decoded = binascii.unhexlify(signature.encode("utf-8"))
-    message_bytes = bytearray(message, "utf-8")
-    message_hash = SHA256.new(message_bytes)
-    public_key_bytes = pub_key.encode("utf-8")
-    public_key_object = RSA.import_key(binascii.unhexlify(public_key_bytes))
-    try:
-        pkcs1_15.new(public_key_object).verify(message_hash, signature_decoded)
-        return True
-    except:
-        return False
 
 
 def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
@@ -190,10 +94,7 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
         hash_comparison (str): a hexidecimal string encoding the bits where the two hashes match and those where they don't.
     """
 
-    hash_bytes = [
-        binascii.unhexlify(hash_bits)  # .encode(encoding="utf-8"))
-        for hash_bits in (first_hash, second_hash)
-    ]
+    hash_bytes = [binascii.unhexlify(hash_bits) for hash_bits in (first_hash, second_hash)]
     numpy_bytes = [np.frombuffer(np.array(q_hash_bytes), dtype="B") for q_hash_bytes in hash_bytes]
     numpy_bits1 = np.unpackbits(numpy_bytes[0])
     numpy_bits2 = np.unpackbits(numpy_bytes[1])

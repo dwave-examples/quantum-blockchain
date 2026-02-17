@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2026 D-Wave
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import numpy as np  # To set effective number of samples (sampling noise)
 
 EMPTY_QUANTUM_HASH = ""
 MIN_SCORE = -(
-    2**14
+    2 ** 14
 )  # Large enough to outweigh any legitimate score, small enough to work on all platforms.
 
 # ===================================================================================
