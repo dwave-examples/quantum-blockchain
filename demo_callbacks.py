@@ -96,7 +96,7 @@ def simulation(
 
     Args:
         update_current_block_data: the progress function for providing updates while the callback is running
-        is_running (bool): flag to signal that the 'run' button has been clicked. Passing it this way
+        start_simulation (bool): flag to signal that the 'run' button has been clicked. Passing it this way
             (instead of the 'run' button itself being used as an input), allows certain UI updates (such as
             disabling/hiding components) to be processed immediately on clicking 'run', before the simulation starts
         num_miners (int): the value of the the miner slider: determines how many miners the trial has.
@@ -311,7 +311,7 @@ class RunSimulationReturn(NamedTuple):
     run_button_classname: str = "display-none"
     reset_button_classname: str = "display-none"
     pause_button_classname: str = ""
-    is_running: bool = True
+    start_simulation: bool = True
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
     qpu_solver_select_disabled: bool = True
