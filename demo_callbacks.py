@@ -241,7 +241,7 @@ def simulation(
                 plot_bgcolor="white",
             )
             set_props(
-                {"type": "view_graph", "index": view_miners[miner_id]},  # Graph ID
+                {"type": "view-graph", "index": view_miners[miner_id]},  # Graph ID
                 {"figure": miner_fig},
             )
 
@@ -261,6 +261,7 @@ def simulation(
     Output("prelim-text", "className"),
     Output("block-status", "children", allow_duplicate=True),
     Output("miner-status-table", "children", allow_duplicate=True),
+    Output("graph-loading", "display", allow_duplicate=True),
     inputs=[
         Input("current-block-data", "data"),
         State("miner-slider", "value"),
@@ -291,7 +292,9 @@ def update_miner_display(
 
     miner_table_body = render_miner_status(current_block_data, num_miners, show_solvers)
 
-    return "", "display-none", block_status_text, miner_table_body
+    graph_loading = "auto" if block_number > 1 else dash.no_update
+
+    return "", "display-none", block_status_text, miner_table_body, graph_loading
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -313,6 +316,7 @@ class RunSimulationReturn(NamedTuple):
     qpu_solver_select_disabled: bool = True
     simulated_solver_select_disabled: bool = True
     simulation_is_active: bool = True
+    graph_loading_display: str = "show"
 
 
 @dash.callback(
@@ -325,6 +329,7 @@ class RunSimulationReturn(NamedTuple):
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
+    Output("graph-loading", "display", allow_duplicate=True),
     inputs=[
         Input("run-button", "n_clicks"),
         State("is-active-simulation", "data"),
@@ -445,10 +450,10 @@ class ResetSimulationReturn(NamedTuple):
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
     Output("blockchain-structure-data", "data", allow_duplicate=True),
-    Output({"type": "view_graph", "index": ALL}, "figure"),
+    Output({"type": "view-graph", "index": ALL}, "figure"),
     inputs=[
         Input("reset-button", "n_clicks"),
-        State({"type": "view_graph", "index": ALL}, "figure"),
+        State({"type": "view-graph", "index": ALL}, "figure"),
     ],
     prevent_initial_call=True,
 )
@@ -462,10 +467,10 @@ def reset_simulation(reset_click: int, graphs: list) -> ResetSimulationReturn:
 
 
 @dash.callback(
-    Output({"type": "view_wrapper", "index": ALL}, "className"),
+    Output({"type": "view-wrapper", "index": ALL}, "className"),
     inputs=[
         Input("view-select", "value"),
-        State({"type": "view_wrapper", "index": ALL}, "className"),
+        State({"type": "view-wrapper", "index": ALL}, "className"),
     ],
     prevent_initial_call=True,
 )

@@ -354,19 +354,16 @@ def create_interface():
                                                 [
                                                     dcc.Loading(
                                                         parent_className="graph-loading",
-                                                        overlay_style={
-                                                            "visibility": "visible",
-                                                            "opacity": "0.5",
-                                                        },
+                                                        id="graph-loading",
                                                         type="circle",
                                                         color=THEME_COLOR,
                                                         children=[
                                                             html.Div(
-                                                                id={"type": "view_wrapper", "index": i},
+                                                                id={"type": "view-wrapper", "index": i},
                                                                 className=f"graph-wrapper {'display-none' if i > 0 else ''}",
                                                                 children=[
                                                                     dcc.Graph(
-                                                                        id={"type": "view_graph", "index": i},
+                                                                        id={"type": "view-graph", "index": i},
                                                                         responsive=True,
                                                                         config={
                                                                             "displayModeBar": False
