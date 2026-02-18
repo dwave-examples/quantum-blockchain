@@ -46,7 +46,9 @@ THEME_COLOR = "#2d4376"
 
 ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
 
-GRAPH_VIEW_LABELS = ["Global View"] + [f"{MINER_NAMES[i]} View" for i in range(NUM_MINER_VIEWS)]
+GRAPH_VIEW_LABELS = ["Global View"] + [
+    f'{" ".join(MINER_NAMES[i].split("_"))} View' for i in range(NUM_MINER_VIEWS)
+]
 
 
 def slider(label: str, id: str, config: dict) -> html.Div:
