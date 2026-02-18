@@ -46,21 +46,8 @@ THEME_COLOR = "#2d4376"
 
 ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
 
-VIEW_OPTS = [
-    ViewOption(
-        menu_select="Global View",
-        graph_name="global_view_graph",
-        wrapper_name="global_view_wrapper",
-        miner_number=-1,
-    )
-] + [
-    ViewOption(
-        menu_select=f"{MINER_NAMES[i]} View",
-        graph_name=f"{MINER_NAMES[i].lower()}_view_graph",
-        wrapper_name=f"{MINER_NAMES[i].lower()}_view_wrapper",
-        miner_number=i,
-    )
-    for i in range(NUM_MINER_VIEWS)
+GRAPH_VIEW_LABELS = ["Global View"] + [
+    f'{" ".join(MINER_NAMES[i].split("_"))} View' for i in range(NUM_MINER_VIEWS)
 ]
 
 
@@ -252,6 +239,26 @@ def generate_run_buttons() -> html.Div:
     )
 
 
+def graph_legend() -> html.Div:
+    """Generate graph legend"""
+
+    legend_items = (
+        ("background", TRUNK_POINT_COLOR, "Consensus"),
+        ("background", ABANDONED_BRANCH_POINT_COLOR, "Abandoned"),
+        ("background", ACTIVE_BRANCH_POINT_COLOR, "Undecided"),
+        ("background", TRUNK_TIP_COLOR, "Available to Mine"),
+        ("border-color", MINING_BLOCK_BORDER_COLOR, "Currently Mining"),
+    )
+    return html.Div(
+        [
+            html.P(
+                [html.Span(style={style_rule: color}), label]
+            ) for style_rule, color, label in legend_items
+        ],
+        className="graph-legend",
+    )
+
+
 def create_interface():
     """Set the application HTML."""
     return html.Div(
@@ -336,7 +343,7 @@ def create_interface():
                                                 "",
                                                 "view-select",
                                                 generate_options_dropdown(
-                                                    [opt.menu_select for opt in VIEW_OPTS]
+                                                    [label for label in GRAPH_VIEW_LABELS]
                                                 ),
                                             ),
                                             html.H4(id="block-status"),
@@ -349,19 +356,16 @@ def create_interface():
                                                 [
                                                     dcc.Loading(
                                                         parent_className="graph-loading",
-                                                        overlay_style={
-                                                            "visibility": "visible",
-                                                            "opacity": "0.5",
-                                                        },
+                                                        id="graph-loading",
                                                         type="circle",
                                                         color=THEME_COLOR,
                                                         children=[
                                                             html.Div(
-                                                                id=view.wrapper_name,
+                                                                id={"type": "view-wrapper", "index": i},
                                                                 className=f"graph-wrapper {'display-none' if i > 0 else ''}",
                                                                 children=[
                                                                     dcc.Graph(
-                                                                        id=view.graph_name,
+                                                                        id={"type": "view-graph", "index": i},
                                                                         responsive=True,
                                                                         config={
                                                                             "displayModeBar": False
@@ -369,64 +373,10 @@ def create_interface():
                                                                     ),
                                                                 ],
                                                             )
-                                                            for i, view in enumerate(VIEW_OPTS)
+                                                            for i in range(len(GRAPH_VIEW_LABELS))
                                                         ],
                                                     ),
-                                                    html.Div(
-                                                        [
-                                                            html.P(
-                                                                [
-                                                                    html.Span(
-                                                                        style={
-                                                                            "background": TRUNK_POINT_COLOR
-                                                                        }
-                                                                    ),
-                                                                    "Consensus",
-                                                                ]
-                                                            ),
-                                                            html.P(
-                                                                [
-                                                                    html.Span(
-                                                                        style={
-                                                                            "background": ABANDONED_BRANCH_POINT_COLOR
-                                                                        }
-                                                                    ),
-                                                                    "Abandoned",
-                                                                ]
-                                                            ),
-                                                            html.P(
-                                                                [
-                                                                    html.Span(
-                                                                        style={
-                                                                            "background": ACTIVE_BRANCH_POINT_COLOR
-                                                                        }
-                                                                    ),
-                                                                    "Undecided",
-                                                                ]
-                                                            ),
-                                                            html.P(
-                                                                [
-                                                                    html.Span(
-                                                                        style={
-                                                                            "background": TRUNK_TIP_COLOR
-                                                                        }
-                                                                    ),
-                                                                    "Available to Mine",
-                                                                ]
-                                                            ),
-                                                            html.P(
-                                                                [
-                                                                    html.Span(
-                                                                        style={
-                                                                            "border-color": MINING_BLOCK_BORDER_COLOR
-                                                                        }
-                                                                    ),
-                                                                    "Currently Mining",
-                                                                ]
-                                                            ),
-                                                        ],
-                                                        className="graph-legend",
-                                                    ),
+                                                    graph_legend(),
                                                 ]
                                             ),
                                             html.Div(html.Table(id="miner-status-table")),
