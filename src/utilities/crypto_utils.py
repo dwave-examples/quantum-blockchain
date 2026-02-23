@@ -18,7 +18,7 @@ import numpy as np
 
 
 def calculate_hash(data_in: str) -> str:
-    """ Basic function SHA256 hashes. Essentially just a wrapper handling
+    """Basic function SHA256 hashes. A wrapper handling
         formatting data to and from strings to call hashlib's sha256.
 
     Args:
