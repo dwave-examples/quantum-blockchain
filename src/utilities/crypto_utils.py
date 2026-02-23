@@ -13,44 +13,26 @@
 # limitations under the License.
 
 import binascii
-from enum import Enum
-
+from hashlib import sha256
 import numpy as np
-from Crypto.Hash import RIPEMD160, SHA256
 
 
-class HashFunction(Enum):
-    SHA256 = "sha256"
-    RIPEMD160 = "ripemd160"
-
-
-def calculate_hash(data_in: str, hash_function: HashFunction = HashFunction.SHA256) -> str:
-    """Basic function for calculating the two types of hash functions currently
-    used in the blockchain. Validates both data type and hash function name.
+def calculate_hash(data_in: str) -> str:
+    """ Basic function SHA256 hashes. Essentially just a wrapper handling
+        formatting data to and from strings to call hashlib's sha256.
 
     Args:
         data_in (str): the data to be hashed, formatted as a hexidecimal string
-        hash_function (HashFunction): name of the hash function to use
 
     Returns:
-        output_hash (str): the hash of the passed data, formatted as a hex string.
-    """
+        output_hash (str): the hash of the passed data, formatted as a hex string."""
+    
     if type(data_in) != str:
         raise Exception(f"Passed non-string data {data_in} of type {type(data_in)}")
 
-    data = bytearray(data_in, "utf-8")
-    if hash_function == HashFunction.SHA256:
-        h = SHA256.new()
-        h.update(data)
-        output = h.hexdigest()
-    elif hash_function == HashFunction.RIPEMD160:
-        h = RIPEMD160.new()
-        h.update(data)
-        output = h.hexdigest()
-    else:
-        raise Exception(f"Invalid hash function argument {hash_function} passed!")
-
-    return output
+    byte_data = bytearray(data_in, "utf-8")
+    hash_data = sha256(byte_data)
+    return hash_data.hexdigest()
 
 
 def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:

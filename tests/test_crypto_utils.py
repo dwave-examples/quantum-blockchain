@@ -18,39 +18,28 @@ from src.utilities import crypto_utils
 
 
 def test_hash_functions():
-    """Tests that the core hash functions, SHA256 and RIPEMD160 are working as they should. Specifically, this
-    test iterates twice over all sequential slices of a regular string, hashing the iteration and testing
-    that the outputs have the correct length, and match one another if and only if the inputs and hash functions
-    used are identical.
-    """
+    """Tests that the core hash functions, SHA256, is working as it should. Specifically, this
+    test iterates twice over all sequential slices of a regular string, hashing the iteration and
+    testing that the outputs have the correct length, and match one another if and only if the 
+    inputs used are identical."""
+
     input_string = "abc123abc123abc"
     for i_2 in range(len(input_string) - 1):
         for i_1 in range(i_2, len(input_string)):
             msg_1 = input_string[i_1:i_2]
-            for hash_fn_1 in crypto_utils.HashFunction:
-                hash_1 = crypto_utils.calculate_hash(msg_1, hash_fn_1)
-                if hash_fn_1 == crypto_utils.HashFunction.SHA256:
-                    assert (
-                        len(hash_1) == 64
-                    ), f"Received SHA256 hash {hash_1}, expected hex rep to have length 64, received {len(hash_1)}"
-                elif hash_fn_1 == crypto_utils.HashFunction.RIPEMD160:
-                    assert (
-                        len(hash_1) == 40
-                    ), f"Received RIPEMD160 hash {hash_1}, expected hex rep to have length 40, received {len(hash_1)}"
+            hash_1 = crypto_utils.calculate_hash(msg_1)
+            assert len(hash_1) == 64, f"Received {hash_1}, hex length 64, received {len(hash_1)}"
 
-                for j_2 in range(len(input_string) - 1):
-                    for j_1 in range(j_2, len(input_string)):
-                        msg_2 = input_string[j_1:j_2]
-                        for hash_fn_2 in crypto_utils.HashFunction:
-                            hash_2 = crypto_utils.calculate_hash(msg_2, hash_fn_2)
-                            if msg_1 == msg_2 and hash_fn_1 == hash_fn_2:
-                                assert (
-                                    hash_1 == hash_2
-                                ), f"Expected hashes {hash_1} and {hash_2} to have equal values with inputs {msg_1} and {msg_1} and hash function {hash_fn_1} and {hash_fn_2}"
-                            else:
-                                assert (
-                                    hash_1 != hash_2
-                                ), f"Expected hashes {hash_1} and {hash_2} to have unequal values with inputs {msg_1} and {msg_1} and hash function {hash_fn_1} and {hash_fn_2}"
+            for j_2 in range(len(input_string) - 1):
+                for j_1 in range(j_2, len(input_string)):
+                    msg_2 = input_string[j_1:j_2]
+                    hash_2 = crypto_utils.calculate_hash(msg_2)
+                    if msg_1 == msg_2:
+                        assert hash_1 == hash_2, f"Expected equal hashes {hash_1} and {hash_2} \
+                                                                     for {msg_1} and {msg_1}"
+                    else:
+                        assert hash_1 != hash_2, f"Expected unequal hashes {hash_1} and {hash_2} \
+                                                                       for {msg_1} and {msg_1}."
 
 
 def test_validate_zeroes():
