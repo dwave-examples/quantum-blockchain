@@ -365,7 +365,7 @@ def generate_default_sampler(
     *,
     embedding_directory: str = EMBEDDINGS_PATH,
     embedding_timeout: float | int = 0,
-    automorphism_per_component: bool = False,
+    automorphism_per_component: bool = True,
 ) -> dimod.Sampler:
     """This function generates a sampler (either a QPU or a SA sampler), appropriately
     parameterized based on the input to this function.
