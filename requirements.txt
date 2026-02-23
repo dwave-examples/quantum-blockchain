@@ -1,7 +1,6 @@
 dash[diskcache,async]~=3.2
 dash-mantine-components~=2.3
 dwave-ocean-sdk~=9.0
-pycryptodome~=3.23
 flask~=3.1
 requests~=2.32
 pandas~=2.3
