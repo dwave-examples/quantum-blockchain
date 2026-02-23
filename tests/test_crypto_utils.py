@@ -18,7 +18,7 @@ from src.utilities import crypto_utils
 
 
 def test_hash_functions():
-    """Tests that the core hash functions, SHA256, is working as it should. Specifically, this
+    """Tests that the core hash function, SHA256, is working as it should. Specifically, this
     test iterates twice over all sequential slices of a regular string, hashing the iteration and
     testing that the outputs have the correct length, and match one another if and only if the 
     inputs used are identical."""
