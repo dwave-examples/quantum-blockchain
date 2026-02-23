@@ -52,7 +52,19 @@ class Miner:
     def re_initialize_blockchain(self, node_list: list[dict]):
         """ Re-creates the miner's blockchain from a dictionary of miner blockchain data. This is used
             when re-starting the demo when it has been paused. Persistent blockchain data will be saved
-            in a list of dicts containing each containing both a JSON-formatted block"""
+            in a list of dicts, where each dict contains a JSON-formatted block, plus several fields
+            of metadata about that block, including the scores assigned to it be each miner. When
+            a miner calls this function, it will look for a score keyed to its miner_id in the
+            score list of each block in order (starting from the first block mined) and add that
+            block to its chain with that score. This should reproduce an identical blockchain
+            to the one the miner had before the simulation was paused.
+            
+            Args:
+                node_list (list of dicts): A list of dicts containing JSON blocks and metadata.  
+                    should be passed to each miner by simulation callback during restart.
+                    
+            Modifies:
+                self.blockchain: should add nodes to the miner's blockchain to bring it up-to-date."""
 
         for block_entry in node_list:
             scores = block_entry["scores"]
@@ -160,9 +172,9 @@ class Miner:
                 scores are presumed invalid and will create a secondary branch if their predecessor is in the trunk
                 (or be added to an existing branch otherwise)."""
 
-        passes, score, solver = self.pow.validate_block(block)
+        valid, score, solver = self.pow.validate_block(block)
 
-        if not passes:
+        if not valid:
             raise Exception(
                 f"Block {block.hash} failed required protocol validation checks for miner {self.id}"
             )

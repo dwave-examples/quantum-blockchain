@@ -202,6 +202,7 @@ class TrialManager:
         Returns:
             mined (bool): Indicates whether this step was a mining step
             miner_id (string): ID of the miner that mined or validated this round
+            block_score (float): score of the block that was just mined or validated
             solver (string): name of the solver that was used for mining or validation this round"""
 
         if self.round_progress == 0 or self.round_progress >= self.num_miners:
@@ -236,7 +237,7 @@ class TrialManager:
         while self.blocks_mined < stopping_block:
             self.single_step()
 
-    def get_active_block_hashes(self) -> list:
+    def get_active_block_hashes(self) -> list[str]:
         """Queries miners to get a list of the hashes of all blocks that are currently candidates for mining.
         Each miner should have one block that they consider the strongest (may be the same for different
         miners), which they will mine on top of if they are selected for the next mining round. This
@@ -266,5 +267,5 @@ class TrialManager:
         if len(common_block_nums) == 0:
             return 0
 
-        largest_common_block_num = max(list(common_block_nums))
+        largest_common_block_num = max(common_block_nums)
         return largest_common_block_num

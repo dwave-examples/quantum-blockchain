@@ -20,52 +20,42 @@ class RandomProjectionHasher:
         self,
         *,
         random_seed: int = 0,
-        nbits: int = 32,
+        num_bits_out: int = 32,
         input_dimension: int = 64,
-        orthogonal_to: np.ndarray = None,
-        dist: str = "Normal"
+        forced_orthogonal_vector: np.ndarray | None = None,
     ):
         """This is a class that implements a simple random projection hash function.
 
         Args:
             random_seed: The random seed to use for generating the plane norms.
-            nbits: The number of bits to output.
+            num_bits_out: The number of bits to output.
             input_dimension: The dimension of the input vector.
-        """
-        prng = np.random.default_rng(random_seed)
-        if dist == "Normal":
-            self.plane_norms = prng.normal(size=(nbits, input_dimension))
-        else:
-            self.plane_norms = prng.random(size=(nbits, input_dimension))
-        if orthogonal_to is not None:
-            orthogonal_to /= np.sqrt(np.sum(orthogonal_to ** 2))
-            coeffs = self.plane_norms @ orthogonal_to[:, np.newaxis]
-            self.plane_norms = self.plane_norms - orthogonal_to[np.newaxis, :] * coeffs
+            forced_orthogonal_vector (np.ndarray or None). Defaults to None. If passed,
+                forces all hyperplanes to be orthogonal to this vector. """
+        
+        prng = np.random.default_rng(random_seed)   
+        self.plane_norms = prng.normal(size=(num_bits_out, input_dimension))
+
+        if forced_orthogonal_vector is not None:
+            forced_orthogonal_vector /= np.sqrt(np.sum(forced_orthogonal_vector ** 2))
+            coeffs = self.plane_norms @ forced_orthogonal_vector[:, np.newaxis]
+            self.plane_norms = self.plane_norms - forced_orthogonal_vector[np.newaxis, :] * coeffs
 
     def hash_vector(self, input_vector: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """This function hashes a vector using the random projection hash function.
 
         Args:
-            vv: The input vector to hash.
-
+            input_vector (np.nd_array): An input vector of floats which will be hashed
+                and reshaped via a locality-sensitive random projection hash.
         Returns:
-            np.ndarray: The hashed vector.
-            np.ndarray: The dot product of the input vector with the plane norms.
-        """
-        dot = np.dot(input_vector, self.plane_norms.T)
-        bool_vector = dot > 0
+            binary_vector (np.ndarray): The result of applying the random projection hashing,
+                which should be a np.ndarray whose components are exclusively 1s and 0s. The
+                length is defined by the num_bits_out parameter in the class constructor.
+            dot_vector (np.ndarray): The dot product of the input vector with the plane norms. This
+                should have the same length as the binary vector, but the outputs are signed floats
+                indicating distance and direction from the hyperplanes of the random projection."""
+        
+        dot_vector = np.dot(input_vector, self.plane_norms.T)
+        bool_vector = dot_vector > 0
         binary_vector = bool_vector.astype(int)
-        return binary_vector, dot
-
-    def projected_vector(self, input_vector: np.ndarray) -> np.ndarray:
-        """This function hashes a vector using the random projection hash function.
-
-        Args:
-            vv: The input vector to hash.
-
-        Returns:
-            np.ndarray: The hashed vector.
-        """
-        dot = np.dot(input_vector, self.plane_norms.T)
-
-        return dot  # binary_vector
+        return binary_vector, dot_vector

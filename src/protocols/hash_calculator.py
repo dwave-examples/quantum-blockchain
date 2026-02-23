@@ -111,9 +111,8 @@ def initialize_solver(solver_name: str) -> HashSolver:
         A HashSolver"""
 
     if solver_name not in [str(n.value) for n in SolverName]:
-        raise Exception(
-            f"Unrecognized solver name {solver_name} passed. Allowed names are {[str(n.value) for n in SolverName]}"
-        )
+        raise Exception(f"Unrecognized solver name {solver_name} passed. \
+                        Allowed names are {[str(name.value) for name in SolverName]}")
     elif "simulated" in solver_name:
         return SimulatedHashSolver(solver_name)
     else:
@@ -123,7 +122,7 @@ def initialize_solver(solver_name: str) -> HashSolver:
 class SimulatedHashSolver(HashSolver):
     def __init__(
         self,
-        solver_name: str = None,
+        solver_name: str | None = None,
         *,
         simulated_path: str = SIMULATED_PATH,
         mean_witnesses: np.ndarray | None = None,
@@ -293,7 +292,7 @@ class QuantumHashSolver(HashSolver):
         stats = quantum_cubic_utils.build_stats(sampler_output, J.keys())
 
         hv = RandomProjectionHasher(
-            random_seed=rng_seed + 1, input_dimension=stats.size, nbits=hash_length
+            random_seed=rng_seed + 1, input_dimension=stats.size, num_bits_out=hash_length
         )
 
         hash_bits, dot_vector = hv.hash_vector(stats.reshape(-1))

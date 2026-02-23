@@ -59,7 +59,7 @@ class ProofOfWorkProtocol:
                 (and thus make more QPU calls) to find a valid block.
             allowable_err (int): the error tolerance of validation. Increasing this means hashes
                 with more and larger error will still pass validation (but hashes with fewer
-                errors will still score higher)."""  # TODO replace with Enum
+                errors will still score higher)."""
 
         self.quantum_hash_length = quantum_hash_length
         self.n_zeroes = n_zeroes
@@ -76,18 +76,14 @@ class ProofOfWorkProtocol:
             invalid blocks have negative scores, with some scoring functions allowing for variation
             in both how positive and how negative they might be.
 
-            To save QPU cycles, all the classical checks are done before any QPU call is made, with
+            To save QPU cycles, the classical checks are done before any QPU call is made, with
             each done in increasing order of computational cost. First the block is checked for
             passing the easily verified n_zeroes requirement (which allows efficient filtering of
-            no-work blocks). Then the Merkle root is validated, requiring several rounds of
-            repeated SHA256 hashes, at moderate cost. Then the digital signature of the block is
-            checked against the miner's provided signature, expected to be the most computationally
-            expensive process for blocks with reasonable numbers of transactions. If all of these
-            checks pass, then the QPU is called to validate the quantum hash and check it against
-            the scoring requirement. Doing it in this order prevents attackers from DDoSing the
-            network with garbage blocks that are cheap to produce but expensive to detect: passing
-            each step requires (at a minimum) computational work proportional to the work required
-            to validate it.
+            no-work blocks). After that, the classical hash of the block is checked to make sure
+            it is consistent with the block header data. If both of these checks pass, then the 
+            QPU is called to validate the quantum hash and check it against the scoring 
+            requirement. This allows corrupted or improperly-mined blocks to be quickly and
+            cheaply discarded without having to spend any QPU time on them.
 
             Blocks which fail a classical check return default values indicating an invalid block
             with a very low score.
@@ -154,20 +150,19 @@ class ProofOfWorkProtocol:
 
         return block, block_score, self.current_solver.solver_name
 
-    def score_block(self, block: Block):
-        """Calls the stored scoring function to calculate a score for the block. Checks to make
-            sure the block has a matching quantum hash length to what is stored in the protocol
-            data, but does not perform any other data integrity checks. For details of the
-            individual scoring function options, see scoring.py
+    def score_block(self, block: Block) -> float:
+        """ Calculates the score for a single block by re-calculating the quantum hash for the
+            block and comparing the re-calculated result to the value stored in the block. 
+            Currently the scoring is done exclusively via the calculate_confidence_score
+            function, but other scoring schemas can be used in its place without affecting
+            the functionality of the rest of the code base.
 
         Args:
             block (Block): the Block object to be scored
 
         Returns:
-            block_score: the score of the block assigned by the stored scoring function.
-            validation_bits: whether each bit of the quantum hash passed or failed validation.
-                    If self.quantum_hash_length == 0 this will be an empty list.
-            sample_time: the time required for the D-Wave sampler call"""
+            block_score: the score of the block assigned by the stored scoring function."""
+        
         received_hash = block.quantum_hash
 
         if self.quantum_hash_length > 0:
@@ -214,6 +209,7 @@ class ProofOfWorkProtocol:
         Returns:
             confidence_score (float): the validator's overall log confidence that the hash is correct to within
                 the error threshold defined by allowable_err"""
+        
         min_confidence = MIN_SCORE
         mean = W_0_ALPHA
         std_dev = DELTA_W_0_ALPHA
