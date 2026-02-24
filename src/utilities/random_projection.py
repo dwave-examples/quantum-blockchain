@@ -30,7 +30,7 @@ class RandomProjectionHasher:
             random_seed: The random seed to use for generating the plane norms.
             num_bits_out: The number of bits to output.
             input_dimension: The dimension of the input vector.
-            forced_orthogonal_vector (np.ndarray or None). Defaults to None. If passed,
+            forced_orthogonal_vector (np.ndarray or None): Defaults to None. If passed,
                 forces all hyperplanes to be orthogonal to this vector. """
         
         prng = np.random.default_rng(random_seed)   
