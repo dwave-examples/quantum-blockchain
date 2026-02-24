@@ -155,7 +155,7 @@ class ProofOfWorkProtocol:
             block and comparing the re-calculated result to the value stored in the block. 
             Currently the scoring is done exclusively via the calculate_confidence_score
             function, but other scoring schemas can be used in its place without affecting
-            the functionality of the rest of the code base.
+            the functionality of the rest of the codebase.
 
         Args:
             block (Block): the Block object to be scored
