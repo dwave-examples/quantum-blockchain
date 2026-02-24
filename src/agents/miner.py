@@ -50,7 +50,7 @@ class Miner:
         self.mined_block_score = None
 
     def re_initialize_blockchain(self, node_list: list[dict]):
-        """ Re-creates the miner's blockchain from a dictionary of miner blockchain data. This is used
+        """ Recreates the miner's blockchain from a dictionary of miner blockchain data. This is used
             when re-starting the demo when it has been paused. Persistent blockchain data will be saved
             in a list of dicts, where each dict contains a JSON-formatted block, plus several fields
             of metadata about that block, including the scores assigned to it be each miner. When
