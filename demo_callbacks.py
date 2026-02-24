@@ -106,7 +106,7 @@ def simulation(
             the data needed to reconstruct the blockchain
         solver_mode (str): Value of the solver selector. Outputs as a string-typed integer value (e.g.
             "1", "2"), which can just be immediately typed back to int and put into the AVAILABLE_SOLVERS
-            constant to get the solver #TODO make the selector return either the solver name or an actual integer
+            constant to get the solver 
 
 
     Returns:

@@ -16,7 +16,6 @@ Consensus on the state of the chain from the perspective of mining participants 
 
 ![Demo Example](static/demo.png "Image of demo interface")
 
-<!-- TODO: UPDATE static/demo.ong FIGURE ONCE GRAPHICS ARE STABILIZED -->
 
 ## Installation
 You can run this example without installation in cloud-based IDEs that support the
@@ -102,7 +101,6 @@ The delay and efficiency of quantum blockchains was evaluated in the paper, in p
 The demo defines the following parameters for the underlying proof-of-work protocol
 
 * Number of miners: The number of participating miners.
-<!-- TODO: PER FINAL INTERFACE DECISION-->
 * The length of the chain:
 * The set of QPUs used: One can select a single generally available QPU or all available QPUs. 
 
