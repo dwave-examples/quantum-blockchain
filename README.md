@@ -1,32 +1,21 @@
-### Interested in contributing a code example?
+[![Open in GitHub Codespaces](
+  https://img.shields.io/badge/Open%20in%20GitHub%20Codespaces-333?logo=github)](
+  https://codespaces.new/dwave-examples/quantum-blockchain?quickstart=1)
 
-Please take a look at our [contribution guidelines](CONTRIBUTING.md) before getting started.
-Thank you!
+# Proof of Quantum Work Blockchains
 
-The Dash template is intended for demos that would benefit from a user interface. This user
-interface could include settings to run and customize the problem, an interactive graphical element,
-or tables/charts to compare different solutions. This template is also useful for demos that are
-intended for a general audience, as it is more approachable for those without a technical background.
+Ledgers are widespread record keeping structures. A proof of work blockchain is a ledger supported
+by consensus mechanisms to ensure that no single authority is required to verify the ledger.
+Cryptographically-linked hard problems are solved by miners to encode new transactions.
+Transactions can be considered finalized in the ledger because the community is incentivized by consensus mechanisms to behave honestly, and any attacker must out-work this majority to manipulate the ledger.
 
-<!-- Before submitting your code, please delete everything above and including this comment. -->
-<!-- The following is a README template for your new demo. -->
+The proof of quantum work blockchain demonstrated in this example, works similarly to Bitcoin [[1]](#arXiv_2503_14462), but replaces the hard problem of finding rare SHA256 hashes with the problem of finding quantum experiments consistent with rare statistics. The particular quantum experiments can be chosen to be beyond-classical, so that only quantum computers can participate [[2]](#10.1126/science.ado6285).
 
-# Demo Name
-
-Describe your demo and specify what it is demonstrating. Consider the
-following questions:
-
-* Is it a canonical problem or a real-world application?
-* Does it belong to a particular domain such as material simulation or logistics?
-* What level of Ocean proficiency does it target: beginner, advanced?
-
-A clear description allows us to properly categorize your demo.
-
-Please include a screenshot of your demo below.
+In this example, a blockchain evolution is simulated by fixing the number of miners, depth of the chain, and computational context (the set of QPUs available to the miners).
+Consensus on the state of the chain from the perspective of mining participants is presented.
 
 ![Demo Example](static/demo.png "Image of demo interface")
 
-<!-- Below is boilerplate instructions to be included, as is, in the final demo. -->
 
 ## Installation
 You can run this example without installation in cloud-based IDEs that support the
@@ -66,57 +55,136 @@ Configuration options can be found in the [demo_configs.py](demo_configs.py) fil
 with the `--debug` command-line argument for live reloads and easier debugging:
 `python app.py --debug`
 
-<!-- End of boilerplate. -->
+Tests can be run by running
 
-## Problem Description
-Give an overview of the problem you are solving in this demo.
+```bash
+pytest -k "test" 
+```
+from the quantum-blockchain/tests directory.
 
-**Objectives**: define the goal this example attempts to accomplish by minimizing or maximizing
-certain aspects of the problem. For example, a production-line optimization might attempt to
-minimize the time to produce all of the products.
 
-**Constraints**: aspects of the problem, with limited or no flexibility, that must be satisfied for
-solutions to be considered feasible. For example, a production-line optimization might have a
-limitation that Machine A can only bend 10 parts per hour.
+# Problem Description
 
-## Model Overview
-The clearer your model is presented here, the more useful it will be to others. For a strong example
-of this section, see [here](https://github.com/dwave-examples/3d-bin-packing#model-overview).
+This demo implements a simplified version of a blockchain with adherence of miners to the blockchain rules. Modeling of transactions and passive (non-mining) stakeholders is omitted - this does not impact the evolution of the blockchain. Networking delays are not modeled, and miners use identical (by default distributed) computing resources.
+
+Miners demonstrate completion of quantum work by performing experiments parameterized by the state of the blockchain. Experimental results (sample sets) are post-processed to pairwise correlation statistics. Correlations realized by a particular experiment define a point in a high dimensional space; a miner must find experimental parameters such that this point falls in a small subspace. Miners search by varying a nonce parameter, which controls the parameters of the unitary evolution and post-processing. Statistics can be digitalized to produce a hash. Any other miner can rerun the experiment to verify a claim of work, up to control and sampling errors. The process of generating a hash is demonstrated below.
+
+![Quantum Hash Generation](static/Quantum_hash_infographic.png "Image of quantum hash generation")
+
+Miners present work subject to statistical uncertainty, their work is not guaranteed to be accepted by the community. Consensus mechanisms ensure that such uncertainty is resolved subject to a delay, so that the state of the ledger can be confidently asserted. An example of how probabilistic verification impacts the state of the chain is shown below. 
+Consensus mechanisms guarantee that such disagreements are short lived, and there is only ever uncertainty on the status of very recently proposed blocks.
+
+![Blockchain State Uncertainty](static/Consensus_infographic.png "Image of blockchain state uncertainty")
+
+This demo implements a quantum blockchain wherein a set of miners perform quantum experiments on a set of QPUs (and embeddings), yet arrive at a consensus on experimental outcomes and the state of the ledger.
+After setting parameters in the browser, the blockchain is initiated with a genesis block.
+As blocks are mined and proposed they are assessed independently by miners conducting their own quantum experiments.
+
+This example implements methods found in the paper, “Blockchain with Proof of Quantum Work” [[1]](#arXiv_2503_14462), where D-Wave executes the first-ever demonstration of distributed quantum computing deployed blockchain across four cloud-based annealing quantum computers in Canada and the United States. The research highlights how D-Wave built and tested a “proof of quantum” algorithm that uses quantum computation to generate and validate blockchain hashes. The resulting techniques demonstrated that D-Wave’s quantum blockchain architecture could enhance security and significantly reduce electricity costs.
+
+
+### Comparison with Amin et al. Blockchain with Proof of Quantum Work [[1]](#arXiv_2503_14462)
+
+The simulations in this example execute unitary evolutions on cubic spin glasses matching the paper, subject to changes in the generally available solvers.
+The hash length is fixed to 64 and `num_reads` to 600 in order to reduce the QPU access time and accelerate the blockchain evolution (as opposed to the standardized 1 second of QPU access time in the [[1]](#arXiv_2503_14462) experiments).
+
+The blockchain demo uses confidence-based Chainwork. We choose the quantum hash length as 64, and Nmax (called ALLOWABLE_ERROR in demo) to be 1, which allows comparison to the paper statistics demonstrating high efficiency and small delay if we account for changes to the compute environment. Experiments determine the witness uncertain (due to sampling and control errors at 1 second of QPU access time) to be 0.16 with the current set of generally available QPUs (January 2026). The discrepancy between generally available QPUs was larger (0.18) for the generally available QPUs in the paper experiments. Furthermore number of reads is reduced in the demo (enhancing witness uncertainty). A new default for the dW parameter is set accordingly, matching the paper methods. 
+
+Problem-Hamiltonian and/or annealing rescaling allows one processor to emulate another, accommodating differences in the annealing schedules (energy scales). In both the paper and demo the target unitary evolution is defined relative to the Advantage2_prototype2 solver schedule.  Advantage systems modeled this schedule in the paper by lengthening their anneal times, to emulate the higher energy scales of Advantage2, which is also true in the demo. However, Advantage2 solvers (unavailable at the time of the original study) can have higher energy scales than the prototype system and emulation of the unitary dynamics must be achieved by scaling down of the problem Hamiltonian (since we cannot reduce annealing_time beyond the lower bound of [currently 5 nanoseconds]).
+Visualization of the blockchain in the paper placed blocks sequential on a spiral, in the demo visualization the strongest chain follows the same parametric spiral, but other (non-strongest, or rejected) branches deviate inwards from that path. Whereas the paper included 4-color global views, the demo also allows 2-color presentations of the state from an individual miner perspective.
+
+The delay and efficiency of quantum blockchains was evaluated in the paper, in part, by use of bootstrapping statistics. The same methods can be implemented in the context of this demo by enabling HIDE_SIMULATED_SOLVERS=False in the demo_configs.py file.
+
+## Model and Code Overview
 
 ### Parameters
-List and define the parameters used in your model.
+The demo defines the following parameters for the underlying proof-of-work protocol
 
-### Variables
-List and define (including type: e.g., "binary" or "integer") the variables solved for in your model.
+* Number of miners: The number of participating miners.
+* The length of the chain: the number of blocks that will be mined before the simulation stops.
+* The set of QPUs used: One can select a single generally available QPU or all available QPUs. 
 
-### Expressions
-List and define any combinations of variables used for easier representations of the models.
+The simulation can be run, paused, and reset at fixed parameters.
 
-### Objective
-Mathematical formulation of the objective described in the previous section using the listed
-parameters, variables, etc.
+### Initialization
 
-### Constraints
-Mathematical formulation of the constraints described in the previous section using the listed
-parameters, variables, etc.
+The user selects the number of participating miners, the number of mining events to simulate,
+and a set of QPUs (single or multiple). If multiple QPUs are selected, each experiment selects the QPU uniformly from the available QPUs. Each QPU supports a large set of programmings (differing in control error), which are also sampled uniformly at random on every evaluation. Experimental outcomes are subject to control and sampling errors.
 
-## Code Overview
+### Mining and Validation
 
-A general overview of how the code works.
+For each round of mining, one miner is randomly selected to be the 'winner' of that round,
+simulating a distributed community with competitive mining where each miner has an equal chance
+of winning. The winning miner completes a quantum experiment of sufficient confidence, creates a hash, and publishes a block.
+Each unsuccessful miner validates the block and adjusts their pattern of mining based on the validation.
+As this process iterates a panel is updated to demonstrate verification patterns.
+A central graphic showing the state of the chain is updated showing either a single miner view
+or the global view. The genesis block is placed at the center, with blocks spiraling outward in the order of proposal.
 
-Include any notable parts of the code implementation:
+### Miner Blockchain View
 
-* Talk about unusual or potentially difficult parts of the code
-* Explain a code decision
-* Explain how parameters were tuned
+The outer blue path representing the strongest chain, with other proposals marked in orange.
+A miner can trust that the initial part of their strongest chain is immutable with high probability [[1]](#arXiv_2503_14462).
+Transactions in this portion of the chain can be trusted, with some lower confidence in finality for the final few blocks.
 
-Note: there is no need to repeat everything that is already well-documented in
-the code.
+### Global Blockchain View
+
+The user can can select a global view that shows the consistency amongst the various miners.
+Blocks that are finalized for all miners are marked blue. Blocks that are rejected by all users are marked orange.
+Gray and black blocks have disputed status, with black blocks being actively mined by at least one miner (only black blocks have potential for further branching).
+The efficiency is determined by the proportion of blue blocks, which should be large.
+The delay is determined by the number of grey and black blocks, which indicate blocks whose validity is currently contested by miners.
+
+
+### Quantum Unitary Evolution and the Quantum Hash
+
+The unitary evolution that defines "the quantum puzzle", is defined by a set of programmable couplers, J, cryptographically determined by the strongest block (the block defining maximum chain work).
+Each coupler is sampled uniformly at random +/- J for each edge matched to a 4x4x4 dimerized cubic lattice, with the desired evolution defined by a 5ns quench on the Advantage2_prototype2 system.
+For other annealing QPUs to emulate the Advantage2_prototype2 schedule it is necessary to perform time energy rescaling (i.e. the rescaling of the problem Hamiltonian and annealing time is device specific with values precalculated).
+A dimerized cubic lattice is a simple cubic lattice in which each node is replaced by a pair of nodes.
+Miners access QPUs uniformly at random from the specified QPUs.
+The QPU sampling makes use of the Ocean&trade; SDK composites framework with parallel embedding,
+automorphism, and spin-reversal transform (SRT) averaging. The use of automorphism and SRT averaging,
+enhances (relative) control errors, simulating variability that may exist across a more diverse ecosystem of QPUs.
+
+After the sampleset is collected, it is post-processed to nearest neighbor correlations. These correlations are then randomly projected by normally distributed random vectors, to give witnesses. The sign on the witnesses specify the bits of the quantum hash.
+
+
+### Per-QPU One-Time Calibration:
+
+The unitary evolution is adjusted by selection of a QPU-specific energy-time
+rescaling and embedding, precalculated for a restricted set of available solvers.
+
+A new online solver specified by name solver_name, or a change of a processor graph, typically dictates the creation of new embeddings as one time work. This can be done by running
+```bash
+python get_qpu_embeddings.py -Q solver_name
+```
+from the calibration/ directory.
+Embeddings are automatically saved to a location suitable for use by the demo.
+
+Different solvers are characterized by different energy scales. In order for a solver to emulate a reference unitary dynamics it is possible to either rescale upwards the time (if the energy scale is too low), or scale down the problem Hamiltonian (if the energy scale is too high). Estimates are determined by using
+```bash
+python get_qpu_energy_time_rescaling.py -Q solver_name
+```
+again from the calibration/ directory.
+Function customizations can be listed using the --help flag.
+
+In order to access a new solver in the demo:
+1. The solver_name should also be enumerated as a SOLVER in src/protocols/hash_calculator.py
+2. The solver_name and energy-time rescaling tuple should be added as a key-value pair to DEFAULT_ENERGY_TIME_RESCALING dictionary in src/values.py .
+
 
 ## References
 
-A. Person (YEAR), "An Article Title that Helped Formulate the Problem".
-[Link Title](https://example.com/)
+<a id="arXiv_2503_14462"></a>
+Blockchain with proof of quantum work
+Mohammad H. Amin el al., arXiv:2503.14462 (2025)
+https://arxiv.org/abs/2503.14462
+
+<a id="10.1126/science.ado6285"></a>
+Beyond-classical computation in quantum simulation
+Andrew D. King et al., Science (2025)
+https://doi.org/10.1126/science.ado6285
 
 ## License
 
