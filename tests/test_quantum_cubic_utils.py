@@ -168,5 +168,5 @@ def test_generate_default_sampler():
     sampler = generate_default_sampler(
         source_edge_list, qpu=qpu, embedding_timeout=10  # To avoid QPU default
     )  # find embeddings
-    assert len(sampler.embeddings) == t  # This is correct for automorphism_per_embedding = True
-                                        #Otherwise, need to test len(sampler.child.embeddings) == t
+    # This is correct for automorphism_per_embedding = True, otherwise, need to test len(sampler.child.embeddings) == t
+    assert len(sampler.embeddings) == t
