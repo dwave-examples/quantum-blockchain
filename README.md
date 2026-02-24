@@ -101,7 +101,7 @@ The delay and efficiency of quantum blockchains was evaluated in the paper, in p
 The demo defines the following parameters for the underlying proof-of-work protocol
 
 * Number of miners: The number of participating miners.
-* The length of the chain:
+* The length of the chain: the number of blocks that will be mined before the simulation stops.
 * The set of QPUs used: One can select a single generally available QPU or all available QPUs. 
 
 The simulation can be run, paused, and reset at fixed parameters.
