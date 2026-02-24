@@ -64,7 +64,7 @@ class Miner:
                     should be passed to each miner by simulation callback during restart.
                     
             Modifies:
-                self.blockchain: should add nodes to the miner's blockchain to bring it up-to-date."""
+                self.blockchain: Adds nodes to the miner's blockchain to update it."""
 
         for block_entry in node_list:
             scores = block_entry["scores"]
