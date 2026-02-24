@@ -151,7 +151,7 @@ class ProofOfWorkProtocol:
         return block, block_score, self.current_solver.solver_name
 
     def score_block(self, block: Block) -> float:
-        """ Calculates the score for a single block by re-calculating the quantum hash for the
+        """ Calculates the score for a single block by recalculating the quantum hash for the
             block and comparing the re-calculated result to the value stored in the block. 
             Currently the scoring is done exclusively via the calculate_confidence_score
             function, but other scoring schemas can be used in its place without affecting
