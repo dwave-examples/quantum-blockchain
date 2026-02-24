@@ -575,7 +575,7 @@ class SpiralPlotter:
 
             Args:
                 tree (BlockScoreTree): the BlockScoreTree object you wish to plot.
-                active_block_cutoff (int). Optional. Defaults to None. The block number
+                active_block_cutoff (int): Defaults to None. The block number
                     of the last block that all miners have in their trunk. Used to recolor
                     the graph as a global view.
 
