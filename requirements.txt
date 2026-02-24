@@ -1,3 +1,16 @@
+dash[diskcache,async]~=3.2
+dash-mantine-components~=2.3
+dwave-ocean-sdk~=9.0
+flask~=3.1
+requests~=2.32
+pandas~=2.3
+numpy<2.4  # Pending bugfix for dwave-samplers
+pytest~=9.0
+matplotlib~=3.10
+dwave-experimental==2026.2.13  # Update after merging of https://github.com/dwavesystems/dwave-experimental/pull/38
 dash[diskcache]~=3.2
 dash-mantine-components~=2.3
 dwave-ocean-sdk~=9.0
+pycryptodome~=3.23
+numpy<2.4  # Pending bugfix for dwave-samplers
+pytest~=9.0

@@ -1,4 +1,9 @@
 *.DS_Store
 __pycache__
 cache
-assets/__generated_theme.css
+tests/class_tests/blockchain_test/*
+tests/class_tests/score_tree_test/*
+venv/
+.venv/
+env/
+.env/
