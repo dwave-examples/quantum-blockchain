@@ -53,7 +53,7 @@ class Miner:
         """ Recreates the miner's blockchain from a dictionary of miner blockchain data. This is used
             when restarting the demo when it has been paused. Persistent blockchain data will be saved
             in a list of dicts, where each dict contains a JSON-formatted block, plus several fields
-            of metadata about that block, including the scores assigned to it be each miner. When
+            of metadata about that block, including the scores assigned to each miner. When
             a miner calls this function, it will look for a score keyed to its miner_id in the
             score list of each block in order (starting from the first block mined) and add that
             block to its chain with that score. This should reproduce an identical blockchain
