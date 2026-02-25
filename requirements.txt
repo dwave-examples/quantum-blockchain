@@ -5,9 +5,3 @@ dwave-experimental==2026.2.13
 requests~=2.32
 numpy<2.4  # Pending bugfix for dwave-samplers
 pytest~=9.0
-
-
-
-
-
-
