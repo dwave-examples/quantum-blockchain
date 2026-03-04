@@ -39,7 +39,7 @@ from demo_configs import (
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
 )
-from src.demo_enums import SolverMode
+from src.demo_enums import SolverMode, ViewOpt
 from src.utilities.get_solvers import get_solver_lists
 
 THEME_COLOR = "#2d4376"
@@ -342,7 +342,7 @@ def create_interface():
                                                 "",
                                                 "view-select",
                                                 generate_options_dropdown(
-                                                    [label for label in GRAPH_VIEW_LABELS]
+                                                    [view.label for view in ViewOpt]
                                                 ),
                                             ),
                                             html.H4(id="block-status"),
@@ -378,7 +378,7 @@ def create_interface():
                                                                     ),
                                                                 ],
                                                             )
-                                                            for i in range(len(GRAPH_VIEW_LABELS))
+                                                            for i in range(len(ViewOpt))
                                                         ],
                                                     ),
                                                     graph_legend(),

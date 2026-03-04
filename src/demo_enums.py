@@ -14,6 +14,8 @@
 
 from enum import Enum
 
+from demo_configs import MINER_NAMES, NUM_MINER_VIEWS
+
 
 class SolverMode(Enum):
     QPU = 0
@@ -25,3 +27,11 @@ class SolverMode(Enum):
             SolverMode.QPU: "QPU Solver",
             SolverMode.SIMULATED: "Simulated Solver",
         }[self]
+    
+ViewOpt = Enum("ViewOpt", ["Global_View"] + [name for name in MINER_NAMES[:NUM_MINER_VIEWS] ])
+
+@property
+def label(self):
+    return self.name.replace("_", " ")
+
+setattr(ViewOpt, "label", label)

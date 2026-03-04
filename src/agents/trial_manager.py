@@ -20,12 +20,12 @@
 
 
 import random
-import time
 
 from src.agents.miner import Miner
 from src.protocols.hash_calculator import HashSolver
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
+from src.structures.block_score_tree import BlockScoreTree
 from src.values import (
     GENESIS_BLOCK_PREV_HASH,
     GENESIS_BLOCK_TIMESTAMP,
@@ -38,19 +38,19 @@ def initialize_genesis_block(
     miner_id: str = GENESIS_MINER_ID,
     previous_block_hash: str = GENESIS_BLOCK_PREV_HASH,
     timestamp: float = GENESIS_BLOCK_TIMESTAMP,
-):
-    """Initializes genesis block for the blockchain. In ordinary mining, these steps will
-    need to be performed by the miners and interleaved with other operations. For the
-    genesis block, we can just do them all at once based on constant values.
+) -> Block:
+    """ Initializes genesis block for the blockchain. In ordinary mining, these steps will
+        need to be performed by the miners and interleaved with other operations. For the
+        genesis block, we can just do them all at once based on constant values.
 
-    Args:
-        all args are dummy values that just need to be set to some constant. See documentation
-            in src/structure/block.py for descriptions of Block class constructor args
+        Args:
+            all args are dummy values that just need to be set to some constant. See documentation
+                in src/structure/block.py for descriptions of Block class constructor args
 
-    Returns:
-        genesis_block (Block): If called with the default args, this Block will always have
-            the same hash on every invocation, allowing for a consistent seed and starting
-            point for different blockchain trials."""
+        Returns:
+            genesis_block (Block): If called with the default args, this Block will always have
+                the same hash on every invocation, allowing for a consistent seed and starting
+                point for different blockchain trials."""
 
     genesis_block = Block(miner_id, previous_block_hash, timestamp)
     genesis_block.set_quantum_hash()
@@ -60,10 +60,9 @@ def initialize_genesis_block(
 
 
 class TrialManager:
-    """This class manages a trial of blockchain mining. The purpose of this
-    class is to be able to iterate through a series of blocks and maintain
-    the state of the trial as it progresses.
-    """
+    """ This class manages a trial of blockchain mining. The purpose of this
+        class is to be able to iterate through a series of blocks and maintain
+        the state of the trial as it progresses."""
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -102,30 +101,47 @@ class TrialManager:
         Instantiates:
             TrialMiners object: object which declares and initializes miners for the trial."""
 
-        self.max_blocks = num_blocks
+        # Trial Parameters
+        self.max_blocks = num_blocks #
         self.solvers = solvers
         self.pow = ProofOfWorkProtocol(solvers, quantum_hash_length, n_zeroes, allowable_err)
-        self.trial_init_time = time.time()
-        self.genesis_block = initialize_genesis_block()
-        self.initialize_miners(miner_names)
         self.max_mining_attempts = MAX_MINING_ATTEMPTS
+
+        # Data structures
+        self.genesis_block = initialize_genesis_block()
+        self.global_tree = BlockScoreTree()
+        self.global_tree.add_block(self.genesis_block.hash, self.genesis_block.previous_hash, 1.0)
+        self.chain_data = []
+        self._initialize_miners(miner_names)
+
+        # Attributes for tracking round status and progress
         self.mining_miner = None
-        self.block_broadcast = None
-        self.round_order = []
+        self.round_order = [miner_id for miner_id in self.miners.keys()]
+        random.shuffle(self.round_order)
         self.round_progress = 0
-        self.blocks_mined = 0
 
     @property
     def num_miners(self):
         return len(self.miners)
+    
+    @property
+    def blocks_mined(self):
+        return len(self.chain_data)
+    
+    @property
+    def mining_hashes(self) -> list[str]:
+        hash_set = set([miner.mining_hash for miner in self.miners.values()])
+        primary_hash = self.miners[self.round_order[0]].mining_hash
+        hash_set.remove(primary_hash)
+        return [primary_hash] + list(hash_set)
 
-    def initialize_miners(self, miner_names: list[str]):
-        """Creates all the Miner objects necessary to run the trial, passing each one an id, a
-        ProofOrWorkProtocol object (which should contain initialized solvers) and the
-        genesis block to form the basis for the new blockchain.
+    def _initialize_miners(self, miner_names: list[str]):
+        """ Creates all the Miner objects necessary to run the trial, passing each one an id, a
+            ProofOrWorkProtocol object (which should contain initialized solvers) and the genesis 
+            block to form the basis for the new blockchain.
 
-        Args:
-            num_owners: the number of miners to initialize"""
+            Args:
+                num_miners: the number of miners to initialize"""
 
         self.miners = {}
 
@@ -133,88 +149,186 @@ class TrialManager:
             next_miner = Miner(name, self.pow, self.genesis_block)
             self.miners.update({next_miner.id: next_miner})
 
+    def _reload_blockchain(self, blockchain_list: list[dict]):
+        """ Reloads the blockchain data from a list of dicts, each of which must contain a single
+            JSON-formatted block. Each entry's block will also be added to the TrialManager's 
+            global blockchain representation. Should only be called by the restart_trial method.
+            
+            Args:
+                blockchain_list (list[dict]): A list containing dicts of blockchain data, including
+                    JSON-formatted blocks. The list should also include scoring data for all
+                    the miners in the trial, but this won't be checked until reinitialize_miners
+                    is called (see that docstring for more info).
+                    
+            Modifies:
+                self.chain_data: Stores the passed list in the self.chain_data attribute; this 
+                    will serve as the source for all the data needed to reload the blockchain
+                    by this and other functions.
+                self.global_tree: Adds an entry to the global blockchain tree representation for
+                    each block in the passed list. Does not modify the structure beyond whatever
+                    structure is produced by adding all the blocks (but see _reinitialize_miners)"""
+        
+        self.chain_data = blockchain_list
+        for data_dict in blockchain_list:
+            block = Block.from_json(data_dict["block_json"])
+            block_num = data_dict["block_number"]
+            self.global_tree.add_block(block.hash, block.previous_hash, -1.0, block_num)
+
+    def _reinitialize_miners(self):
+        """ Reinitializes all miners, reloading their blockchain data from the data stored in
+            self.chain_data. This function will fail if self.chain_data does not include the
+            correct block data and scoring data. In particular, every entry in self.chain_data
+            must have a sub-dictionary named 'scores', whose keys match the miner names that the
+            TrialManager object was instantiated with. The exception is the final block in
+            self.chain_data, which can be missing some or all of the miner scores without causing
+            an error. Should only be called by the restart_trial method, after _reload_blockchain
+            has been called to populate the self.chain_data list with suitable data.
+            
+            Modifies:
+                self.miners: All the miners stored in self.miners will have the internal states
+                    of their blockchains modified, bringing them up-to-date with the TrialManager's
+                    blockchain data.
+                self.round_order: The round order will be set so that all the miners who have
+                    already validated the current block precede all the miners who have not.
+                    The latter group will be placed in a randomized order to finish validation."""
+        
+        short_blockchain = self.chain_data[:-1]
+        last_block = self.chain_data[-1]
+        finished_miners = [miner_id for miner_id in last_block["scores"].keys()]
+        unfinished_miners = []
+
+        for miner_id, miner in self.miners.items():
+            if miner_id in last_block["scores"]:
+                miner.re_initialize_blockchain(self.chain_data)
+            else:
+                miner.re_initialize_blockchain(short_blockchain)
+                unfinished_miners.append(miner_id)
+
+        self.round_progress = len(finished_miners)
+        if self.round_progress == self.num_miners:
+            self._reset_round()
+        else:
+            random.shuffle(unfinished_miners)
+            self.round_order = finished_miners + unfinished_miners
+
+        current_block = Block.from_json(self.chain_data[-1]["block_json"])
+        for miner_id, miner in self.miners.items():
+            if current_block.previous_hash not in miner.blockchain.hash_to_branch_lookup:
+                raise Exception(f"{miner_id} failed to have latest \
+                                block {current_block.hash} with tree structure {miner.blockchain}")
+
+  
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
     #                             SECTION: Mining Round Primary Steps                                    |
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def reset_round(self):
-        """Runs setup for a single round of mining, currently limited to randomly setting the round order
-        for mining and validation.
+    def _reset_round(self):
+        """ Resets the self.round_progress counter to 0 and rerandomizes the mining and validation
+            order for the next round.
 
         Modifies:
             self.round_order: sets the round order at random."""
 
-        self.block_broadcast = None
         self.round_progress = 0
-        miner_order = [miner_id for miner_id in self.miners.keys()]
-        random.shuffle(miner_order)
-        self.round_order = miner_order
+        random.shuffle(self.round_order)
 
-    def mining_step(self) -> tuple[str, float, str]:
-        """Executes the mining step for the single round of the trial. Miner mines a single block (or times
-        out after exceeding the maximum number of attempts) and stores its serialized form in self.block_broadcast.
+    def _mining_step(self):
+        """ Executes the mining step for the single round of the trial. Miner mines a single block 
+            (or times out after exceeding the maximum number of attempts) and stores its 
+            serialized form in self.block_broadcast.
 
-        Modifies:
-            self.block_broadcast: stores the newly-mined block here, serialized in JSON format."""
+            Modifies:
+                self.chain_data: Adds a new block entry to the chain_data list, containing a
+                    JSON-formatted copy of the block as well as the miner's score and solver data
+                self.global_tree: adds the new block to the global blockchain representation 
+                    maintained by the TrialManager.
+                    
+            Returns:
+                self.mining_miner_id: the id of the miner that mined this round."""
 
         self.mining_miner_id = self.round_order[0]
         self.mining_miner = self.miners[self.mining_miner_id]
 
         for _ in range(self.max_mining_attempts):
-            _, block_score, solver = self.mining_miner.attempt_mine()
-            if block_score > 0:  # Deviates from paper methodology (for confidence-based scoring)
-                self.block_broadcast = self.mining_miner.broadcast_mined_block()
+            mine_success, block_data_dict, blocknode = self.mining_miner.attempt_mine() 
+            if mine_success:  
+                self.chain_data.append(block_data_dict)
+                self.global_tree.add_block(blocknode.hash, blocknode.prev_hash, -1.0)
                 self.round_progress += 1
-                self.blocks_mined += 1
-                return self.mining_miner_id, block_score, solver
+                return
 
-        raise Exception(
-            f"TrialManager exceeded max mining attempts of {self.max_mining_attempts} without {self.mining_miner_id} finding mining a valid block."
-        )
+        raise Exception(f"TrialManager exceeded max mining attempts of {self.max_mining_attempts}\
+                         without {self.mining_miner_id} finding mining a valid block.")
 
-    def validation_step(self) -> tuple[str, float, str]:
-        """Chooses the next miner in validation order to perform validation for the mined block.
+    def _validation_step(self):
+        """ Chooses the next miner in validation order to perform validation for the mined block.
 
-        Returns:
-            validator_id (string): ID of the validating miner
-            block_score (float): score that the validator assigned to the block
-            solver (string): name of the solver used for validation"""
+            Returns:
+                validator_id (string): ID of the validating miner
+                
+            Modifies:
+                self.chain_data: stores the validators score and solver info to the entry for the
+                    current block."""
 
         validator_id = self.round_order[self.round_progress]
         validator = self.miners[validator_id]
-        block_score, solver = validator.receive_block(self.block_broadcast)
+        current_block_dict = self.chain_data[-1]
+        block_score, solver = validator.receive_block(current_block_dict["block_json"])
         self.round_progress += 1
+        current_block_dict["scores"].update({validator_id:block_score})
+        current_block_dict["solvers"].update({validator_id: solver})
 
-        return validator_id, block_score, solver
+    def _update_global_tree_structure(self):
+        """ Updates the structure of the global tree by finding the hash of the most recent block
+            that every miner has in their trunk, and restructuring the global tree so that the 
+            trunk ends at that block (i.e. it consists of that block and all its predecessors). 
+
+            Modifies:
+                self.global_tree: Rearranges the branch structure of the global tree, but does
+                    not add, remove or change the values of any of its blocks."""
+        
+        trunk_sets = [
+            set([(block.hash, block.block_number) for block in miner.blockchain.trunk])
+            for miner in self.miners.values()
+        ]
+        common_hash_tuples = set.intersection(*trunk_sets) # Tuple of (hash, block_number)
+        if len(common_hash_tuples) > 0:
+            last_common_hash_tuple = max(common_hash_tuples, key=lambda x: x[1])
+            if last_common_hash_tuple[0] not in self.global_tree.trunk:
+                next_trunk = self.global_tree.hash_to_branch_lookup[last_common_hash_tuple[0]]
+                self.global_tree.promote_to_trunk(next_trunk, last_common_hash_tuple[0])
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
-    #                             SECTION: Other Round Tasks                                            |
+    #                             SECTION: Public Access Functions                                        |
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def single_step(self) -> tuple[bool, str, float, str]:
-        """Executes a single, atomic step of the simulation algorithm, deciding based on the internal state
-        of the TrialManager object which action needs to happen next.
+    def single_step(self) -> str:
+        """ Executes a single mining or validation step of the algorithm, including any internal
+            state updates appropriate for that step. Which sort of step to execute and whether
+            to finish and reset the round afterwards is determined by the self.round_progress
+            attribute, which is incremented by one on each step executed.
 
         Returns:
-            mined (bool): Indicates whether this step was a mining step
-            miner_id (string): ID of the miner that mined or validated this round
-            block_score (float): score of the block that was just mined or validated
-            solver (string): name of the solver that was used for mining or validation this round"""
+            miner_id (string): ID of the miner that mined or validated this round"""
 
-        if self.round_progress == 0 or self.round_progress >= self.num_miners:
-            mined = True
-            self.reset_round()
-            miner_id, block_score, solver = self.mining_step()
+        miner_id = self.round_order[self.round_progress]
+        if self.round_progress == 0:
+            self._mining_step()
         else:
-            mined = False
-            miner_id, block_score, solver = self.validation_step()
-        return mined, miner_id, block_score, solver
+            self._validation_step()
 
-    def run_trial(self, num_blocks: int = None):
+        if self.round_progress >= self.num_miners:
+            self._update_global_tree_structure()
+            self._reset_round()
+
+        return miner_id
+
+    def run_trial(self, num_blocks: int | None = None):
         """Runs the trial through some number of complete block mining and validation events. By
             default it will run until the trial finishes, but this can be overridden by passing a
             smaller number as an argument.
@@ -237,35 +351,22 @@ class TrialManager:
         while self.blocks_mined < stopping_block:
             self.single_step()
 
-    def get_active_block_hashes(self) -> list[str]:
-        """Queries miners to get a list of the hashes of all blocks that are currently candidates for mining.
-        Each miner should have one block that they consider the strongest (may be the same for different
-        miners), which they will mine on top of if they are selected for the next mining round. This
-        function collects a list of those block hashes and returns it (with duplicates removed).
-
-        Returns:
-            active_hash_list (list[str]). List of hashes of blocks that are candidates for mining.
-        """
-
-        active_hashes = [miner.blockchain.strongest_block_hash for miner in self.miners.values()]
-        return list(set(active_hashes))
-
-    def get_last_common_trunk_block(self) -> int:
-        """Finds the block number of the last block that all miners have in their trunks: that is, the last
-        block that all miners consider to be a canonical part of the main chain. This is important in
-        assessing the state of the blockchain, as once all miners agree on a block, it is effectively
-        immutable, as every new block mined will include it as a predecessor.
-
-        Returns:
-            largest_common_block_num (int): the block number of the last block that all miners have
-                their trunk."""
-        trunk_sets = [
-            set([blk.block_number for blk in miner.blockchain.trunk])
-            for miner in self.miners.values()
-        ]
-        common_block_nums = set.intersection(*trunk_sets)
-        if len(common_block_nums) == 0:
-            return 0
-
-        largest_common_block_num = max(common_block_nums)
-        return largest_common_block_num
+    def restart_trial(self, blockchain_list: list[dict]):
+        """ Restarts and interrupted trial, reloading all necessary blockchain and miner data from
+            the list passed as an argument.
+            
+            Args:
+                blockchain_list (list[dict]): A list containing data for the interrupted trial.
+                    For this function to complete successfully, the list must include a dict for
+                    each block in the chain, with a JSON-formatted copy of that block as well
+                    as a dict of scores that the miners assigned to that block (keyed by miner id).
+                    For more info on each of these requirements, see _reload_blockchain and
+                    _reinitialize_miners respectively.
+                     
+            Modifies:
+                self.chain_data: see individual sub-functions for details
+                self.global_tree """
+        
+        self._reload_blockchain(blockchain_list)
+        self._reinitialize_miners()
+        self._update_global_tree_structure()

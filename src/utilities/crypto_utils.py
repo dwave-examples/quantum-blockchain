@@ -76,9 +76,9 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     numpy_bytes = [np.frombuffer(np.array(q_hash_bytes), dtype="B") for q_hash_bytes in hash_bytes]
     numpy_bits1 = np.unpackbits(numpy_bytes[0])
     numpy_bits2 = np.unpackbits(numpy_bytes[1])
-    assert len(numpy_bits1) == len(
-        numpy_bits2
-    ), f"Attempted to compare hashes of different lengths, {len(numpy_bits1)} vs {len(numpy_bits2)}"
+    if len(numpy_bits1) != len(numpy_bits2):
+        raise Exception(f"Attempted to compare hashes of different \
+                        lengths, {len(numpy_bits1)} vs {len(numpy_bits2)}")
     comparison_vector = np.zeros(shape=(len(numpy_bits1)), dtype=np.int8)
 
     for i in range(len(numpy_bits1)):
