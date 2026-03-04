@@ -59,7 +59,7 @@ class SolverName(Enum):
 
     SOLVER1 = "Advantage_system4.1"
     SOLVER2 = "Advantage_system6.4"
-    SOLVER3 = "Advantage2_system1.11"
+    SOLVER3 = "Advantage2_system1.12"
 
     SIMULATED1 = "simulated_Advantage2_prototype2.6"  # No longer generally available
     SIMULATED2 = "simulated_Advantage_system4.1"
