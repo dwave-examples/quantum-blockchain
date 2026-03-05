@@ -89,9 +89,7 @@ def simulation(
     execution of this function is internally divided up into 'rounds,' where one round covers a
     single action (mining or validation) from each miner in the trial. Each action takes roughly
     1 second, so a round will last for roughly as many seconds as there are miners. It will
-    run a number of rounds equal to the 'num_blocks' parameter. So with the default settings of
-    7 miners and 20 blocks, execution will span roughly 7s x 20 = 140 seconds (though high
-    latency in connecting to solvers could cause it to take longer). As this callback runs, it will
+    run a number of rounds equal to the 'num_blocks' parameter. As this callback runs, it will
     call the 'set_progress_miner_table' function to provide regular updates to the miner table
     (approximately 1 per second). It will also use the 'set_props' function to keep the
     'blockchain-structure-data' dcc.Store up-to-date with the same frequency, and to update each of
