@@ -102,7 +102,7 @@ class TrialManager:
             TrialMiners object: object which declares and initializes miners for the trial."""
 
         # Trial Parameters
-        self.max_blocks = num_blocks  #
+        self.max_blocks = num_blocks
         self.solvers = solvers
         self.pow = ProofOfWorkProtocol(solvers, quantum_hash_length, n_zeroes, allowable_err)
         self.max_mining_attempts = MAX_MINING_ATTEMPTS
