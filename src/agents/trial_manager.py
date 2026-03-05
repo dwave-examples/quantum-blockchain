@@ -354,7 +354,7 @@ class TrialManager:
             self.single_step()
 
     def restart_trial(self, blockchain_list: list[dict]):
-        """Restarts and interrupted trial, reloading all necessary blockchain and miner data from
+        """Restarts an interrupted trial, reloading all necessary blockchain and miner data from
         the list passed as an argument.
 
         Args:
