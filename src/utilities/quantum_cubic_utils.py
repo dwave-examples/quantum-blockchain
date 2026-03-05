@@ -375,7 +375,7 @@ def generate_default_sampler(
         qpu: A DWaveSampler
         embedding_directory: Path to saved embeddings.
         embedding_timeout: Timeout for on-the-fly embedding. Embeddings can be
-            created as one-time work per QPU using calibration/get_qpu_embeddings.py. By
+            created as one-time work per QPU using get_qpu_embeddings.py. By
             default the timeout is zero and an error is thrown if the embedding is not
             precalculation.
         automorphism_per_component: If True, each embedding has an independent
@@ -394,7 +394,7 @@ def generate_default_sampler(
     if len(embeddings) == 0:
         raise Exception(
             f"Embeddings not found at {embedding_directory}"
-            "Use calibration/get_qpu_embeddings to generate embeddings/"
+            "Use get_qpu_embeddings to generate embeddings/"
         )
     if automorphism_per_component:
         # This should be much faster subject to https://github.com/dwavesystems/dwave-experimental/pull/38

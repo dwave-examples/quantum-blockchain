@@ -159,14 +159,12 @@ A new online solver specified by name solver_name, or a change of a processor gr
 ```bash
 python get_qpu_embeddings.py -Q solver_name
 ```
-from the calibration/ directory.
 Embeddings are automatically saved to a location suitable for use by the demo.
 
 Different solvers are characterized by different energy scales. In order for a solver to emulate a reference unitary dynamics it is possible to either rescale upwards the time (if the energy scale is too low), or scale down the problem Hamiltonian (if the energy scale is too high). Estimates are determined by using
 ```bash
 python get_qpu_energy_time_rescaling.py -Q solver_name
 ```
-again from the calibration/ directory.
 Function customizations can be listed using the --help flag.
 
 In order to access a new solver in the demo:

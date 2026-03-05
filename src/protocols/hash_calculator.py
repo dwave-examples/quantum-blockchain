@@ -59,7 +59,7 @@ class SolverName(Enum):
 
     SOLVER1 = "Advantage_system4.1"
     SOLVER2 = "Advantage_system6.4"
-    SOLVER3 = "Advantage2_system1.11"
+    SOLVER3 = "Advantage2_system1.12"
 
     SIMULATED1 = "simulated_Advantage2_prototype2.6"  # No longer generally available
     SIMULATED2 = "simulated_Advantage_system4.1"
@@ -235,7 +235,7 @@ class QuantumHashSolver(HashSolver):
         if energy_time_rescaling is None:
             if solver_name not in DEFAULT_ENERGY_TIME_RESCALING:
                 raise ValueError(
-                    "Unsupported {solver_name}: See the `calibration` directory for generation of energy-time rescaling values and embeddings"
+                    "Unsupported {solver_name}: see README Per-QPU calibration"
                 )
             problem_hamiltonian_rescaling, time_rescaling = DEFAULT_ENERGY_TIME_RESCALING[
                 solver_name
