@@ -536,7 +536,7 @@ class BlockScoreTree:
             branch: a branch
 
         Returns:
-            root: first trunk block among the branch's predecessors, of None if the branch passed
+            root: first trunk block among the branch's predecessors, or None if the branch passed
                 is the trunk."""
 
         current_branch = branch
