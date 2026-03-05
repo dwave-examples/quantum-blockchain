@@ -117,11 +117,13 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2**15)
+        nonce = np.random.randint(0, 2 ** 15)
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
-    def attempt_mine(self, mining_block: Block | None = None) -> tuple[bool,dict,BlockNode | None]:
+    def attempt_mine(
+        self, mining_block: Block | None = None
+    ) -> tuple[bool, dict, BlockNode | None]:
         """Attempts to mine a new block, choosing the nonce at random, calculating the quantum hash
             and the block hash and validating against the PoW requirement.
 
@@ -137,7 +139,7 @@ class Miner:
                 mining_block.nonce += 1
 
         new_block, block_score, solver = self.pow.mine_block(mining_block)
-        if block_score <= 0: # Deviates from paper methodology (for confidence-based scoring)
+        if block_score <= 0:  # Deviates from paper methodology (for confidence-based scoring)
             return False, {}, None
         else:
             new_block.lock()
@@ -146,10 +148,10 @@ class Miner:
             block_data_dict = dict(
                 block_json=new_block.to_json,
                 block_number=new_blocknode.block_number,
-                scores={self.id:block_score},
-                solvers= {self.id:solver},
+                scores={self.id: block_score},
+                solvers={self.id: solver},
                 miner_id=self.id,
-                )
+            )
             return True, block_data_dict, new_blocknode
 
     def receive_block(self, new_block_str) -> tuple[float, str]:

@@ -49,8 +49,10 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
         passes_validation (bool): True if the hash passes, False otherwise."""
 
     if 4 * len(hash) < num_zeroes:
-        raise Exception(f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
-                        represents only {4*len(hash)} binary digits.")
+        raise Exception(
+            f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
+                        represents only {4*len(hash)} binary digits."
+        )
 
     q_hash_bytes = binascii.unhexlify(hash.encode(encoding="utf-8"))
     numpy_bytes = np.frombuffer(np.array(q_hash_bytes), dtype="B")
@@ -77,8 +79,10 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     numpy_bits1 = np.unpackbits(numpy_bytes[0])
     numpy_bits2 = np.unpackbits(numpy_bytes[1])
     if len(numpy_bits1) != len(numpy_bits2):
-        raise Exception(f"Attempted to compare hashes of different \
-                        lengths, {len(numpy_bits1)} vs {len(numpy_bits2)}")
+        raise Exception(
+            f"Attempted to compare hashes of different \
+                        lengths, {len(numpy_bits1)} vs {len(numpy_bits2)}"
+        )
     comparison_vector = np.zeros(shape=(len(numpy_bits1)), dtype=np.int8)
 
     for i in range(len(numpy_bits1)):

@@ -163,8 +163,10 @@ class ScoreTreeBranch:
             self.node_list.append(new_block_node)
             self.hash_to_index_lookup.update({new_block_node.hash: self.tip_idx})
         else:
-            raise Exception(f"Invalid block. Block's predecessor {new_block_node.prev_hash} \
-                            does not match branch tip {self.tip.hash}")
+            raise Exception(
+                f"Invalid block. Block's predecessor {new_block_node.prev_hash} \
+                            does not match branch tip {self.tip.hash}"
+            )
 
     def update_depth(self):
         """Updates the branch depth to one more than that of its parent. Called recursively on all
@@ -191,8 +193,10 @@ class ScoreTreeBranch:
             self.parent = parent_branch
             self.update_depth()
         else:
-            raise Exception(f"Attempted to set branch {self.node_list} \
-                            as child of branch {parent_branch.node_list}")
+            raise Exception(
+                f"Attempted to set branch {self.node_list} \
+                            as child of branch {parent_branch.node_list}"
+            )
 
     def link_child_branch(self, child_branch: "ScoreTreeBranch"):
         """Links a ScoreTreeBranch to this branch as a child. The child then calls set_parent on
@@ -220,16 +224,16 @@ class ScoreTreeBranch:
         return None
 
     def has_blocks(self, hash_list: list[str]) -> bool:
-        """ Given a list of block hashes, returns True if the branch contains a block matching any
-            of those hashes and False otherwise.
-            
-            Args:
-                hash_list (list[str]): list of block hashes to check against branch contents."""
-        
+        """Given a list of block hashes, returns True if the branch contains a block matching any
+        of those hashes and False otherwise.
+
+        Args:
+            hash_list (list[str]): list of block hashes to check against branch contents."""
+
         for block_hash in hash_list:
             if block_hash in self.hash_to_index_lookup:
                 return True
-            
+
         return False
 
     def get_longest_child(self):
@@ -342,15 +346,19 @@ class ScoreTreeBranch:
             cut_idx = len(self) + cut_idx
 
         if cut_idx > self.tip_idx or cut_idx < 1:
-            raise Exception(f"Error, invalid cut index of {cut_idx} provided. Cut index cannot \
-                            be 0 and must be within branch bounds.")
+            raise Exception(
+                f"Error, invalid cut index of {cut_idx} provided. Cut index cannot \
+                            be 0 and must be within branch bounds."
+            )
 
         moving_blocks = []
         moving_children = []
         num_removals = len(self) - cut_idx
         if num_removals <= 0:
-            raise Exception(f"Attempted to cut at index {cut_idx} from branch with \
-                            base {self.base.hash}, but branch was length {len(self)}")
+            raise Exception(
+                f"Attempted to cut at index {cut_idx} from branch with \
+                            base {self.base.hash}, but branch was length {len(self)}"
+            )
 
         for i in range(num_removals):
             block, children = self.pop()
@@ -365,11 +373,15 @@ class ScoreTreeBranch:
             new_branch.append_block(next_block)
 
         if len(moving_blocks) > 0:
-            raise Exception(f"Some blocks didn't get removed from staging. Blocks with \
-                            hashes {[b.hash for b in moving_blocks]} remain in staging list.")
+            raise Exception(
+                f"Some blocks didn't get removed from staging. Blocks with \
+                            hashes {[b.hash for b in moving_blocks]} remain in staging list."
+            )
         if len(new_branch) != num_removals:
-            raise Exception(f"Some blocks didn't get added to new branch. \
-                            Missing {num_removals - len(new_branch)} blocks.")
+            raise Exception(
+                f"Some blocks didn't get added to new branch. \
+                            Missing {num_removals - len(new_branch)} blocks."
+            )
 
         moved_children = []
         for child in moving_children:
@@ -377,12 +389,16 @@ class ScoreTreeBranch:
             new_branch.link_child_branch(child)
 
         if len(moving_children) != len(moved_children):
-            raise Exception(f"{len(moved_children)} reported moved \
-                            but {len(moving_children)} were staged to move.")
+            raise Exception(
+                f"{len(moved_children)} reported moved \
+                            but {len(moving_children)} were staged to move."
+            )
 
         for child in moved_children:
             if child.parent != new_branch:
-                raise Exception(f"Child branch with base hash {child.base.hash} has parent \
-                                root {child.parent}. Should have {new_branch}")
+                raise Exception(
+                    f"Child branch with base hash {child.base.hash} has parent \
+                                root {child.parent}. Should have {new_branch}"
+                )
 
         return new_branch
