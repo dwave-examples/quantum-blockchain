@@ -165,7 +165,7 @@ class SpiralPlotter:
     ):
         """Takes a BlockScoreTree object and processes the data to prepare it to be plotted. When
         the data is imported, each of the branches of the original BlockScoreTree has its
-        data used to define a GraphBranch--a child class of ScoreTreeBranch which uses the same
+        data used to define a GraphBranch: a child class of ScoreTreeBranch which uses the same
         data organization scheme, but adds some methods and fields useful for preparing the
         data to be graphed. The GraphBranch objects are linked together with the same
         parent-child relationships that the branches of the original BlockScoreTree had,
