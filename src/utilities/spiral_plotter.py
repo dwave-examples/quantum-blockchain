@@ -384,7 +384,7 @@ class SpiralPlotter:
         for branch in self.branches:
             if branch != self.trunk:
                 if branch.has_blocks(mining_hashes):
-                    branch.point_colors = [ACTIVE_BRANCH_POINT_COLOR for _ in range(len(branch))]
+                    branch.point_colors = [ACTIVE_BRANCH_POINT_COLOR] * len(branch)
                     branch.edge_color = ACTIVE_BRANCH_EDGE_COLOR
 
             for block_hash in mining_hashes:
