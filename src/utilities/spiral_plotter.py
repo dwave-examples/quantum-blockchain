@@ -379,7 +379,7 @@ class SpiralPlotter:
             mining_hashes (list[str]): a list of block hashes that are currently candidates
                 to be mined."""
 
-        # In miner view trunk tip will always be a mining block, in global view it may not be
+        # In miner view, trunk tip will always be a mining block, in global view it may not be
         self.trunk.point_colors[-1] = TRUNK_POINT_COLOR
         for branch in self.branches:
             if branch != self.trunk:
