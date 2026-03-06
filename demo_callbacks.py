@@ -38,9 +38,19 @@ from demo_configs import (
 )
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode, ViewOpt
-from src.utilities.display_update import graph_layout_dict, render_miner_status
+from src.utilities.display_update import render_miner_status
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
+
+graph_layout_dict = dict(
+    autosize=False,
+    showlegend=False,
+    xaxis=dict(showticklabels=False),
+    yaxis=dict(showticklabels=False),
+    margin=dict(l=0, r=0, b=0, t=0, pad=4),
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================

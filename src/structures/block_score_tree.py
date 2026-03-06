@@ -301,9 +301,9 @@ class BlockScoreTree:
 
         if trunk_join_block is None:  # If branch is the trunk, do nothing
             return
-        else:
-            while branch_to_promote != self.trunk:  # Otherwise, keep promoting to reach trunk
-                branch_to_promote = self.promote_branch(branch_to_promote)
+        
+        while branch_to_promote != self.trunk:  # Otherwise, keep promoting to reach trunk
+            branch_to_promote = self.promote_branch(branch_to_promote)
 
         for branch in self.branches:
             if branch != self.trunk:
@@ -416,8 +416,9 @@ class BlockScoreTree:
         Branches that contain mining blocks are supposed to be colored with the 'undecided'
         coloring, while branches that do not are supposed to be colored with the 'abandoned'
         coloring. If an 'abandoned' branch has a child branch with a mining block, the color
-        scheme will be ambiguous: this method ensures that branches with mining blocks will
-        always have lower depth than their neighboring branch that lack them.
+        scheme will be ambiguous; this method ensures that when a mining branch and a non-mining
+        branch are adjacent, the former will always have lower depth than the latter, ensuring
+        a sensible coloration.
 
         Args:
             hashes_to_promote (list[str]): a list of block hashes indicating blocks whose
@@ -445,12 +446,12 @@ class BlockScoreTree:
 
     def refactor_branches(self):
         """This function rearranges the branches of the tree to put branches with the highest
-        final block number at the lowest level. In this structure, trunk has special
-        importance, but outside of that, which branch is a parent and which is a child is
-        arbitrary: promote_branch lets us swap between them at will. For graphing it is useful
-        to have the branches that will appear longest on the trunk (those that end with the
-        highest block number) to have the lowest depth. This function rearranges the branches
-        to meet that criterion."""
+        final block number at the lowest level. For most purposes, there is no special meaning
+        accorded to the depth of a (non-trunk) branch: which branch out of a pair is a parent and
+        which is a child is arbitrary and can be changed at will with the promote_branch method. 
+        However,  putting the branches with the highest terminal block number at the lowest depth 
+        is convenient when graphing, as it allows for more efficient use of space and a more 
+        visually clean graph. This function rearranges branches to meet that criterion."""
 
         base_branches = []
         for branch in self.branches:
@@ -519,13 +520,13 @@ class BlockScoreTree:
         node_list = [current_block]
         while current_block.hash != stopping_hash and current_block.block_height > stopping_height:
             current_block = self.get_block(current_block.prev_hash)
-            if current_block is not None:
-                node_list.append(current_block)
-            else:
+            if current_block is None:
                 raise Exception(
                     f"Reached a dead end in the tree before reaching a termination \
                                 condition. Last node accessed was {node_list[-1].hash}"
                 )
+            
+            node_list.append(current_block)
 
         return node_list
 

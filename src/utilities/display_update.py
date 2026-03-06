@@ -16,17 +16,6 @@ from dash import html
 
 from demo_configs import MINER_NAMES
 
-graph_layout_dict = dict(
-    autosize=False,
-    showlegend=False,
-    xaxis=dict(showticklabels=False),
-    yaxis=dict(showticklabels=False),
-    margin=dict(l=0, r=0, b=0, t=0, pad=4),
-    paper_bgcolor="white",
-    plot_bgcolor="white",
-)
-
-
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
     """Renders the status of the miners in the current trial. Each miner will be named
         "Miner n" where n is one more than their ID in TrialManager (because numbering

@@ -141,18 +141,18 @@ class Miner:
         new_block, block_score, solver = self.pow.mine_block(mining_block)
         if block_score <= 0:  # Deviates from paper methodology (for confidence-based scoring)
             return False, {}, None
-        else:
-            new_block.lock()
-            new_blocknode = self.add_block_to_chain(new_block, block_score)
-            self.mining_block = None
-            block_data_dict = dict(
-                block_json=new_block.to_json,
-                block_number=new_blocknode.block_number,
-                scores={self.id: block_score},
-                solvers={self.id: solver},
-                miner_id=self.id,
-            )
-            return True, block_data_dict, new_blocknode
+        
+        new_block.lock()
+        new_blocknode = self.add_block_to_chain(new_block, block_score)
+        self.mining_block = None
+        block_data_dict = dict(
+            block_json=new_block.to_json,
+            block_number=new_blocknode.block_number,
+            scores={self.id: block_score},
+            solvers={self.id: solver},
+            miner_id=self.id,
+        )
+        return True, block_data_dict, new_blocknode
 
     def receive_block(self, new_block_str) -> tuple[float, str]:
         """Processes a new block that has been received as a JSON-formatted string, validates it
