@@ -419,7 +419,7 @@ class SpiralPlotter:
     def draw_spiral(self, mining_hashes: list[str], is_global: bool = False) -> go.Figure:
         """Assuming all the points and edges have been plotted, draws them on the figure, coloring
         and sizing them according to the pre-defined color and size schema. This will draw two
-        distinct sorts of elements onto the graph area: points and lines. Each branch of the
+        distinct elements onto the graph area: points and lines. Each branch of the
         graph will have one set of points (indicating the blocks that are part of that branch)
         and one set of lines, arranged so as to connect those points in a curving spiral shape.
 
