@@ -262,7 +262,7 @@ class BlockScoreTree:
             force_child (bool). Defaults to True. When this parameter is True, the new branch will
                 always be kept distinct, added as a child of the branch containing the root block.
                 If it is set to False, the new branch will be used to extend the branch with the
-                root block if possible (i.e. if the root is also the branch tip).""" 
+                root block, if possible (i.e. if the root is also the branch tip).""" 
         
         if new_branch.root_hash not in self.hash_to_branch_lookup:
             raise Exception(f"Root {new_branch.root_hash} of new branch isn't in the tree")
