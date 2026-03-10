@@ -259,7 +259,7 @@ class BlockScoreTree:
         Args:
             new_branch (ScoreTreeBranch): a branch to add to the tree. Can consist of entirely new
                 blocks or can be a cut section of a branch that was already in the tree.
-            force_child (bool). Defaults to True. When this parameter is true, the new branch will
+            force_child (bool). Defaults to True. When this parameter is True, the new branch will
                 always be kept distinct, added as a child of the branch containing the root block.
                 If it is set to False, the new branch will be used to extend the branch with the
                 root block if possible (i.e. if the root is also the branch tip).""" 
