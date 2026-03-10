@@ -356,8 +356,8 @@ class BlockScoreTree:
         if branch_to_promote == self.trunk:
             return branch_to_promote
         elif branch_to_promote.parent is None:
-            raise Exception("Tried to promote non-trunk branch with no parent.") #TODO consider identification
-
+            raise Exception(f"branch_to_promote {branch_to_promote.base.hash} has no parent.")
+        
         base_branch = branch_to_promote.parent
 
         # Leave the root block in place, remove the next block
@@ -409,7 +409,14 @@ class BlockScoreTree:
 
     def demote_branch_section(self, branch_to_truncate: ScoreTreeBranch, cut_idx: int):
         """Truncates a branch by removing all blocks from a specified index forward. The removed
-        section will be linked to the original branch as a TODO finish"""
+        section will be linked to the original branch as a child and all the necessary references
+        will be updated.
+        
+        Args:
+            branch_to_truncate (ScoreTreeBranch): the branch to be altered
+            cut_idx (int): the index at which the branch is to be cut. The block at this index
+                and all blocks at higher indices will become part of a new branch, which is a
+                linked as a child of the original branch."""
 
         demoted_section = branch_to_truncate.cut_branch_section(cut_idx)
         demoted_hashes = set(demoted_section.hash_to_index_lookup.keys())
