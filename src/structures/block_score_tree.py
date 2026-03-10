@@ -266,6 +266,7 @@ class BlockScoreTree:
         
         if new_branch.root_hash not in self.hash_to_branch_lookup:
             raise Exception(f"Root {new_branch.root_hash} of new branch isn't in the tree")
+
         parent_branch = self.hash_to_branch_lookup[new_branch.root_hash]
         hashes_to_update = list(new_branch.hash_to_index_lookup.keys())
         if new_branch.root_hash != parent_branch.tip.hash or force_child:
