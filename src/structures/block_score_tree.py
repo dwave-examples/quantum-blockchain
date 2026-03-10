@@ -416,7 +416,7 @@ class BlockScoreTree:
         Args:
             branch_to_truncate (ScoreTreeBranch): the branch to be altered
             cut_idx (int): the index at which the branch is to be cut. The block at this index
-                and all blocks at higher indices will become part of a new branch, which is a
+                and all blocks at higher indices will become part of a new branch, which is
                 linked as a child of the original branch."""
 
         demoted_section = branch_to_truncate.cut_branch_section(cut_idx)
