@@ -367,7 +367,7 @@ class BlockScoreTree:
             self.demote_branch_section(base_branch, cut_location)
 
         if base_branch.tip.hash != branch_to_promote.root_hash: # Prev step should make this False
-            raise Exception( #So if we're here, something went wrong.
+            raise Exception(  # So if we're here, something went wrong.
                 f"Mismatch between tip of parent branch {base_branch.tip.hash} and root of branch \
                 being promoted {branch_to_promote.root_hash} which could not be reconciled."
             )
