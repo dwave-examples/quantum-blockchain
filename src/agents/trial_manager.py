@@ -135,7 +135,7 @@ class TrialManager:
         hash_set.remove(primary_hash)
         return [primary_hash] + list(hash_set)
 
-    def _initialize_miners(self, miner_names: list[str]):
+    def _initialize_miners(self, miner_names: list[str]) -> None:
         """Creates all the Miner objects necessary to run the trial, passing each one an id, a
         ProofOrWorkProtocol object (which should contain initialized solvers) and the genesis
         block to form the basis for the new blockchain.
@@ -149,7 +149,7 @@ class TrialManager:
             next_miner = Miner(name, self.pow, self.genesis_block)
             self.miners.update({next_miner.id: next_miner})
 
-    def _reload_blockchain(self, blockchain_list: list[dict]):
+    def _reload_blockchain(self, blockchain_list: list[dict]) -> None:
         """Reloads the blockchain data from a list of dicts, each of which must contain a single
         JSON-formatted block. Each entry's block will also be added to the TrialManager's
         global blockchain representation. Should only be called by the restart_trial method.
@@ -174,7 +174,7 @@ class TrialManager:
             block_num = data_dict["block_number"]
             self.global_tree.add_block(block.hash, block.previous_hash, -1.0, block_num)
 
-    def _reinitialize_miners(self):
+    def _reinitialize_miners(self) -> None:
         """Reinitializes all miners, reloading their blockchain data from the data stored in
         self.chain_data. This function will fail if self.chain_data does not include the
         correct block data and scoring data. In particular, every entry in self.chain_data
@@ -225,7 +225,7 @@ class TrialManager:
     # =====================================================================================================
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def _reset_round(self):
+    def _reset_round(self) -> None:
         """Resets the self.round_progress counter to 0 and rerandomizes the mining and validation
             order for the next round.
 
@@ -235,7 +235,7 @@ class TrialManager:
         self.round_progress = 0
         random.shuffle(self.round_order)
 
-    def _mining_step(self):
+    def _mining_step(self) -> None:
         """Executes the mining step for the single round of the trial. Miner mines a single block
         (or times out after exceeding the maximum number of attempts) and stores its
         serialized form in self.block_broadcast.
@@ -244,10 +244,7 @@ class TrialManager:
             self.chain_data: Adds a new block entry to the chain_data list, containing a
                 JSON-formatted copy of the block as well as the miner's score and solver data
             self.global_tree: adds the new block to the global blockchain representation
-                maintained by the TrialManager.
-
-        Returns:
-            self.mining_miner_id: the id of the miner that mined this round."""
+                maintained by the TrialManager."""
 
         self.mining_miner_id = self.round_order[0]
         self.mining_miner = self.miners[self.mining_miner_id]
@@ -265,11 +262,8 @@ class TrialManager:
                          without {self.mining_miner_id} finding mining a valid block."
         )
 
-    def _validation_step(self):
+    def _validation_step(self) -> None:
         """Chooses the next miner in validation order to perform validation for the mined block.
-
-        Returns:
-            validator_id (string): ID of the validating miner
 
         Modifies:
             self.chain_data: stores the validators score and solver info to the entry for the
@@ -283,7 +277,7 @@ class TrialManager:
         current_block_dict["scores"].update({validator_id: block_score})
         current_block_dict["solvers"].update({validator_id: solver})
 
-    def _update_global_tree_structure(self):
+    def _update_global_tree_structure(self) -> None:
         """Updates the structure of the global tree by finding the hash of the most recent block
         that every miner has in their trunk, and restructuring the global tree so that the
         trunk ends at that block (i.e. it consists of that block and all its predecessors).
@@ -330,7 +324,7 @@ class TrialManager:
 
         return miner_id
 
-    def run_trial(self, num_blocks: int | None = None):
+    def run_trial(self, num_blocks: int | None = None) -> None:
         """Runs the trial through some number of complete block mining and validation events. By
             default it will run until the trial finishes, but this can be overridden by passing a
             smaller number as an argument.
@@ -353,7 +347,7 @@ class TrialManager:
         while self.blocks_mined < stopping_block:
             self.single_step()
 
-    def restart_trial(self, blockchain_list: list[dict]):
+    def restart_trial(self, blockchain_list: list[dict]) -> None:
         """Restarts an interrupted trial, reloading all necessary blockchain and miner data from
         the list passed as an argument.
 
