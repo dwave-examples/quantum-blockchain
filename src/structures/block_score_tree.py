@@ -248,7 +248,7 @@ class BlockScoreTree:
         """Adds a new branch to the tree, joining it to the block referenced by the branch's root
         hash and updating self.hash_to_branch_lookup as necessary. If the root block is in the 
         middle of an existing branch, the new_branch will simply be designated as a child of that 
-        branch and added to self.branches as-is. However, if the root of the new branch is the tip
+        branch and added to self.branches as is. However, if the root of the new branch is the tip
         of an existing branch, then the new branch will be appended to the end of the existing
         branch, which will extend it instead of creating a distinct branch. 
         The force_child argument can be used to override this behavior, guaranteeing that the new
