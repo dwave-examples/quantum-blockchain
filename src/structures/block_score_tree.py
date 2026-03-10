@@ -250,7 +250,7 @@ class BlockScoreTree:
         middle of an existing branch, the new_branch will simply be designated as a child of that 
         branch and added to self.branches as is. However, if the root of the new branch is the tip
         of an existing branch, then the new branch will be appended to the end of the existing
-        branch, which will extend it instead of creating a distinct branch. 
+        branch which will extend it instead of creating a distinct branch. 
         The force_child argument can be used to override this behavior, guaranteeing that the new
         branch will always create a distinct branch, and never extend an existing one. Used both
         when adding new blocks to the tree with self.add_block and when restructuring the tree
