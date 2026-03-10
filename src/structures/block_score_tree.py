@@ -274,7 +274,7 @@ class BlockScoreTree:
             self.branches.append(new_branch)
             target_branch = new_branch
         else:
-            parent_branch.concatenate_branch(new_branch) #Automatically updates child references
+            parent_branch.concatenate_branch(new_branch)  # Automatically updates child references
             target_branch = parent_branch
 
         for block_hash in hashes_to_update:
