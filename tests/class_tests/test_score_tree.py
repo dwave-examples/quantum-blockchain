@@ -69,13 +69,8 @@ def test_tree_structure():
         for branch in tree.branches:
             if branch == tree.trunk:
                 assert branch.depth == 0, f"Trunk of tree {idx} depth is not 0"
-                assert (
-                    tree.get_trunk_join_block(branch) is None
-                ), f"Trunk of tree {idx} returned a join index for itself."
+
             else:
-                assert (
-                    tree.get_trunk_join_block(branch).block_number >= 0
-                ), f"Branch rooted at {branch.root_hash} returned improper trunk join index for tree {idx}"
                 assert (
                     branch.root.hash == branch.root_hash
                 ), "Root hash {branch.root_hash} doesn't match root block for tree {idx}."

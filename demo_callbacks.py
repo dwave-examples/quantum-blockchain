@@ -163,23 +163,20 @@ def simulation(
         set_progress_miner_table(manager.chain_data[-1])
         time.sleep(0.2)
 
-        if miner_id in ViewOpt._member_names_:
-            plotter = SpiralPlotter()
+        plotter = SpiralPlotter()
+
+        if manager.round_progress == 0:  # round_progress resets to 0 at the end of a round
+            mining_hashes = manager.mining_hashes
+            global_fig = plotter.create_plot_from_tree(manager.global_tree, mining_hashes, True)
+            global_fig.update_layout(**graph_layout_dict)
+            set_props({"type": "view-graph", "index": 0}, {"figure": global_fig})
+        elif miner_id in ViewOpt._member_names_:
             view_miner = manager.miners[miner_id]
             mining_hash = [manager.mining_hashes[0]]
             miner_fig = plotter.create_plot_from_tree(view_miner.blockchain, mining_hash)
             miner_fig.update_layout(**graph_layout_dict)
             view_idx = ViewOpt[miner_id].value - 1  # ViewOpt vals are off by 1 from miner names
             set_props({"type": "view-graph", "index": view_idx}, {"figure": miner_fig})
-        elif global_fig is not None:
-            set_props({"type": "view-graph", "index": 0}, {"figure": global_fig})
-            global_fig = None
-
-        if manager.round_progress == 0:  # round_progress resets to 0 at the end of a round
-            plotter = SpiralPlotter()
-            mining_hashes = manager.mining_hashes
-            global_fig = plotter.create_plot_from_tree(manager.global_tree, mining_hashes, True)
-            global_fig.update_layout(**graph_layout_dict)
 
         iter_end_time = time.time()
         iter_total_time = iter_end_time - iter_start_time

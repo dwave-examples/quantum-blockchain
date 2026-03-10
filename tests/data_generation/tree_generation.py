@@ -138,7 +138,7 @@ def generate_tree_from_dicts(tree_dicts):
             else:
                 block_score = next_branch_data["scores"][0]
         tree.add_block(new_hash, prev_hash, block_score)
-        extended_branch = tree.hash_to_branch_lookup[new_hash]
+        extended_branch = tree.hash_to_branch_lookup[prev_hash]
         next_branch_data.update({"branch": extended_branch})
 
         for branch_dict in waiting_branches:

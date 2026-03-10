@@ -168,7 +168,7 @@ class ScoreTreeBranch:
                             does not match branch tip {self.tip.hash}"
             )
 
-    def update_depth(self):
+    def _update_depth(self):
         """Updates the branch depth to one more than that of its parent. Called recursively on all
         children to ensure the update propagates properly."""
 
@@ -177,9 +177,9 @@ class ScoreTreeBranch:
         else:
             self.depth = 0
         for child in self.children:
-            child.update_depth()
+            child._update_depth()
 
-    def set_parent(self, parent_branch: "ScoreTreeBranch"):
+    def _set_parent(self, parent_branch: "ScoreTreeBranch"):
         """Sets the passed branch as the parent of the current branch
         (provided that is a legal assignment). Will not set the other end
         of the relationship (this is intended to be called by link_child_branch,
@@ -191,7 +191,7 @@ class ScoreTreeBranch:
 
         if self.root_hash in parent_branch:
             self.parent = parent_branch
-            self.update_depth()
+            self._update_depth()
         else:
             raise Exception(
                 f"Attempted to set branch {self.node_list} \
@@ -199,7 +199,7 @@ class ScoreTreeBranch:
             )
 
     def link_child_branch(self, child_branch: "ScoreTreeBranch"):
-        """Links a ScoreTreeBranch to this branch as a child. The child then calls set_parent on
+        """Links a ScoreTreeBranch to this branch as a child. The child then calls _set_parent on
         this branch to complete the linkage.
 
         Args:
@@ -207,7 +207,7 @@ class ScoreTreeBranch:
 
         if child_branch.root_hash in self:
             self.children.append(child_branch)
-            child_branch.set_parent(self)
+            child_branch._set_parent(self)
         else:
             raise Exception("Attempted to link branch that was not a child.")
 
@@ -235,26 +235,6 @@ class ScoreTreeBranch:
                 return True
 
         return False
-
-    def get_longest_child(self):
-        """Returns the child of the current branch with the highest-numbered tip block,
-        if it is higher than the block number of this branch's tip. This is a helper
-        function for BlockScoreTree.refactor_branches, used to find the branches that
-        will extend the farthest (when drawn with the graphing logic in SpiralPlotter),
-        so they can be positioned to avoid overlaps.
-
-        Returns:
-            longest_child (ScoreTreeBranch): child branch of this branch whose
-                tip has the highest block_number"""
-
-        highest_block_num = self.tip.block_number
-        longest_child = None
-        for child in self.children:
-            if child.tip.block_number > highest_block_num:
-                highest_block_num = child.tip.block_number
-                longest_child = child
-
-        return longest_child
 
     def get_descendants_by_depth(self) -> list[list["ScoreTreeBranch"]]:
         """Compiles a list of all the descendants (children and their children and so on)
