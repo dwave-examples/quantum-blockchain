@@ -395,7 +395,6 @@ class BlockScoreTree:
         Args:
             hashes_to_promote (list[str]): a list of block hashes indicating blocks whose
                 branches should be promoted to as low a depth as possible."""
-        
         promoted_branch_tips = set() # Promoting a branch will change its root but not its tip
         for mining_hash in hashes_to_promote:
             mining_branch = self.hash_to_branch_lookup[mining_hash]
