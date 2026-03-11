@@ -164,10 +164,11 @@ class ScoreTreeBranch:
             self.hash_to_index_lookup.update({new_block_node.hash: self.tip_idx})
         else:
             raise Exception(
-                f"Invalid block. Root hash {new_block_node.prev_hash} cannot connect to tip hash {self.tip.hash}"
+                f"Invalid block. Block's predecessor {new_block_node.prev_hash} \
+                            does not match branch tip {self.tip.hash}"
             )
 
-    def update_depth(self):
+    def _update_depth(self):
         """Updates the branch depth to one more than that of its parent. Called recursively on all
         children to ensure the update propagates properly."""
 
@@ -176,9 +177,9 @@ class ScoreTreeBranch:
         else:
             self.depth = 0
         for child in self.children:
-            child.update_depth()
+            child._update_depth()
 
-    def set_parent(self, parent_branch: "ScoreTreeBranch"):
+    def _set_parent(self, parent_branch: "ScoreTreeBranch"):
         """Sets the passed branch as the parent of the current branch
         (provided that is a legal assignment). Will not set the other end
         of the relationship (this is intended to be called by link_child_branch,
@@ -190,14 +191,15 @@ class ScoreTreeBranch:
 
         if self.root_hash in parent_branch:
             self.parent = parent_branch
-            self.update_depth()
+            self._update_depth()
         else:
             raise Exception(
-                f"Attempted to set branch {self.node_list} as child of branch {parent_branch.node_list}"
+                f"Attempted to set branch {self.node_list} \
+                            as child of branch {parent_branch.node_list}"
             )
 
     def link_child_branch(self, child_branch: "ScoreTreeBranch"):
-        """Links a ScoreTreeBranch to this branch as a child. The child then calls set_parent on
+        """Links a ScoreTreeBranch to this branch as a child. The child then calls _set_parent on
         this branch to complete the linkage.
 
         Args:
@@ -205,7 +207,7 @@ class ScoreTreeBranch:
 
         if child_branch.root_hash in self:
             self.children.append(child_branch)
-            child_branch.set_parent(self)
+            child_branch._set_parent(self)
         else:
             raise Exception("Attempted to link branch that was not a child.")
 
@@ -221,29 +223,18 @@ class ScoreTreeBranch:
 
         return None
 
-    def get_score_map(self):
-        score_map = [node.total_score for node in self.node_list]
-        return score_map
+    def has_blocks(self, hash_list: list[str]) -> bool:
+        """Given a list of block hashes, returns True if the branch contains a block matching any
+        of those hashes and False otherwise.
 
-    def get_longest_child(self):
-        """Returns the child of the current branch with the highest-numbered tip block,
-        if it is higher than the block number of this branch's tip. This is a helper
-        function for BlockScoreTree.refactor_branches, used to find the branches that
-        will extend the farthest (when drawn with the graphing logic in SpiralPlotter),
-        so they can be positioned to avoid overlaps.
+        Args:
+            hash_list (list[str]): list of block hashes to check against branch contents."""
 
-        Returns:
-            longest_child (ScoreTreeBranch): child branch of this branch whose
-                tip has the highest block_number"""
+        for block_hash in hash_list:
+            if block_hash in self.hash_to_index_lookup:
+                return True
 
-        highest_block_num = self.tip.block_number
-        longest_child = None
-        for child in self.children:
-            if child.tip.block_number > highest_block_num:
-                highest_block_num = child.tip.block_number
-                longest_child = child
-
-        return longest_child
+        return False
 
     def get_descendants_by_depth(self) -> list[list["ScoreTreeBranch"]]:
         """Compiles a list of all the descendants (children and their children and so on)
@@ -336,47 +327,58 @@ class ScoreTreeBranch:
 
         if cut_idx > self.tip_idx or cut_idx < 1:
             raise Exception(
-                f"Error, invalid cut index of {cut_idx} provided. Cut index cannot be 0 and must be within branch bounds."
+                f"Error, invalid cut index of {cut_idx} provided. Cut index cannot \
+                            be 0 and must be within branch bounds."
             )
 
         moving_blocks = []
         moving_children = []
         num_removals = len(self) - cut_idx
-        assert (
-            num_removals > 0
-        ), f"Attempted to cut at index {cut_idx} from branch with base {self.base.hash}, but branch was length {len(self)}"
+        if num_removals <= 0:
+            raise Exception(
+                f"Attempted to cut at index {cut_idx} from branch with \
+                            base {self.base.hash}, but branch was length {len(self)}"
+            )
 
         for i in range(num_removals):
             block, children = self.pop()
-            # Block appended to moving_blocks in reversed order, newest blocks first, oldest blocks last
+            # Block appended to list in reversed order, newest blocks first, oldest blocks last
             moving_blocks.append(block)
             moving_children += children
 
         new_branch = ScoreTreeBranch()
         for i in range(num_removals):
             next_block = moving_blocks.pop()
-            # Thus when we pop them off of moving_blocks, we get them in the correct order to add them to the new branch.
+            # Popping from reversed list gives us blocks in correct order to add to the new branch.
             new_branch.append_block(next_block)
 
-        assert (
-            len(moving_blocks) == 0
-        ), f"Some blocks didn't get removed from staging. Blocks with hashes {[b.hash for b in moving_blocks]} remain in staging list."
-        assert (
-            len(new_branch) == num_removals
-        ), f"Some blocks didn't get added to new branch. Missing {num_removals - len(new_branch)} blocks."
+        if len(moving_blocks) > 0:
+            raise Exception(
+                f"Some blocks didn't get removed from staging. Blocks with \
+                            hashes {[b.hash for b in moving_blocks]} remain in staging list."
+            )
+        if len(new_branch) != num_removals:
+            raise Exception(
+                f"Some blocks didn't get added to new branch. \
+                            Missing {num_removals - len(new_branch)} blocks."
+            )
 
         moved_children = []
         for child in moving_children:
             moved_children.append(child)
             new_branch.link_child_branch(child)
 
-        assert len(moving_children) == len(
-            moved_children
-        ), f"{len(moved_children)} reported moved but {len(moving_children)} were staged to move."
+        if len(moving_children) != len(moved_children):
+            raise Exception(
+                f"{len(moved_children)} reported moved \
+                            but {len(moving_children)} were staged to move."
+            )
 
         for child in moved_children:
-            assert (
-                child.parent == new_branch
-            ), f"Child branch with base hash {child.base.hash} has parent root {child.parent}. Should have {new_branch}"
+            if child.parent != new_branch:
+                raise Exception(
+                    f"Child branch with base hash {child.base.hash} has parent \
+                                root {child.parent}. Should have {new_branch}"
+                )
 
         return new_branch

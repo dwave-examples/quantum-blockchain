@@ -24,7 +24,7 @@ import numpy as np  # To set effective number of samples (sampling noise)
 EMPTY_QUANTUM_HASH = ""
 
 # Large enough to outweigh any legitimate score, small enough to work on all platforms.
-MIN_SCORE = -(2**14)
+MIN_SCORE = -(2 ** 14)
 
 # ===================================================================================
 #                      Unitary dynamics parameterization

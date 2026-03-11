@@ -23,7 +23,7 @@ import numpy as np
 
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
-from src.structures.block_score_tree import BlockScoreTree
+from src.structures.block_score_tree import BlockNode, BlockScoreTree
 
 
 class Miner:
@@ -46,8 +46,10 @@ class Miner:
 
         # Holds block that is currently being mined but not yet finalized or broadcast.
         self.mining_block = None
-        self.mined_block = None
-        self.mined_block_score = None
+
+    @property
+    def mining_hash(self):
+        return self.blockchain.trunk.tip.hash
 
     def re_initialize_blockchain(self, node_list: list[dict]):
         """Recreates the miner's blockchain from a dictionary of miner blockchain data. This is used
@@ -72,7 +74,7 @@ class Miner:
             block = Block.from_json(block_entry["block_json"])
             self.add_block_to_chain(block=block, block_score=score)
 
-    def add_block_to_chain(self, block: Block, block_score: float = 0.0):
+    def add_block_to_chain(self, block: Block, block_score: float = 0.0) -> BlockNode:
         """Adds a block to the block_score_tree object stored in self.blockchain. Updates
             blockchain beliefs based on the logic of the update_blockchain_beliefs function.
 
@@ -84,11 +86,13 @@ class Miner:
             self.blockchain: the miner's blockchain
         """
 
-        self.blockchain.add_block(block.hash, block.previous_hash, block_score)
+        blocknode_rep = self.blockchain.add_block(block.hash, block.previous_hash, block_score)
 
         # Only need to update on blocks that are good and not already in trunk
         if self.blockchain.score_predicate(block_score):
             self.update_blockchain_beliefs()
+
+        return blocknode_rep
 
     def update_blockchain_beliefs(self):
         """Updates the blockchain tree so that the branch containing the highest scoring block is now the trunk.
@@ -113,11 +117,13 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2**15)
+        nonce = np.random.randint(0, 2 ** 15)
         new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
         return new_block
 
-    def attempt_mine(self, mining_block: Block | None = None) -> tuple[Block, float, str]:
+    def attempt_mine(
+        self, mining_block: Block | None = None
+    ) -> tuple[bool, dict, BlockNode | None]:
         """Attempts to mine a new block, choosing the nonce at random, calculating the quantum hash
             and the block hash and validating against the PoW requirement.
 
@@ -133,11 +139,20 @@ class Miner:
                 mining_block.nonce += 1
 
         new_block, block_score, solver = self.pow.mine_block(mining_block)
+        if block_score <= 0:  # Deviates from paper methodology (for confidence-based scoring)
+            return False, {}, None
+
         new_block.lock()
-        self.mined_block = new_block
-        self.mined_block_score = block_score
+        new_blocknode = self.add_block_to_chain(new_block, block_score)
         self.mining_block = None
-        return new_block, block_score, solver
+        block_data_dict = dict(
+            block_json=new_block.to_json,
+            block_number=new_blocknode.block_number,
+            scores={self.id: block_score},
+            solvers={self.id: solver},
+            miner_id=self.id,
+        )
+        return True, block_data_dict, new_blocknode
 
     def receive_block(self, new_block_str) -> tuple[float, str]:
         """Processes a new block that has been received as a JSON-formatted string, validates it
@@ -180,25 +195,3 @@ class Miner:
             )
 
         return score, solver
-
-    def broadcast_mined_block(self) -> str:
-        """Stores a copy of the Miner's most recently mined block in the Miner's own blockchain before serializing
-            a mined block into a JSON-formatted string, which is returned.
-
-        Returns:
-            block_data (str): the mined block serialized as a JSON-formatted string"""
-
-        if self.mined_block is None:
-            raise Exception(f"Miner {self.id} attempted to broadcast with no block ready")
-
-        if self.mined_block_score is None:
-            raise Exception(f"Attempted to broadcast mined block with hash \
-                            {self.mined_block.hash}, but it had not been scored.")
-        else:
-            self.add_block_to_chain(self.mined_block, self.mined_block_score)
-
-        block_data = self.mined_block.to_json
-        self.mined_block = None
-        self.mined_block_score = None
-
-        return block_data

@@ -223,8 +223,10 @@ class ProofOfWorkProtocol:
         log_confidence = np.float64(allowable_err)
         for idx, confidence in enumerate(validation_confidence):
             if confidence < 0:
-                raise ValueError(f"Invalid confidence value {confidence} at index {idx} from bit\
-                                {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}")
+                raise ValueError(
+                    f"Invalid confidence value {confidence} at index {idx} from bit\
+                                {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}"
+                )
 
             if confidence == 0:
                 return min_confidence

@@ -20,8 +20,6 @@
 
 from __future__ import annotations
 
-import copy
-import random
 import time
 from typing import NamedTuple
 
@@ -38,13 +36,21 @@ from demo_configs import (
     N_ZEROES,
     QUANTUM_HASH_LENGTH,
 )
-from demo_interface import GRAPH_VIEW_LABELS
 from src.agents.trial_manager import TrialManager
-from src.demo_enums import SolverMode
-from src.structures.block import Block
+from src.demo_enums import SolverMode, ViewOpt
 from src.utilities.display_update import render_miner_status
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
+
+graph_layout_dict = dict(
+    autosize=False,
+    showlegend=False,
+    xaxis=dict(showticklabels=False),
+    yaxis=dict(showticklabels=False),
+    margin=dict(l=0, r=0, b=0, t=0, pad=4),
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
@@ -80,7 +86,7 @@ def simulation(
     start_simulation: bool,
     num_miners: int,
     num_blocks: int,
-    blockchain_structure: list,
+    stored_blockchain_data: list,
     qpu_solver_select_val: str,
     simulated_solver_select_val: str,
     solver_mode: str,
@@ -89,28 +95,38 @@ def simulation(
 
     This callback is triggered (indirectly) by the "run" and "resume" buttons. When triggered
     by the "run" button, it will complete a full run of the blockchain simulation with the solver
-    scheme and the numbers of blocks and miners each defined by their respective input fields. As
-    it runs, it will call the 'update_current_block_data' function to provide progress updates,
-    which will then trigger other callbacks to update the display.
+    scheme and the numbers of blocks and miners each defined by their respective input fields. The
+    execution of this function is internally divided up into 'rounds,' where one round covers a
+    single action (mining or validation) from each miner in the trial. Each action takes roughly
+    1 second, so a round will last for roughly as many seconds as there are miners. It will
+    run a number of rounds equal to the 'num_blocks' parameter. As this callback runs, it will
+    call the 'set_progress_miner_table' function to provide regular updates to the miner table
+    (approximately 1 per second). It will also use the 'set_props' function to keep the
+    'blockchain-structure-data' dcc.Store up-to-date with the same frequency, and to update each of
+    the graph views once per round.
 
     Args:
-        update_current_block_data: the progress function for providing updates while the callback is running
-        start_simulation (bool): flag to signal that the 'run' button has been clicked. Passing it this way
-            (instead of the 'run' button itself being used as an input), allows certain UI updates (such as
-            disabling/hiding components) to be processed immediately on clicking 'run', before the simulation starts
-        num_miners (int): the value of the the miner slider: determines how many miners the trial has.
-        num_blocks (int): the value of the blocks input. Determines how many blocks the simulation will run for.
-        blockchain_structure (list): The data structure storing the current blockchain data. If starting a trial,
-            this will simply be a list with 'None' in every field. But if resuming after a pause, this will hold
-            the data needed to reconstruct the blockchain
-        solver_mode (str): Value of the solver selector. Outputs as a string-typed integer value (e.g.
-            "1", "2"), which can just be immediately typed back to int and put into the AVAILABLE_SOLVERS
-            constant to get the solver
+        set_progress_miner_table: the progress function for passing data out to update the miner
+            status table
+        start_simulation (bool): flag to signal that the 'run' button has been clicked. Passing it
+            this way (instead of the 'run' button itself being used as an input), allows certain
+            UI updates (such as disabling/hiding components) to be processed immediately on
+            clicking 'run', before the simulation starts
+        num_miners (int): value of the miner slider. Determines how many miners the simulation has.
+        num_blocks (int): the value of the blocks input. Determines how many blocks the simulation
+            will run for.
+        stored_blockchain_data (list): The data structure storing the current blockchain data.
+            This will be empty when starting a new trial, but if the trial has been paused,
+            it will contain all the data about the blocks mined up to this point, allowing the
+            trial to be restarted from the same state.
+        solver_mode (str): Value of the solver selector. Outputs as a string-typed integer value
+            (e.g. "1", "2"), which can just be immediately typed back to int and put into the
+            AVAILABLE_SOLVERS constant to get the solver
 
 
     Returns:
-        Most of the output of this function is passed by 'update_current_block_data', so the only
-        actual return values simply toggle button visibility
+        Most of the output of this function is passed by 'set_progress_miner_table' or with the
+        'set_props' function, so the only actual return values simply toggle button visibility
 
         reset-button: makes the 'reset' button visible
         pause-button: hides the 'pause' button
@@ -120,129 +136,47 @@ def simulation(
         raise PreventUpdate
 
     solver_mode = SolverMode(solver_mode)
-    print(f"Starting TrialManager with {num_blocks} blocks and {num_miners} miners")
-
     available_qpu_solvers, available_simulated_solvers = get_solver_lists()
-
     mode_config = {
         SolverMode.QPU: (int(qpu_solver_select_val), available_qpu_solvers),
         SolverMode.SIMULATED: (int(simulated_solver_select_val), available_simulated_solvers),
     }
     dropdown_idx, solvers = mode_config[solver_mode]
-
     if dropdown_idx > 0:
         solvers = [solvers[dropdown_idx - 1]]
 
     manager = TrialManager(
         num_blocks, MINER_NAMES[:num_miners], solvers, QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR
     )
+    if len(stored_blockchain_data) > 0:
+        manager.restart_trial(stored_blockchain_data)
 
-    block_dict_template = {
-        "block_json": "",
-        "block_number": 0,
-        "scores": {},
-        "solvers": {},
-        "miner_id": "",
-    }
-    current_block_dict = copy.deepcopy(block_dict_template)
-    current_blockchain = []
+    global_fig = None
 
-    if len(blockchain_structure) > 0:
-        current_idx = len(blockchain_structure)
-        print(f"Restarting trial at block {current_idx}")
-        short_blockchain = blockchain_structure[:-1]
-        last_block = blockchain_structure[-1]
-        finished_miners = [miner_id for miner_id in last_block["scores"].keys()]
-        unfinished_miners = []
-
-        for miner_id, miner in manager.miners.items():
-            if miner_id in last_block["scores"]:
-                miner.re_initialize_blockchain(blockchain_structure)
-            else:
-                miner.re_initialize_blockchain(short_blockchain)
-                unfinished_miners.append(miner_id)
-
-        manager.round_progress = len(finished_miners)
-        manager.block_broadcast = last_block["block_json"]
-        random.shuffle(unfinished_miners)
-        manager.round_order = finished_miners + unfinished_miners
-        current_block_dict = last_block
-        manager.blocks_mined = current_block_dict["block_number"]
-        set_progress_miner_table(current_block_dict)
-        current_block = Block.from_json(current_block_dict["block_json"])
-        for miner_id, miner in manager.miners.items():
-            assert (
-                current_block.previous_hash in miner.blockchain.hash_to_branch_lookup
-            ), f"{miner_id} failed to have latest block {current_block.hash} with tree structure {miner.blockchain}"
-        current_blockchain = blockchain_structure
-
-        print("Finished restarting simulation.")
-
-    # Miner graph views available in the form GRAPH_ID: INDEX
-    view_miners = {MINER_NAMES[(i - 1) % num_miners]: i for i in range(len(GRAPH_VIEW_LABELS))}
-
-    while manager.blocks_mined <= num_blocks:
+    while manager.blocks_mined < num_blocks or manager.round_progress > 0:
         iter_start_time = time.time()
-        if manager.round_progress == 0 and manager.blocks_mined == num_blocks:
-            break
+        miner_id = manager.single_step()
 
-        mined, miner_id, block_score, solver = manager.single_step()
-        if mined:
-            current_block_dict = copy.deepcopy(block_dict_template)
-            current_block_dict["block_number"] = manager.blocks_mined
-            current_block_dict["block_json"] = manager.block_broadcast
-            current_block_dict["miner_id"] = miner_id
-
-            print(f"TrialManager starting new round with {manager.blocks_mined} blocks mined.")
-
-            current_block_dict["scores"][miner_id] = block_score
-            current_block_dict["solvers"][miner_id] = solver
-            current_blockchain.append(current_block_dict)
-
-        else:
-            current_block_dict["scores"][miner_id] = block_score
-            current_block_dict["solvers"][miner_id] = solver
-            current_blockchain[-1] = current_block_dict
-
-        set_props("blockchain-structure-data", {"data": current_blockchain})
+        set_props("blockchain-structure-data", {"data": manager.chain_data})
         time.sleep(0.2)
 
-        set_progress_miner_table(current_block_dict)
-
+        set_progress_miner_table(manager.chain_data[-1])
         time.sleep(0.2)
 
-        if miner_id in view_miners:
-            active_hashes = manager.get_active_block_hashes()
-            most_recent_block = manager.miners[miner_id].blockchain.most_recent_block
-            plotter = SpiralPlotter()
-            if view_miners[miner_id] == 0:  # Global view
-                last_shared_block = manager.get_last_common_trunk_block()
-                miner_fig = plotter.create_plot_from_tree(
-                    manager.miners[miner_id].blockchain,
-                    active_blocks=active_hashes,
-                    active_block_cutoff=last_shared_block,
-                    mining_block=most_recent_block,
-                )
-            else:
-                miner_fig = plotter.create_plot_from_tree(
-                    manager.miners[miner_id].blockchain,
-                    active_blocks=active_hashes,
-                    mining_block=most_recent_block,
-                )
+        plotter = SpiralPlotter()
 
-            miner_fig.update_layout(
-                autosize=False,
-                showlegend=False,
-                xaxis=dict(showticklabels=False),
-                yaxis=dict(showticklabels=False),
-                margin=dict(l=0, r=0, b=0, t=0, pad=4),
-                paper_bgcolor="white",
-                plot_bgcolor="white",
-            )
-            set_props(
-                {"type": "view-graph", "index": view_miners[miner_id]},  # Graph ID
-                {"figure": miner_fig},
-            )
+        if manager.round_progress == 0:  # round_progress resets to 0 at the end of a round
+            mining_hashes = manager.mining_hashes
+            global_fig = plotter.create_plot_from_tree(manager.global_tree, mining_hashes, True)
+            global_fig.update_layout(**graph_layout_dict)
+            set_props({"type": "view-graph", "index": 0}, {"figure": global_fig})
+        elif miner_id in ViewOpt._member_names_:
+            view_miner = manager.miners[miner_id]
+            mining_hash = [manager.mining_hashes[0]]
+            miner_fig = plotter.create_plot_from_tree(view_miner.blockchain, mining_hash)
+            miner_fig.update_layout(**graph_layout_dict)
+            view_idx = ViewOpt[miner_id].value - 1  # ViewOpt vals are off by 1 from miner names
+            set_props({"type": "view-graph", "index": view_idx}, {"figure": miner_fig})
 
         iter_end_time = time.time()
         iter_total_time = iter_end_time - iter_start_time
@@ -288,10 +222,11 @@ def update_miner_display(
     )
 
     block_number = current_block_data["block_number"]
+    block_progress = len(current_block_data["scores"])
 
     block_status_text = (
         f"Currently mining block number {block_number}"
-        if block_number <= num_blocks
+        if block_number < num_blocks or block_progress < num_miners
         else "Finished Simulation"
     )
 
