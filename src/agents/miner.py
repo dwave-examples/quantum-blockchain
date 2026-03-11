@@ -23,7 +23,7 @@ import numpy as np
 
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
-from src.structures.block_score_tree import BlockScoreTree, BlockNode
+from src.structures.block_score_tree import BlockNode, BlockScoreTree
 
 
 class Miner:
@@ -141,7 +141,7 @@ class Miner:
         new_block, block_score, solver = self.pow.mine_block(mining_block)
         if block_score <= 0:  # Deviates from paper methodology (for confidence-based scoring)
             return False, {}, None
-        
+
         new_block.lock()
         new_blocknode = self.add_block_to_chain(new_block, block_score)
         self.mining_block = None

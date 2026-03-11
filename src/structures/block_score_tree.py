@@ -24,6 +24,7 @@ from src.structures.score_tree_branch import BlockNode, ScoreTreeBranch
 
 SHORT_HASH_LEN = 5
 
+
 class BlockScoreTree:
     """Class for tracking structure and score of a blockchain. Each block is represented by a
     6-element named BlockNode tuple (see score_tree_branch.py for definition) formatted as
@@ -189,7 +190,7 @@ class BlockScoreTree:
                 block_height=0,
             )
             self.trunk.append_block(new_block)
-            self.hash_to_branch_lookup.update({block_hash:self.trunk})
+            self.hash_to_branch_lookup.update({block_hash: self.trunk})
         elif block_hash in self.hash_to_branch_lookup:  # otherwise, check for duplicates
             raise Exception(f"Attempted to add duplicate block with hash {block_hash} to tree.")
         # make sure block predecessor exists
@@ -209,7 +210,7 @@ class BlockScoreTree:
                 block_height=prev_block.block_height + 1,
             )
             new_branch = ScoreTreeBranch(new_block)
-            canonical = self.score_predicate(block_score) and parent_branch==self.trunk
+            canonical = self.score_predicate(block_score) and parent_branch == self.trunk
             self._append_branch(new_branch, force_child=not canonical)
 
         return new_block
@@ -241,29 +242,29 @@ class BlockScoreTree:
         else:  # if it does, add it to the tree in the proper spot.
             parent_branch = self.hash_to_branch_lookup[block.prev_hash]
             new_branch = ScoreTreeBranch(block)
-            canonical = self.score_predicate(block.block_score) and parent_branch==self.trunk
-            self._append_branch(new_branch, force_child = not canonical)
+            canonical = self.score_predicate(block.block_score) and parent_branch == self.trunk
+            self._append_branch(new_branch, force_child=not canonical)
 
     def _append_branch(self, new_branch: ScoreTreeBranch, force_child: bool = True):
         """Adds a new branch to the tree, joining it to the block referenced by the branch's root
-        hash and updating self.hash_to_branch_lookup as necessary. If the root block is in the 
-        middle of an existing branch, the new_branch will simply be designated as a child of that 
+        hash and updating self.hash_to_branch_lookup as necessary. If the root block is in the
+        middle of an existing branch, the new_branch will simply be designated as a child of that
         branch and added to self.branches as is. However, if the root of the new branch is the tip
         of an existing branch, then the new branch will be appended to the end of the existing
-        branch which will extend it instead of creating a distinct branch. 
+        branch which will extend it instead of creating a distinct branch.
         The force_child argument can be used to override this behavior, guaranteeing that the new
         branch will always create a distinct branch, and never extend an existing one. Used both
         when adding new blocks to the tree with self.add_block and when restructuring the tree
         with self.promote_branch and various related methods.
-        
+
         Args:
             new_branch (ScoreTreeBranch): a branch to add to the tree. Can consist of entirely new
                 blocks or can be a cut section of a branch that was already in the tree.
             force_child (bool). Defaults to True. When this parameter is True, the new branch will
                 always be kept distinct, added as a child of the branch containing the root block.
                 If it is set to False, the new branch will be used to extend the branch with the
-                root block, if possible (i.e. if the root is also the branch tip).""" 
-        
+                root block, if possible (i.e. if the root is also the branch tip)."""
+
         if new_branch.root_hash not in self.hash_to_branch_lookup:
             raise Exception(f"Root {new_branch.root_hash} of new branch isn't in the tree")
 
@@ -278,7 +279,7 @@ class BlockScoreTree:
             target_branch = parent_branch
 
         for block_hash in hashes_to_update:
-            self.hash_to_branch_lookup.update({block_hash:target_branch})
+            self.hash_to_branch_lookup.update({block_hash: target_branch})
 
         if not set(hashes_to_update).issubset(set(self.hash_to_branch_lookup.keys())):
             raise Exception(f"Failed updating refs when adding branch {new_branch.base.hash}")
@@ -312,7 +313,7 @@ class BlockScoreTree:
 
         if branch_to_promote == self.trunk:  # If branch is the trunk, do nothing
             return
-        
+
         for _ in range(branch_to_promote.depth):  # Otherwise, keep promoting to reach trunk
             branch_to_promote = self.promote_branch(branch_to_promote)
 
@@ -358,23 +359,23 @@ class BlockScoreTree:
             return branch_to_promote
         elif branch_to_promote.parent is None:
             raise Exception(f"branch_to_promote {branch_to_promote.base.hash} has no parent.")
-        
+
         base_branch = branch_to_promote.parent
 
         # Leave the root block in place, remove the next block
         cut_location = base_branch.hash_to_index_lookup[branch_to_promote.root_hash] + 1
-        if cut_location < base_branch.tip_idx + 1: # Cut base branch so it's tip matches new root
+        if cut_location < base_branch.tip_idx + 1:  # Cut base branch so it's tip matches new root
             self.demote_branch_section(base_branch, cut_location)
 
-        if base_branch.tip.hash != branch_to_promote.root_hash: # Prev step should make this False
+        if base_branch.tip.hash != branch_to_promote.root_hash:  # Prev step should make this False
             raise Exception(  # So if we're here, something went wrong.
                 f"Mismatch between tip of parent branch {base_branch.tip.hash} and root of branch \
                 being promoted {branch_to_promote.root_hash} which could not be reconciled."
             )
-        
+
         self.branches.remove(branch_to_promote)
         self._append_branch(branch_to_promote, force_child=False)
-        
+
         base_hashes = set(base_branch.hash_to_index_lookup.keys())
         if not base_hashes.issubset(set(self.hash_to_branch_lookup.keys())):
             raise Exception()
@@ -395,23 +396,23 @@ class BlockScoreTree:
         Args:
             hashes_to_promote (list[str]): a list of block hashes indicating blocks whose
                 branches should be promoted to as low a depth as possible."""
-        promoted_branch_tips = set() # Promoting a branch will change its root but not its tip
+        promoted_branch_tips = set()  # Promoting a branch will change its root but not its tip
         for mining_hash in hashes_to_promote:
             mining_branch = self.hash_to_branch_lookup[mining_hash]
             if mining_branch != self.trunk and mining_branch.tip.hash not in promoted_branch_tips:
                 promoted_branch_tips.add(mining_branch.tip.hash)
-                current_branch = mining_branch # Object reference will change with promotion
-                max_promotes = mining_branch.depth - 1 # End no later than one level above trunk
+                current_branch = mining_branch  # Object reference will change with promotion
+                max_promotes = mining_branch.depth - 1  # End no later than one level above trunk
                 for _ in range(max_promotes):
                     if current_branch.parent.has_blocks(hashes_to_promote):
                         break
-                    current_branch = self.promote_branch(current_branch) 
+                    current_branch = self.promote_branch(current_branch)
 
     def demote_branch_section(self, branch_to_truncate: ScoreTreeBranch, cut_idx: int):
         """Truncates a branch by removing all blocks from a specified index forward. The removed
         section will be linked to the original branch as a child and all the necessary references
         will be updated.
-        
+
         Args:
             branch_to_truncate (ScoreTreeBranch): the branch to be altered
             cut_idx (int): the index at which the branch is to be cut. The block at this index
@@ -428,9 +429,9 @@ class BlockScoreTree:
         """This function rearranges the branches of the tree to put branches with the highest
         final block number at the lowest level. For most purposes, there is no special meaning
         accorded to the depth of a (non-trunk) branch: which branch out of a pair is a parent and
-        which is a child is arbitrary and can be changed at will with the promote_branch method. 
-        However,  putting the branches with the highest terminal block number at the lowest depth 
-        is convenient when graphing, as it allows for more efficient use of space and a more 
+        which is a child is arbitrary and can be changed at will with the promote_branch method.
+        However,  putting the branches with the highest terminal block number at the lowest depth
+        is convenient when graphing, as it allows for more efficient use of space and a more
         visually clean graph. This function rearranges branches to meet that criterion."""
 
         base_branches = []
