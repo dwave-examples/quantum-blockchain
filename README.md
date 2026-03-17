@@ -171,6 +171,14 @@ In order to access a new solver in the demo:
 1. The solver_name should also be enumerated as a SOLVER in src/protocols/hash_calculator.py
 2. The solver_name and energy-time rescaling tuple should be added as a key-value pair to DEFAULT_ENERGY_TIME_RESCALING dictionary in src/values.py .
 
+### Repeatability of Trials:
+
+The demo uses numpy random generator objects for all implementations of pseudorandom number generation. All generator functions use seed values descending from the PRNG_SEED parameter found in demo_configs.py; setting the seed to a value other than 'None' before running the demo will cause
+all trials to use that seed. This will cause things like mining order, solver choices and nonce values to repeat from one trial to the next. Likewise it will cause those portions of the quantum hash algorithm that rely on pseudorandom number generation to repeat. HOWEVER, measurements taken by the QPU will still be subject to the inherent randomness of quantum phenomena so in general. As these measurements determine block scores, which in turn determine miner's choices of where to mine, even two trials with identical initialization parameters and the same pseudorandom seed may have their blockchain structures diverge quite significantly. To make trials fully repeatable, they must be run using simulated QPU solvers (setting HIDE_SIMULATED_SOLVER = False in demo_configs.py) and every choice in the selection must be identical. As repeating trials (wholely or partially) is not always desired behavior, leaving PRNG_SEED at its default value of 'None' will initialize the numpy generator objects with a randomly-chosen seed which will differ from trial to trial. However, the value of the seed used for any such trial can still be captured from the Trial ID, described below.
+
+### Trial IDs and Reinitialization:
+
+All of parameters necessary to fully characterize a single trial (as it begins) can be compressed into a single 22-digit hexidecimal number, allowing trials to be compared and repeated more easily. This number can be composed from the internal state of a TrialManager object by calling the get_trial_id function found in src/protocols/trial_identification.py, and can be turned back into a complete dictionary of initialization parameters for TrialManager by calling the get_trial_params_from_id function in the same file. However, this functionality cannot currently be accessed automatically through the Dash interface, and its use is mostly limited to debugging and helping organize trial data. The Trial ID for any trial run will be printed to the console, where it can be read, copied or stored. Note that identical Trial IDs don't ensure two trials will be fully repeatable if they are using QPU solvers (see Repeatability of Trials above).
 
 ## References
 

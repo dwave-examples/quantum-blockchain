@@ -29,18 +29,14 @@ from dash import ALL, MATCH, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from demo_configs import (
-    ALLOWABLE_ERR,
-    MIN_SIMULATION_LOOP_TIME,
-    MINER_NAMES,
-    N_ZEROES,
-    QUANTUM_HASH_LENGTH,
-)
+from demo_configs import MIN_SIMULATION_LOOP_TIME
+
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode, ViewOpt
 from src.utilities.display_update import render_miner_status
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
+from src.protocols.trial_identification import generate_trial_id
 
 graph_layout_dict = dict(
     autosize=False,
@@ -145,9 +141,9 @@ def simulation(
     if dropdown_idx > 0:
         solvers = [solvers[dropdown_idx - 1]]
 
-    manager = TrialManager(
-        num_blocks, MINER_NAMES[:num_miners], solvers, QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR
-    )
+    manager = TrialManager(num_blocks, num_miners, solvers)
+
+    print(f"Starting trial with ID {generate_trial_id(manager)}")
     if len(stored_blockchain_data) > 0:
         manager.restart_trial(stored_blockchain_data)
 

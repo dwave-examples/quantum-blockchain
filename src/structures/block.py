@@ -153,8 +153,7 @@ class Block:
         """This property defines the data fields and ordering used to calculate both quantum and
         classical hashes. Important that this be consistent across all users or they will not
         calculate comparable hash values."""
-        seed_string = f"{self.previous_hash}{self.merkle_root}{self.timestamp}\
-                        {self.merkle_root}{self.miner_id}{self.nonce}"
+        seed_string = f"{self.previous_hash}{self.merkle_root}{self.miner_id}{self.nonce}"
         return calculate_hash(seed_string)
 
     @property
