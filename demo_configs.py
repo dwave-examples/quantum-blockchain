@@ -88,11 +88,7 @@ GRAPH_MAX_BRANCH_DISTANCE = 0.78
 # values are min: "4", max: "28", step: "1" and "value": 7, which will be sufficient for most uses.
 # Using fewer than 4 miners is possible but not recommended. Increasing the number of miners causes
 # a proportional slowdown in the growth of the chain and the QPU use, as each miner must use a
-# separate QPU call to validate. Maximum supported value is 255, though in practice, 7-20 miners
-# is generally sufficient to produce  interesting behavior, while going beyond 25-30 will extend
-# the miner display beyond the height of a single screen and make the viewing the progress less
-# convenient.
-
+# separate QPU call to validate. Maximum supported value is 255.
 MINER_SLIDER = {"min": 4, "max": 28, "step": 1, "value": 7}
 
 # Controls the values of the selector that chooses the length of the trial (the number of blocks
