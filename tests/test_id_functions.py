@@ -138,5 +138,3 @@ def test_id_recovery():
                 assert (
                     orig_id == recovered_id
                 ), f"orig_id {orig_id} and recovered_id {recovered_id} differ"
-
-    pass
