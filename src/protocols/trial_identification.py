@@ -46,7 +46,7 @@ def generate_trial_id(manager: TrialManager) -> str:
         if param_name == "solvers":
             manager_solver_names = {s.solver_name for s in param_val}
             solver_bits = reversed(
-                [1 if x.value in manager_solver_names else 0 for x in SolverName]
+                [int(x.value in manager_solver_names) for x in SolverName]
             )
             solver_int = sum([a * 2 ** idx for idx, a in enumerate(solver_bits)])
             param_string = hex(solver_int)[2:]
@@ -57,8 +57,7 @@ def generate_trial_id(manager: TrialManager) -> str:
                 )
             param_string = hex(param_val)[2:]
 
-        param_padding = "0" * (length - len(param_string))
-        trial_id += param_padding + param_string
+        trial_id += f"{'0' * (length - len(param_string))}{param_string}"
 
     return trial_id
 
@@ -72,25 +71,27 @@ def get_trial_params_from_id(trial_id: str) -> dict:
         param_int_value = int(param_hex_value, 16)
         if param_name == "solvers":
             bin_rep = bin(param_int_value)[2:]
-            if len(bin_rep) <= len(SolverName):
-                bin_rep = "0" * (len(SolverName) - len(bin_rep)) + bin_rep
-            else:
+            if len(bin_rep) > len(SolverName):
                 raise Exception(
                     f"Trial ID encoded a solver in position {len(bin_rep)}, but \
                     only {len(SolverName)} solvers are defined."
                 )
+            else:
+                bin_rep = f"{'0'*(len(SolverName) - len(bin_rep))}{bin_rep}"
+                
             solver_bits = [int(char) for char in bin_rep]
             available_solvers = get_all_solvers()
             solvers = []
             for idx, solver_entry in enumerate(SolverName):
                 if solver_bits[idx] == 1:
-                    if solver_entry.value in available_solvers:
-                        solvers.append(available_solvers[solver_entry.value])
-                    else:
+                    if solver_entry.value not in available_solvers:
                         raise Exception(
                             f"Can't recover initialization parameters: required solver \
                             {solver_entry.value} is unavailable."
                         )
+                    else:
+                        solvers.append(available_solvers[solver_entry.value])
+                        
             params_dict[param_name] = solvers
         else:
             params_dict[param_name] = param_int_value

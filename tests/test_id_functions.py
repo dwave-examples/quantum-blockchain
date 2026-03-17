@@ -118,7 +118,6 @@ def test_id_recovery():
                 raised_exception = False
             except:
                 raised_exception = True
-                assert True
 
             assert (
                 raised_exception
