@@ -13,18 +13,18 @@
 # limitations under the License.
 
 from src.agents.trial_manager import TrialManager
-from src.utilities.get_solvers import get_all_solvers
 from src.protocols.trial_identification import generate_trial_id, get_trial_params_from_id
+from src.utilities.get_solvers import get_all_solvers
 
 miner_nums = [7, 4, 189, 27]
 block_nums = [20, 531, 3, 2917]
 solver_dict = get_all_solvers()
 solver_list = [solver for solver in solver_dict.values()]
-solver_lists = [ # Test shouldn't fail because a specific solver is unavailable, lists are built
-    [solver_list[0], solver_list[1], solver_list[2]], # from only available solvers
-    [solver_list[-1], solver_list[-2], solver_list[-3], solver_list[-4]], 
-    [solver_list[2], solver_list[4], solver_list[-1]], 
-    [solver_list[3]]
+solver_lists = [  # Test shouldn't fail because a specific solver is unavailable, lists are built
+    [solver_list[0], solver_list[1], solver_list[2]],  # from only available solvers
+    [solver_list[-1], solver_list[-2], solver_list[-3], solver_list[-4]],
+    [solver_list[2], solver_list[4], solver_list[-1]],
+    [solver_list[3]],
 ]
 
 zero_nums = [0, 77, 6, 155]
@@ -33,63 +33,76 @@ allowable_errs = [1, 133, 19, 83]
 prng_seeds = [42, 793917, 118, 2113145]
 
 parameter_sets = [
-                [block_nums[i], 
-                miner_nums[i], 
-                solver_lists[i],
-                quantum_hash_lens[i], 
-                zero_nums[i], 
-                allowable_errs[i], 
-                prng_seeds[i]] 
-                for i in range(len(miner_nums))
+    [
+        block_nums[i],
+        miner_nums[i],
+        solver_lists[i],
+        quantum_hash_lens[i],
+        zero_nums[i],
+        allowable_errs[i],
+        prng_seeds[i],
+    ]
+    for i in range(len(miner_nums))
 ]
+
 
 def test_manager_state_recovery():
     """This test checks that a TrialManager object's initialization state is being faithfully
-    captured by the generate_trial_id function and successfully reconstructed by the 
+    captured by the generate_trial_id function and successfully reconstructed by the
     get_trial_params_from_id function. It compares the parameters of the original TrialManager
-    object to those of a new TrialManager object whose initialization parameters are recovered 
+    object to those of a new TrialManager object whose initialization parameters are recovered
     from the Trial ID, and fails if any of those parameters differ."""
-    
+
     for param_set in parameter_sets:
         orig_manager = TrialManager(*param_set)
         manager_id = generate_trial_id(orig_manager)
         recovered_manager = TrialManager(**get_trial_params_from_id(manager_id))
-        assert orig_manager.num_miners == recovered_manager.num_miners, f"Original manager and \
-                            recovered manager had different num_miners, {orig_manager.num_miners} \
-                            and {recovered_manager.num_miners} respectively."
-        assert orig_manager.max_blocks == recovered_manager.max_blocks, f"Original manager and \
-                            recovered manager had different max_blocks, {orig_manager.max_blocks} \
-                            and {recovered_manager.max_blocks} respectively."
-        assert orig_manager.n_zeroes == recovered_manager.n_zeroes, f"Original manager and \
-                            recovered manager had different n_zeroes, {orig_manager.n_zeroes} \
-                            and {recovered_manager.n_zeroes} respectively."
-        assert orig_manager.quantum_hash_length == recovered_manager.quantum_hash_length, (
-            f"Original manager and recovered manager had different quantum hash lengths,\
+        assert (
+            orig_manager.num_miners == recovered_manager.num_miners
+        ), f"Original manager and recovered manager had different num_miners, \
+            {orig_manager.num_miners} and {recovered_manager.num_miners} respectively."
+        assert (
+            orig_manager.max_blocks == recovered_manager.max_blocks
+        ), f"Original manager and recovered manager had different max_blocks, \
+            {orig_manager.max_blocks} and {recovered_manager.max_blocks} respectively."
+        assert (
+            orig_manager.n_zeroes == recovered_manager.n_zeroes
+        ), f"Original manager and recovered manager had different n_zeroes, \
+            {orig_manager.n_zeroes} and {recovered_manager.n_zeroes} respectively."
+        assert (
+            orig_manager.quantum_hash_length == recovered_manager.quantum_hash_length
+        ), f"Original manager had recovered manager had different quantum hash lengths,\
             {orig_manager.quantum_hash_length} and {recovered_manager.quantum_hash_length} \
             respectively."
-            )
-        assert orig_manager.allowable_err == recovered_manager.allowable_err, f"Original manager \
-                and recovered manager had different values for allowable_err, \
+        assert (
+            orig_manager.allowable_err == recovered_manager.allowable_err
+        ), f"Original manager and recovered manager had different values for allowable_err, \
                 {orig_manager.allowable_err} and {recovered_manager.allowable_err} respectively."
-        
-        assert orig_manager.prng_seed == recovered_manager.prng_seed, f"Original manager and \
-                            recovered manager had different prng seeds, {orig_manager.prng_seed} \
-                            and {recovered_manager.prng_seed} respectively."
-        
+
+        assert (
+            orig_manager.prng_seed == recovered_manager.prng_seed
+        ), f"Original manager and recovered manager had different prng seeds, \
+            {orig_manager.prng_seed} and {recovered_manager.prng_seed} respectively."
+
         orig_solver_set = {solver.solver_name for solver in orig_manager.solvers}
         recovered_solver_set = {solver.solver_name for solver in recovered_manager.solvers}
-        assert orig_solver_set == recovered_solver_set, f"Original manager and recovered manager \
-                                           had differing solver lists {orig_solver_set} and \
-                                            {recovered_solver_set} respectively. \n Params {param_set}, ID {manager_id}"
-        
-# In most positions, and valid hex digit (0-9 and a-f) will yield a usable ID. However, the 7th 
+        assert (
+            orig_solver_set == recovered_solver_set
+        ), f"Original manager and recovered manager had different solver lists {orig_solver_set} \
+            and {recovered_solver_set} respectively. \n Params {param_set}, ID {manager_id}"
+
+
+# In most positions, and valid hex digit (0-9 and a-f) will yield a usable ID. However, the 7th
 # and 8th place represent the solver configuration, and with the current 7 solvers,  can't tolerate
-# hex value of 80 (equivalent to 128 is decimal notation) or greater, as they encode solver 
-# configurations that don't exist. 
-test_ids = ["001409700000400100002a", # All QPU solvers (hex: 70, binary: 01110000) 
-            "0b050c0f0302b002c151d6", # All simulated solvers (hex: 0f, binary: 00001111)
-            "2f015ac80034032111f1c4", # Invalid solver configuration (hex: c8, binary: 11001000)
-            "c1c31c042f05043a4a33d9"] # Single simulated solver (hex: 04, binary: 00000100)
+# hex value of 80 (equivalent to 128 is decimal notation) or greater, as they encode solver
+# configurations that don't exist.
+test_ids = [
+    "001409700000400100002a",  # All QPU solvers (hex: 70, binary: 01110000)
+    "0b050c0f0302b002c151d6",  # All simulated solvers (hex: 0f, binary: 00001111)
+    "2f015ac80034032111f1c4",  # Invalid solver configuration (hex: c8, binary: 11001000)
+    "c1c31c042f05043a4a33d9",
+]  # Single simulated solver (hex: 04, binary: 00000100)
+
 
 def test_id_recovery():
     """This test checks to ensure that a TrialManager instantiated from a Trial ID via
@@ -98,8 +111,8 @@ def test_id_recovery():
     get_trial_params_from_id to raise an Exception."""
 
     for orig_id in test_ids:
-        if int(orig_id[6:8], 16) >= 128: # Validation checks in get_trial_params_from_id should
-            error_params = "" # Catch IDs above 127 (hex values over 7f), raising an Exception.
+        if int(orig_id[6:8], 16) >= 128:  # Validation checks in get_trial_params_from_id should
+            error_params = ""  # Catch IDs above 127 (hex values over 7f), raising an Exception.
             try:
                 error_params = get_trial_params_from_id(orig_id)
                 raised_exception = False
@@ -107,7 +120,9 @@ def test_id_recovery():
                 raised_exception = True
                 assert True
 
-            assert raised_exception, f"Test passed trial ID {orig_id} with invalid solver code \
+            assert (
+                raised_exception
+            ), f"Test passed trial ID {orig_id} with invalid solver code \
                 {orig_id[6:8]}:{int(orig_id[6:8], 16)}, yielding trial parameters {error_params}."
 
         else:
@@ -119,12 +134,9 @@ def test_id_recovery():
                 solvers_available = False
             if solvers_available:
                 manager = TrialManager(**manager_params)
-                print(f"Manager Num Blocks {manager.num_miners}. Manager Solver List {[solver.solver_name for solver in manager.solvers]}")
                 recovered_id = generate_trial_id(manager)
-                assert orig_id == recovered_id, f"orig_id {orig_id} and recovered_id {recovered_id} differ"
-
+                assert (
+                    orig_id == recovered_id
+                ), f"orig_id {orig_id} and recovered_id {recovered_id} differ"
 
     pass
-
-
-

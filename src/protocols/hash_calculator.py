@@ -179,7 +179,7 @@ class SimulatedHashSolver(HashSolver):
                 scores."""
 
         prng_header = np.random.default_rng(rng_seed)
-        prng_sampling = np.random.default_rng(rng_seed+1)
+        prng_sampling = np.random.default_rng(rng_seed + 1)
         indices = prng_header.integers(self.num_witnesses, size=hash_length)
         mu = self.mean_witnesses.ravel()[indices]
         var = self.var_witnesses.ravel()[indices]

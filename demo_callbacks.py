@@ -30,13 +30,12 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
 from demo_configs import MIN_SIMULATION_LOOP_TIME
-
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode, ViewOpt
+from src.protocols.trial_identification import generate_trial_id
 from src.utilities.display_update import render_miner_status
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.protocols.trial_identification import generate_trial_id
 
 graph_layout_dict = dict(
     autosize=False,

@@ -18,8 +18,8 @@
 # cloud service and will be governed by the Leap Cloud Subscription Agreement available at:
 # https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
-from logging import warning
 from datetime import datetime
+from logging import warning
 
 import numpy as np
 from scipy.special import erf
@@ -27,7 +27,8 @@ from scipy.special import erf
 from src.protocols.hash_calculator import HashSolver
 from src.structures.block import Block
 from src.utilities.crypto_utils import compare_hashes, validate_zeroes
-from src.values import DELTA_W_0_ALPHA, MIN_SCORE, W_0_ALPHA, MAX_INITIAL_NONCE
+from src.values import DELTA_W_0_ALPHA, MAX_INITIAL_NONCE, MIN_SCORE, W_0_ALPHA
+
 
 class ProofOfWorkProtocol:
     """This class implements the Proof of Work Protocol for a node on the blockchain. In practice,
@@ -41,7 +42,7 @@ class ProofOfWorkProtocol:
         quantum_hash_length: int,
         n_zeroes: int,
         allowable_err: int,
-        prng_seed: int | None = None
+        prng_seed: int | None = None,
     ):
         """Initializes a ProofOfWorkProtocol object. In the current implementation, TrialManager
             initializes a single ProofOfWorkProtocol, which is shared by all miners in a trial.
@@ -72,10 +73,10 @@ class ProofOfWorkProtocol:
     def get_random_nonce(self) -> int:
         """Generates a random integer for miners to use as a nonce. This allows miners to use
         this object's PRNG rather than having to see and maintain one of their own.
-        
+
         Returns:
             nonce: A random integer between 0 and the currently-implemented maximum"""
-        
+
         return int(self.seeded_prng.integers(0, MAX_INITIAL_NONCE))
 
     def validate_block(self, block: Block) -> tuple[bool, float, str]:
@@ -164,9 +165,9 @@ class ProofOfWorkProtocol:
 
     def score_block(self, block: Block) -> float:
         """Calculates the score for a single block by recalculating the quantum hash for the block
-        and comparing the recalculated result to the value stored in the block. Currently the 
+        and comparing the recalculated result to the value stored in the block. Currently the
         scoring is done exclusively via the calculate_confidence_score function, but other scoring
-        schemas can be used in its place without affecting the functionality of the rest of the 
+        schemas can be used in its place without affecting the functionality of the rest of the
         codebase.
 
         Args:
@@ -180,8 +181,10 @@ class ProofOfWorkProtocol:
         if self.quantum_hash_length > 0:
             calculated_hash, dot_vector = self.calculate_quantum_hash(block)
             if len(received_hash) != len(calculated_hash):
-                raise Exception(f"Expected quantum hash of length {len(calculated_hash)},\
-                                 received hash of length {len(received_hash)}")
+                raise Exception(
+                    f"Expected quantum hash of length {len(calculated_hash)},\
+                                 received hash of length {len(received_hash)}"
+                )
             validation_bits = compare_hashes(received_hash, calculated_hash)
 
         else:

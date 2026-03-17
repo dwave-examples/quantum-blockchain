@@ -20,7 +20,7 @@
 
 import numpy as np
 
-from demo_configs import MINER_NAMES, QUANTUM_HASH_LENGTH, N_ZEROES, ALLOWABLE_ERR
+from demo_configs import ALLOWABLE_ERR, MINER_NAMES, N_ZEROES, QUANTUM_HASH_LENGTH
 from src.agents.miner import Miner
 from src.protocols.hash_calculator import HashSolver, SolverName
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
@@ -30,9 +30,9 @@ from src.values import (
     GENESIS_BLOCK_PREV_HASH,
     GENESIS_BLOCK_TIMESTAMP,
     GENESIS_MINER_ID,
-    MAX_MINING_ATTEMPTS,
     MANAGER_PRNG_SEED,
-    MAX_RNG_SEED_LEN
+    MAX_MINING_ATTEMPTS,
+    MAX_RNG_SEED_LEN,
 )
 
 
@@ -60,6 +60,7 @@ def initialize_genesis_block(
     genesis_block.lock()
     return genesis_block
 
+
 class TrialManager:
     """This class manages a trial of blockchain mining. The purpose of this
     class is to be able to iterate through a series of blocks and maintain
@@ -79,7 +80,7 @@ class TrialManager:
         quantum_hash_length: int = QUANTUM_HASH_LENGTH,
         n_zeroes: int = N_ZEROES,
         allowable_err: int = ALLOWABLE_ERR,
-        prng_seed: int = MANAGER_PRNG_SEED
+        prng_seed: int = MANAGER_PRNG_SEED,
     ):
         """Initializes a new TrialManager object.
 
@@ -109,12 +110,12 @@ class TrialManager:
         self.max_blocks = max_blocks
         self.solvers = solvers
         self.pow = ProofOfWorkProtocol(
-                        solvers, 
-                        quantum_hash_length, 
-                        n_zeroes, 
-                        allowable_err, 
-                        self.seeded_prng.integers(16**MAX_RNG_SEED_LEN-1)
-                    )
+            solvers,
+            quantum_hash_length,
+            n_zeroes,
+            allowable_err,
+            self.seeded_prng.integers(16 ** MAX_RNG_SEED_LEN - 1),
+        )
         self.max_mining_attempts = MAX_MINING_ATTEMPTS
 
         # Data structures
@@ -138,15 +139,15 @@ class TrialManager:
     @property
     def blocks_mined(self):
         return len(self.chain_data)
-    
+
     @property
-    def quantum_hash_length(self)->int:
+    def quantum_hash_length(self) -> int:
         return self.pow.quantum_hash_length
-    
+
     @property
     def allowable_err(self) -> int:
         return self.pow.allowable_err
-    
+
     @property
     def n_zeroes(self) -> int:
         return self.pow.n_zeroes
@@ -157,7 +158,7 @@ class TrialManager:
         primary_hash = self.miners[self.round_order[0]].mining_hash
         hash_set.remove(primary_hash)
         return [primary_hash] + list(hash_set)
-    
+
     def _initialize_miners(self, miner_names: list[str]) -> None:
         """Creates all the Miner objects necessary to run the trial, passing each one an id, a
         ProofOrWorkProtocol object (which should contain initialized solvers) and the genesis

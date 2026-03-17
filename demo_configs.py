@@ -29,7 +29,7 @@ A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
 HIDE_SIMULATED_SOLVERS = False
 
 # Changing this parameter to any number will make the simulation repeatable; all random
-# number generation events in the simulation will produce predictable results, so a 
+# number generation events in the simulation will produce predictable results, so a
 # subsequent run using the same parameters should be identical. HOWEVER, this will not
 # remove the randomness from QPU measurements, so two QPU-based simulations may still
 # diverge fairly quickly even with the same PRNG_SEED. If you want completely repeatable
@@ -89,11 +89,11 @@ GRAPH_MAX_BRANCH_DISTANCE = 0.78
 # Controls the available range of miners that can be selected in the miner slider. Recommended
 # values are min: "4", max: "28", step: "1" and "value": 7, which will be sufficient for most uses.
 # Using fewer than 4 miners is possible but not recommended. Increasing the number of miners causes
-# a proportional slowdown in the growth of the chain and the QPU use, as each miner must use a 
-# separate QPU call to validate. Maximum supported value is 255, though in practice, 7-20 miners 
-# is generally sufficient to produce  interesting behavior, while going beyond 25-30 will extend 
+# a proportional slowdown in the growth of the chain and the QPU use, as each miner must use a
+# separate QPU call to validate. Maximum supported value is 255, though in practice, 7-20 miners
+# is generally sufficient to produce  interesting behavior, while going beyond 25-30 will extend
 # the miner display beyond the height of a single screen and make the viewing the progress less
-# convenient. 
+# convenient.
 
 MINER_SLIDER = {"min": 4, "max": 28, "step": 1, "value": 7}
 
@@ -101,7 +101,7 @@ MINER_SLIDER = {"min": 4, "max": 28, "step": 1, "value": 7}
 # mined before completion). Recommended values are min: "5", max: "600", step: "1" and "value": 20,
 # which will be sufficient for most use cases. Trials of fewer than 5 blocks are rarely useful even
 # for testing, while those exceeding 600 blocks will take more than an hour to complete under most
-# settings. Interesting behavior can readily be observed in trials ranging from 20 to several 
+# settings. Interesting behavior can readily be observed in trials ranging from 20 to several
 # hundred blocks. For decreased validation difficulties, it may require more blocks (and thus
 # longer trials) for significant branching to occur, while for increased validation difficulties,
 # it may take similarly take longer for forks to resolve and miners to reach consensus on the
@@ -109,7 +109,7 @@ MINER_SLIDER = {"min": 4, "max": 28, "step": 1, "value": 7}
 
 NUM_BLOCKS = {"min": 5, "max": 600, "step": 1, "value": 20}
 
-# The number of miner views that will be selectable in the UI. Each miner view will show the 
+# The number of miner views that will be selectable in the UI. Each miner view will show the
 # blockchain graph for a different miner in the trial; different graphs will include the same
 # blocks and connections, but generally position and color them differently, reflecting the
 # individual miner's opinion on the validity of those blocks. If this value is higher than
@@ -127,11 +127,11 @@ MINER_NAMES = [f"Miner_{i}" for i in range(1, 256)]
 # Length of the quantum hash. Determines how difficult it is to mine and validate a block, though
 # increasing the value of ALLOWABLE_ERR will compensate for this. If this parameter is set to 0,
 # the demo will function as a classical blockchain, with deterministic validation. Blockchains
-# are generally stable but display interesting behavior (significant validation randomness) at 
-# values roughly in the range of 16-128, but this depends substantially on solver choices: using 
+# are generally stable but display interesting behavior (significant validation randomness) at
+# values roughly in the range of 16-128, but this depends substantially on solver choices: using
 # the default choice of "All QPU Solvers" will reduce this range substantially, for example. For
 # larger values, stability can be maintained by increasing the ALLOWABLE_ERR parameter in
-# proportion to the quantum hash length: roughly 1 point per 32-128 quantum hash bits. Using much 
+# proportion to the quantum hash length: roughly 1 point per 32-128 quantum hash bits. Using much
 # larger values may cause modest increase in CPU use and memory footprint. Maximum supported value
 # of 65536
 QUANTUM_HASH_LENGTH = 64
@@ -147,4 +147,3 @@ ALLOWABLE_ERR = 1
 # make the simulation take longer. For most practical uses, values should range from 0 to 30. Max
 # supported value of 255.
 N_ZEROES = 0
-

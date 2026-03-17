@@ -22,6 +22,7 @@ from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.structures.block_score_tree import BlockNode, BlockScoreTree
 
+
 class Miner:
     """This class is intended to encapsulate all necessary functions for running a miner
     on the blockchain network."""
