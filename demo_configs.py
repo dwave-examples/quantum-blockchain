@@ -28,12 +28,10 @@ A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
 # set (unlike the QPU solvers).
 HIDE_SIMULATED_SOLVERS = False
 
-# Changing this parameter to any number will make the simulation repeatable; all random
-# number generation events in the simulation will produce predictable results, so a
-# subsequent run using the same parameters should be identical. HOWEVER, this will not
-# remove the randomness from QPU measurements, so two QPU-based simulations may still
+# Changing this parameter to any number will make the simulation repeatable for simulated solvers.
+# This will not remove the randomness from QPU measurements, so two QPU-based simulations may still
 # diverge fairly quickly even with the same PRNG_SEED. If you want completely repeatable
-# simulations (for example, for testing), use the simulated solvers instead of the QPU solvers
+# simulations, use the simulated solvers instead of the QPU solvers. Default set to 'None'.
 PRNG_SEED = None
 
 INTRO_TEXT = 'Select a number of miners and blocks and press "Begin Simulation".'
