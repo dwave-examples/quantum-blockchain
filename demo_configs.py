@@ -109,7 +109,6 @@ NUM_BLOCKS = {"min": 5, "max": 600, "step": 1, "value": 20}
 # individual miner's opinion on the validity of those blocks. If this value is higher than
 # the number of miners selected for a given simulation, there number of views will max out
 # at the number of miners selected.
-
 NUM_MINER_VIEWS = 3
 
 MINER_NAMES = [f"Miner_{i}" for i in range(1, 256)]
