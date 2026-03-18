@@ -23,11 +23,6 @@ DESCRIPTION = """\
 A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
 """
 
-# Set to 'False' for testing code with the simulated solvers, which generate quantum hashes
-# via statistical bootstrapping, which can be made fully repeatable when a RANDOM_SEED is
-# set (unlike the QPU solvers).
-HIDE_SIMULATED_SOLVERS = False
-
 # Setting an integer value for this allows for repeatability in all random aspects of the
 # simulation except those drawing on the QPU. See "Repeatability of Trials" in README for details.
 RANDOM_SEED = None
@@ -78,9 +73,9 @@ GRAPH_MAX_RADIUS = 0.999
 GRAPH_MAX_BRANCH_DISTANCE = 0.78
 
 
-#######################################
-# Sliders, buttons and option entries #
-#######################################
+########################################
+# Sliders, Buttons, and Option Entries #
+########################################
 
 # Controls the parameters of the miner selection slider
 # Recommended Setting: {"min": 4, "max": 28, "step": 1, "value": 7}
@@ -97,6 +92,11 @@ NUM_BLOCKS = {"min": 5, "max": 600, "step": 1, "value": 20}
 # Minimum Supported Value: 0, Maximum Supported Value: 255 
 # Values above the value of num_miners (in a given trial) have no effect.
 NUM_MINER_VIEWS = 3
+
+# Set to 'False' for testing code with the simulated solvers, which generate quantum hashes
+# via statistical bootstrapping, which can be made fully repeatable when a RANDOM_SEED is
+# set (unlike the QPU solvers).
+HIDE_SIMULATED_SOLVERS = False
 
 MINER_NAMES = [f"Miner_{i}" for i in range(1, 256)]
 

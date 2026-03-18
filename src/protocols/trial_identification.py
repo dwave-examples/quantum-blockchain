@@ -76,9 +76,8 @@ def get_trial_params_from_id(trial_id: str) -> dict:
                     f"Trial ID encoded a solver in position {len(bin_rep)}, but \
                     only {len(SolverName)} solvers are defined."
                 )
-            else:
-                bin_rep = f"{'0'*(len(SolverName) - len(bin_rep))}{bin_rep}"
-                
+            
+            bin_rep = f"{'0'*(len(SolverName) - len(bin_rep))}{bin_rep}"
             solver_bits = [int(char) for char in bin_rep]
             available_solvers = get_all_solvers()
             solvers = []
@@ -89,8 +88,8 @@ def get_trial_params_from_id(trial_id: str) -> dict:
                             f"Can't recover initialization parameters: required solver \
                             {solver_entry.value} is unavailable."
                         )
-                    else:
-                        solvers.append(available_solvers[solver_entry.value])
+                    
+                    solvers.append(available_solvers[solver_entry.value])
                         
             params_dict[param_name] = solvers
         else:
