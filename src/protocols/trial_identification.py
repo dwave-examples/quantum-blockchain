@@ -33,7 +33,7 @@ def generate_trial_id(manager: TrialManager) -> str:
     parameters necessary to replicate the trial. Two trials will have identical IDs if and only if
     they use all the same parameters. Every parameter besides 'solvers' contributes to the ID in
     a simple and intuitive way: the integer value is converted to a hexidecimal value with a set
-    number of digits (defined in 'trial_paramater_fields' above). Being non-numerical, the solver
+    number of digits (defined in 'trial_parameter_fields' above). Being non-numerical, the solver
     configuration must instead be encoded into an 8-digit binary number. Each solver is represented
     by a single digit, which is 1 if that solver is present in that configuration and 0 otherwise.
     The digits for the 7 current solvers are then padded with an 8th digit (always 0), to enable
@@ -48,16 +48,14 @@ def generate_trial_id(manager: TrialManager) -> str:
             solver_bits = reversed(
                 [int(x.value in manager_solver_names) for x in SolverName]
             )
-            solver_int = sum([a * 2 ** idx for idx, a in enumerate(solver_bits)])
-            param_string = hex(solver_int)[2:]
+            param_val = sum([a * 2 ** idx for idx, a in enumerate(solver_bits)])
         else:
             if param_val > 16 ** length - 1:
                 raise Exception(
                     f"Parameter {param_name} had value {param_val}, exceeding the maximum"
                 )
-            param_string = hex(param_val)[2:]
 
-        trial_id += f"{'0' * (length - len(param_string))}{param_string}"
+        trial_id += format(param_val, f"0{length}x")
 
     return trial_id
 
@@ -70,19 +68,18 @@ def get_trial_params_from_id(trial_id: str) -> dict:
         start_idx += length
         param_int_value = int(param_hex_value, 16)
         if param_name == "solvers":
-            bin_rep = bin(param_int_value)[2:]
-            if len(bin_rep) > len(SolverName):
+            num_digits = 4*trial_parameter_fields["solvers"]
+            bin_rep = format(param_int_value, f"0{num_digits}b")
+            if num_digits - bin_rep.index("1") > len(SolverName):
                 raise Exception(
-                    f"Trial ID encoded a solver in position {len(bin_rep)}, but \
-                    only {len(SolverName)} solvers are defined."
+                    f"Trial ID encoded a solver in position {num_digits - bin_rep.index("1")}, \
+                    but only {len(SolverName)} solvers are defined."
                 )
             
-            bin_rep = f"{'0'*(len(SolverName) - len(bin_rep))}{bin_rep}"
-            solver_bits = [int(char) for char in bin_rep]
             available_solvers = get_all_solvers()
             solvers = []
             for idx, solver_entry in enumerate(SolverName):
-                if solver_bits[idx] == 1:
+                if bin_rep[idx+(num_digits-len(SolverName))] == "1":
                     if solver_entry.value not in available_solvers:
                         raise Exception(
                             f"Can't recover initialization parameters: required solver \
