@@ -85,20 +85,17 @@ GRAPH_MAX_BRANCH_DISTANCE = 0.78
 # Controls the parameters of the miner selection slider
 # Recommended Setting: {"min": 4, "max": 28, "step": 1, "value": 7}
 # Minimum Supported Value: 3, Maximum Supported Value: 255
-
 MINER_SLIDER = {"min": 4, "max": 28, "step": 1, "value": 7}
 
 # Controls the parameters of the block selector
 # Recommended Setting: {"min": 5, "max": 600, "step": 1, "value": 20}
 # Minimum Supported Value: 1, Maximum Supported Value: 65535
-
 NUM_BLOCKS = {"min": 5, "max": 600, "step": 1, "value": 20}
 
 # The number of miner views that will be selectable in the UI. 
 # Recommended Value: 3
 # Minimum Supported Value: 0, Maximum Supported Value: 255 
 # Values above the value of num_miners (in a given trial) have no effect.
-
 NUM_MINER_VIEWS = 3
 
 MINER_NAMES = [f"Miner_{i}" for i in range(1, 256)]
@@ -113,7 +110,7 @@ MINER_NAMES = [f"Miner_{i}" for i in range(1, 256)]
 QUANTUM_HASH_LENGTH = 64
 
 # The number of single-bit errors validators will allow; makes validation easier for a given value
-# if QUANTUM_HASH_LENGTH; changing them proportionally will keep validation rate roughly the same. 
+# if QUANTUM_HASH_LENGTH. Changing them proportionally will keep validation rate roughly the same. 
 # Recommended Value: 1, Recommended range: 0-8
 # Minimum Supported Value: 0. Maximum Supported Value: 255.
 ALLOWABLE_ERR = 1
