@@ -182,7 +182,7 @@ All of parameters necessary to fully characterize a single trial (as it begins) 
 
 ### Adjusting Settings and Parameter Values
 
-Adjustable settings and parameter values that are reasonably easy to understand and safe to change are located in 'demo_configs.py'. Parameters found outside this file are likely to cause serious issues if changed, and should only be altered by an experienced programmer who is already familiar with the code in the repository. Documentation within 'demo_configs.py' will generally indicate reasonable values and supported ranges; many values can be changed outside these ranges, but doing so is more likely to produce undesired behavior. Read below for a detailed description of the considerations of adjusting various parameter values.
+If a setting or parameter value is safe to change and generally easy to understand, it will be located in the 'demo_configs.py'. Parameters found outside this file are likely to cause serious issues if changed, and should only be altered by an experienced programmer who is already familiar with the code in the repository. Documentation within 'demo_configs.py' will generally indicate reasonable values and supported ranges; many values can be changed outside these ranges, but doing so is more likely to produce undesired behavior. Read below for a detailed description of the considerations of adjusting various parameter values.
 
 #### Adjusting Interface Input Elements
 
