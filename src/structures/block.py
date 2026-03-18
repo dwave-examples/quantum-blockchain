@@ -208,10 +208,10 @@ class Block:
         """Sets value for the block's quantum hash, which must be a hex-formatted string.
 
         Args:
-            quantum_hash: the quantum hash formatted as a hexidecimal string.
+            quantum_hash: the quantum hash formatted as a hexadecimal string.
 
         Modifies:
-            self._header["quantum_hash"]: stores the value in this field as a hexidecimal string.
+            self._header["quantum_hash"]: stores the value in this field as a hexadecimal string.
         """
 
         if not self._locked:

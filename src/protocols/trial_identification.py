@@ -29,15 +29,15 @@ trial_parameter_fields = {
 
 
 def generate_trial_id(manager: TrialManager) -> str:
-    """Creates an ID for a trial in the form of a hexidecimal string. This ID will encode all the
+    """Creates an ID for a trial in the form of a hexadecimal string. This ID will encode all the
     parameters necessary to replicate the trial. Two trials will have identical IDs if and only if
     they use all the same parameters. Every parameter besides 'solvers' contributes to the ID in
-    a simple and intuitive way: the integer value is converted to a hexidecimal value with a set
+    a simple and intuitive way: the integer value is converted to a hexadecimal value with a set
     number of digits (defined in 'trial_parameter_fields' above). Being non-numerical, the solver
     configuration must instead be encoded into an 8-digit binary number. Each solver is represented
     by a single digit, which is 1 if that solver is present in that configuration and 0 otherwise.
     The digits for the 7 current solvers are then padded with an 8th digit (always 0), to enable
-    the binary value to be converted smoothly into hexidecimal."""
+    the binary value to be converted smoothly into hexadecimal."""
 
     trial_id = ""
 

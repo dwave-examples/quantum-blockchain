@@ -177,7 +177,7 @@ class SimulatedHashSolver(HashSolver):
             rng_seed (int): a seed to use to determine which witnesses to draw from
 
         Returns:
-            quantum_hash (str): the quantum hash formatted as a hexidecimal string. Note that
+            quantum_hash (str): the quantum hash formatted as a hexadecimal string. Note that
                 this means that the length will be 1/4 (rounded up) of the passed hash length
                 since a hex digit can store 4 binary digits.
             dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence
@@ -282,7 +282,7 @@ class QuantumHashSolver(HashSolver):
             rng_seed (int): a seed to use to determine parameters of the quantum experiment
 
         Returns:
-            quantum_hash (str): the quantum hash formatted as a hexidecimal string. Note that
+            quantum_hash (str): the quantum hash formatted as a hexadecimal string. Note that
                 this means that the length will be 1/4 (rounded up) of the passed hash length
                 since a hex digit can store 4 binary digits.
             dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence
