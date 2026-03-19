@@ -96,7 +96,7 @@ NUM_MINER_VIEWS = 3
 # Set to 'False' for testing code with the simulated solvers, which generate quantum hashes
 # via statistical bootstrapping, which can be made fully repeatable when a RANDOM_SEED is
 # set (unlike the QPU solvers).
-HIDE_SIMULATED_SOLVERS = False
+HIDE_SIMULATED_SOLVERS = True
 
 MINER_NAMES = [f"Miner_{i}" for i in range(1, 256)]
 
