@@ -17,13 +17,15 @@ from datetime import datetime  # To set genesis block
 
 import numpy as np  # To set effective number of samples (sampling noise)
 
+from demo_configs import RANDOM_SEED
+
 # ===================================================================================
 #                      PoW Protocol Definitions
 # ===================================================================================
 
 EMPTY_QUANTUM_HASH = ""
 
-# Large enough to outweigh any legitimate score, small enough to work on all platforms.
+# Large enough to outweigh any legitimate score.
 MIN_SCORE = -(2 ** 14)
 
 # ===================================================================================
@@ -49,6 +51,11 @@ DEFAULT_ENERGY_TIME_RESCALING = {
 MAX_MINING_ATTEMPTS = 100000
 W_0_ALPHA = 0.0
 DEFAULT_NUM_READS = 600  # NB - Smaller than arXiv:2503.14462.
+
+MAX_INITIAL_NONCE = 2 ** 31
+MAX_RNG_SEED_LEN = 6
+init_rng = np.random.default_rng(RANDOM_SEED)
+MANAGER_PRNG_SEED = int(init_rng.integers(0, 16 ** MAX_RNG_SEED_LEN - 1))
 
 # Value used for Advantage_system4.1 in arXiv:2503.14462. Num reads was fixed to use 1 second of QPU
 # access time (maximum for single-programming). For the simulated data, this is the relevant value.

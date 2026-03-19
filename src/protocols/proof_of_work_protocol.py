@@ -18,8 +18,7 @@
 # cloud service and will be governed by the Leap Cloud Subscription Agreement available at:
 # https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
-
-import random
+from datetime import datetime
 from logging import warning
 
 import numpy as np
@@ -28,7 +27,7 @@ from scipy.special import erf
 from src.protocols.hash_calculator import HashSolver
 from src.structures.block import Block
 from src.utilities.crypto_utils import compare_hashes, validate_zeroes
-from src.values import DELTA_W_0_ALPHA, MIN_SCORE, W_0_ALPHA
+from src.values import DELTA_W_0_ALPHA, MAX_INITIAL_NONCE, MIN_SCORE, W_0_ALPHA
 
 
 class ProofOfWorkProtocol:
@@ -43,6 +42,7 @@ class ProofOfWorkProtocol:
         quantum_hash_length: int,
         n_zeroes: int,
         allowable_err: int,
+        prng_seed: int | None = None,
     ):
         """Initializes a ProofOfWorkProtocol object. In the current implementation, TrialManager
             initializes a single ProofOfWorkProtocol, which is shared by all miners in a trial.
@@ -65,7 +65,19 @@ class ProofOfWorkProtocol:
         self.n_zeroes = n_zeroes
         self.allowable_err = allowable_err
         self.solver_list = hash_solvers
+        self.prng_seed = prng_seed
+        self.seeded_prng = np.random.default_rng(prng_seed)
+        self.seeded_prng.shuffle(self.solver_list)
         self.set_random_solver()
+
+    def get_random_nonce(self) -> int:
+        """Generates a random integer for miners to use as a nonce. This allows miners to use
+        this object's PRNG rather than having to see and maintain one of their own.
+
+        Returns:
+            nonce: A random integer between 0 and the currently-implemented maximum"""
+
+        return int(self.seeded_prng.integers(0, MAX_INITIAL_NONCE))
 
     def validate_block(self, block: Block) -> tuple[bool, float, str]:
         """Validates a block according to the stored protocol parameters and scoring function.
@@ -118,9 +130,9 @@ class ProofOfWorkProtocol:
 
     def mine_block(self, block: Block) -> tuple[Block, float, str]:
         """Makes a single attempt to mine a block based on the stored Proof Of Work requirements.
-            Returns the block itself (with a current quantum and classical hash, and possibly a
-            digital signature) as well as a summary of whether the block passes the stored
-            requirements and the sample time.
+        Returns the block itself (with a current quantum and classical hash, and possibly a digital
+        signature) as well as a summary of whether the block passes the stored requirements and the
+        sample time.
 
         Args:
             block (Block): A block that is finalized except for the quantum hash, quantum signature
@@ -139,7 +151,8 @@ class ProofOfWorkProtocol:
         block.set_quantum_hash(new_quantum_hash)
         validation_bits = [1] * self.quantum_hash_length
         block.set_hash()
-        assert block.validate_hash(), f"Block {block.hash} had invalid hash root after mining."
+        if not block.validate_hash():
+            raise Exception(f"Block {block.hash} had invalid hash after mining.")
 
         if validate_zeroes(block.hash, self.n_zeroes):
             block_score = self.calculate_confidence_score(
@@ -151,11 +164,11 @@ class ProofOfWorkProtocol:
         return block, block_score, self.current_solver.solver_name
 
     def score_block(self, block: Block) -> float:
-        """Calculates the score for a single block by recalculating the quantum hash for the
-            block and comparing the recalculated result to the value stored in the block.
-            Currently the scoring is done exclusively via the calculate_confidence_score
-            function, but other scoring schemas can be used in its place without affecting
-            the functionality of the rest of the codebase.
+        """Calculates the score for a single block by recalculating the quantum hash for the block
+        and comparing the recalculated result to the value stored in the block. Currently the
+        scoring is done exclusively via the calculate_confidence_score function, but other scoring
+        schemas can be used in its place without affecting the functionality of the rest of the
+        codebase.
 
         Args:
             block (Block): the Block object to be scored
@@ -167,9 +180,11 @@ class ProofOfWorkProtocol:
 
         if self.quantum_hash_length > 0:
             calculated_hash, dot_vector = self.calculate_quantum_hash(block)
-            assert len(received_hash) == len(
-                calculated_hash
-            ), f"Expected quantum hash of length {len(calculated_hash)}, received hash of length {len(received_hash)}"
+            if len(received_hash) != len(calculated_hash):
+                raise Exception(
+                    f"Expected quantum hash of length {len(calculated_hash)},\
+                                 received hash of length {len(received_hash)}"
+                )
             validation_bits = compare_hashes(received_hash, calculated_hash)
 
         else:
@@ -185,9 +200,9 @@ class ProofOfWorkProtocol:
         self, valid_bits: np.ndarray, allowable_err: int | float, dot_vector: np.ndarray
     ) -> float:
         """Confidence-based scoring, as defined in the quantum blockchain paper (see README for
-            details). In practice this is quite sensitive to quantum_hash_length, allowable_err,
-            solver schemas and num_reads. Some trial and error is required to find sets of values
-            that allow for reasonable validation rates.
+        details). In practice this is quite sensitive to quantum_hash_length, allowable_err,
+        solver schemas and num_reads. Some trial and error is required to find sets of values that
+        allow for reasonable validation rates.
 
         Args:
             valid_bits (np.ndarray): a vector of binary values representing which bits of the
@@ -250,11 +265,11 @@ class ProofOfWorkProtocol:
             dot_vector: a np vector encoding the hyperplane distance for each bit (that is, the dot
                 product of the hash vector and the hyperplane's normal vector)"""
 
-        random_seed = int(block.hash_seed, 16)
+        block_rng_seed = int(block.hash_seed, 16)
         self.set_random_solver()
 
         quantum_hash, dot_vector = self.current_solver.calculate_quantum_hash(
-            hash_length=self.quantum_hash_length, rng_seed=random_seed
+            hash_length=self.quantum_hash_length, rng_seed=block_rng_seed
         )
 
         return quantum_hash, dot_vector
@@ -269,5 +284,5 @@ class ProofOfWorkProtocol:
             self.current_solver: changes the current solver to one chose randomly from the list
                 of those available.
         """
-        solver_choice = random.choice(self.solver_list)
+        solver_choice = self.seeded_prng.choice(self.solver_list)
         self.current_solver = solver_choice

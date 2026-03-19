@@ -152,9 +152,10 @@ class Block:
     def hash_seed(self):
         """This property defines the data fields and ordering used to calculate both quantum and
         classical hashes. Important that this be consistent across all users or they will not
-        calculate comparable hash values."""
-        seed_string = f"{self.previous_hash}{self.merkle_root}{self.timestamp}\
-                        {self.merkle_root}{self.miner_id}{self.nonce}"
+        calculate comparable hash values. Note that standard practice is for the block
+        timestamp to appear in the hash definition; it is omitted in this case to allow experiments
+        to be repeatable when using the same random seed."""
+        seed_string = f"{self.previous_hash}{self.merkle_root}{self.miner_id}{self.nonce}"
         return calculate_hash(seed_string)
 
     @property
@@ -207,10 +208,10 @@ class Block:
         """Sets value for the block's quantum hash, which must be a hex-formatted string.
 
         Args:
-            quantum_hash: the quantum hash formatted as a hexidecimal string.
+            quantum_hash: the quantum hash formatted as a hexadecimal string.
 
         Modifies:
-            self._header["quantum_hash"]: stores the value in this field as a hexidecimal string.
+            self._header["quantum_hash"]: stores the value in this field as a hexadecimal string.
         """
 
         if not self._locked:

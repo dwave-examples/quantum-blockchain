@@ -18,9 +18,6 @@
 # cloud service and will be governed by the Leap Cloud Subscription Agreement available at:
 # https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
-
-import numpy as np
-
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.structures.block_score_tree import BlockNode, BlockScoreTree
@@ -117,8 +114,7 @@ class Miner:
         if previous_block_hash is None:
             previous_block_hash = self.blockchain.tip_hash
 
-        nonce = np.random.randint(0, 2 ** 15)
-        new_block = Block(miner_id=self.id, previous_block_hash=previous_block_hash, nonce=nonce)
+        new_block = Block(self.id, previous_block_hash, nonce=self.pow.get_random_nonce())
         return new_block
 
     def attempt_mine(

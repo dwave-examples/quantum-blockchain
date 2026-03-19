@@ -48,3 +48,10 @@ def get_solver_lists():
         raise Exception("Cannot connect to any solvers. Unable to run.")
 
     return qpu_solver_list, simulated_list
+
+
+def get_all_solvers():
+    
+    qpu, simulated = get_solver_lists()
+    solver_list = qpu + simulated
+    return {solver.solver_name: solver for solver in solver_list}

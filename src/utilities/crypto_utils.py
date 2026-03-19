@@ -23,7 +23,7 @@ def calculate_hash(data_in: str) -> str:
         formatting data to and from strings to call hashlib's sha256.
 
     Args:
-        data_in (str): the data to be hashed, formatted as a hexidecimal string
+        data_in (str): the data to be hashed, formatted as a hexadecimal string
 
     Returns:
         output_hash (str): the hash of the passed data, formatted as a hex string."""
@@ -63,15 +63,15 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
 
 def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     """Performs a bitwise comparison of two hashes, applying the XNOR logical operation to each pair of bits, yielding
-    a 1 if the bits are the same and a 0 if they differ. Expects both hashes to be formatted as hexidecimal strings,
+    a 1 if the bits are the same and a 0 if they differ. Expects both hashes to be formatted as hexadecimal strings,
     and returns the resulting bitstring in the same format.
 
     Args:
-        first_hash (str): a hash formatted as a hexidecimal string
+        first_hash (str): a hash formatted as a hexadecimal string
         second_hash (str): a second hash, with the same length and format as the first
 
     Returns:
-        hash_comparison (str): a hexidecimal string encoding the bits where the two hashes match and those where they don't.
+        hash_comparison (str): a hexadecimal string encoding the bits where the two hashes match and those where they don't.
     """
 
     hash_bytes = [binascii.unhexlify(hash_bits) for hash_bits in (first_hash, second_hash)]

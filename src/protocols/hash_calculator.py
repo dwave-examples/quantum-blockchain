@@ -55,11 +55,16 @@ class SolverName(Enum):
     the distributions parameterized by saved (offline) QPU experimental data.
     Distributions are provided only for the set of generally-available QPUs used
     in the study https://arxiv.org/pdf/2503.14462
+
+    Important: if any solvers are added to this Enum, they should be added so as to keep the same
+    ordering scheme. If this Enum ever exceeds 8 solvers in total, it will be necessary to
+    update src/protocols/trial_identification to allow for more solver to fit in the ID scheme.
     """
 
-    SOLVER1 = "Advantage_system4.1"
-    SOLVER2 = "Advantage_system6.4"
-    SOLVER3 = "Advantage2_system1.12"
+    SOLVER1 = "Advantage2_system1.12"
+    SOLVER2 = "Advantage_system4.1"
+    SOLVER3 = "Advantage_system6.4"
+
 
     SIMULATED1 = "simulated_Advantage2_prototype2.6"  # No longer generally available
     SIMULATED2 = "simulated_Advantage_system4.1"
@@ -172,14 +177,14 @@ class SimulatedHashSolver(HashSolver):
             rng_seed (int): a seed to use to determine which witnesses to draw from
 
         Returns:
-            quantum_hash (str): the quantum hash formatted as a hexidecimal string. Note that
+            quantum_hash (str): the quantum hash formatted as a hexadecimal string. Note that
                 this means that the length will be 1/4 (rounded up) of the passed hash length
                 since a hex digit can store 4 binary digits.
             dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence
                 scores."""
 
         prng_header = np.random.default_rng(rng_seed)
-        prng_sampling = np.random.default_rng()
+        prng_sampling = np.random.default_rng(rng_seed + 1)
         indices = prng_header.integers(self.num_witnesses, size=hash_length)
         mu = self.mean_witnesses.ravel()[indices]
         var = self.var_witnesses.ravel()[indices]
@@ -277,7 +282,7 @@ class QuantumHashSolver(HashSolver):
             rng_seed (int): a seed to use to determine parameters of the quantum experiment
 
         Returns:
-            quantum_hash (str): the quantum hash formatted as a hexidecimal string. Note that
+            quantum_hash (str): the quantum hash formatted as a hexadecimal string. Note that
                 this means that the length will be 1/4 (rounded up) of the passed hash length
                 since a hex digit can store 4 binary digits.
             dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence

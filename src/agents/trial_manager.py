@@ -18,11 +18,11 @@
 # cloud service and will be governed by the Leap Cloud Subscription Agreement available at:
 # https://cloud.dwavesys.com/leap/legal/cloud_subscription_agreement/
 
+import numpy as np
 
-import random
-
+from demo_configs import ALLOWABLE_ERR, MINER_NAMES, N_ZEROES, QUANTUM_HASH_LENGTH
 from src.agents.miner import Miner
-from src.protocols.hash_calculator import HashSolver
+from src.protocols.hash_calculator import HashSolver, SolverName
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.structures.block_score_tree import BlockScoreTree
@@ -30,7 +30,9 @@ from src.values import (
     GENESIS_BLOCK_PREV_HASH,
     GENESIS_BLOCK_TIMESTAMP,
     GENESIS_MINER_ID,
+    MANAGER_PRNG_SEED,
     MAX_MINING_ATTEMPTS,
+    MAX_RNG_SEED_LEN,
 )
 
 
@@ -72,12 +74,13 @@ class TrialManager:
 
     def __init__(
         self,
-        num_blocks: int,
-        miner_names: list[str],
+        max_blocks: int,
+        num_miners: int,
         solvers: list[HashSolver],
-        quantum_hash_length: int,
-        n_zeroes: int,
-        allowable_err: int,
+        quantum_hash_length: int = QUANTUM_HASH_LENGTH,
+        n_zeroes: int = N_ZEROES,
+        allowable_err: int = ALLOWABLE_ERR,
+        prng_seed: int = MANAGER_PRNG_SEED,
     ):
         """Initializes a new TrialManager object.
 
@@ -102,9 +105,17 @@ class TrialManager:
             TrialMiners object: object which declares and initializes miners for the trial."""
 
         # Trial Parameters
-        self.max_blocks = num_blocks
+        self.prng_seed = prng_seed
+        self.seeded_prng = np.random.default_rng(self.prng_seed)
+        self.max_blocks = max_blocks
         self.solvers = solvers
-        self.pow = ProofOfWorkProtocol(solvers, quantum_hash_length, n_zeroes, allowable_err)
+        self.pow = ProofOfWorkProtocol(
+            solvers,
+            quantum_hash_length,
+            n_zeroes,
+            allowable_err,
+            self.seeded_prng.integers(16 ** MAX_RNG_SEED_LEN - 1),
+        )
         self.max_mining_attempts = MAX_MINING_ATTEMPTS
 
         # Data structures
@@ -112,12 +123,13 @@ class TrialManager:
         self.global_tree = BlockScoreTree()
         self.global_tree.add_block(self.genesis_block.hash, self.genesis_block.previous_hash, 1.0)
         self.chain_data = []
-        self._initialize_miners(miner_names)
+        self._initialize_miners(MINER_NAMES[:num_miners])
 
         # Attributes for tracking round status and progress
         self.mining_miner = None
         self.round_order = [miner_id for miner_id in self.miners.keys()]
-        random.shuffle(self.round_order)
+        self.prng_seed = prng_seed
+        self.seeded_prng.shuffle(self.round_order)
         self.round_progress = 0
 
     @property
@@ -127,6 +139,18 @@ class TrialManager:
     @property
     def blocks_mined(self):
         return len(self.chain_data)
+
+    @property
+    def quantum_hash_length(self) -> int:
+        return self.pow.quantum_hash_length
+
+    @property
+    def allowable_err(self) -> int:
+        return self.pow.allowable_err
+
+    @property
+    def n_zeroes(self) -> int:
+        return self.pow.n_zeroes
 
     @property
     def mining_hashes(self) -> list[str]:
@@ -208,7 +232,7 @@ class TrialManager:
         if self.round_progress == self.num_miners:
             self._reset_round()
         else:
-            random.shuffle(unfinished_miners)
+            self.seeded_prng.shuffle(unfinished_miners)
             self.round_order = finished_miners + unfinished_miners
 
         current_block = Block.from_json(self.chain_data[-1]["block_json"])
@@ -233,7 +257,7 @@ class TrialManager:
             self.round_order: sets the round order at random."""
 
         self.round_progress = 0
-        random.shuffle(self.round_order)
+        self.seeded_prng.shuffle(self.round_order)
 
     def _mining_step(self) -> None:
         """Executes the mining step for the single round of the trial. Miner mines a single block
