@@ -20,6 +20,10 @@ The following style rules can be altered or removed and any additional
 custom CSS can be added below.
 *******************************************************************/
 
+.visibility-hidden {
+    visibility: hidden;
+}
+
 #button-group {
     margin-top: 2.5rem;
 }
@@ -30,12 +34,13 @@ custom CSS can be added below.
 
 #reset-button,
 #pause-button {
-    background-color: var(--red-light);
+    background: radial-gradient(61.22% 95.86% at 26.96% 100%, var(--red-light) 0%, var(--red-dark) 100%);
+    border: 1px solid rgb(245, 118, 119, 0.4);
 }
 
 #reset-button:hover,
 #pause-button:hover {
-    background-color: var(--red-dark);
+    background: radial-gradient(61.22% 95.86% at 26.96% 100%, var(--red-dark) 0%, var(--red-dark) 100%);
 }
 
 #reset-resume-buttons {
@@ -63,22 +68,25 @@ custom CSS can be added below.
 
 #miner-status-table {
     margin: 0 auto 2rem;
-    width: 100%;
     background-color: white;
     display: inline-block;
     overflow-y: auto;
-    max-height: calc(50vw - var(--left-col-width)/2);
+    max-height: calc(100vh - var(--banner-height) - 8rem);
 }
 
 #miner-status-table th,
 #miner-status-table td {
     padding: 0.15rem 0.5rem;
-    border: 1px solid var(--grey-medium);
+    border: 1px solid var(--blue-darker);
     white-space: nowrap;
 }
 
 #miner-status-table td:first-child {
     font-weight: bold;
+}
+
+#miner-status-table td:nth-child(2) {
+    width: 5.25rem;
 }
 
 #miner-status-table td.mined-cell {
@@ -87,7 +95,7 @@ custom CSS can be added below.
 }
 
 #miner-status-table td.validated-cell {
-    background-color: hsl(213, 75%, 80%);
+    background-color: hsl(213, 75%, 87%);
 }
 
 #miner-status-table td.rejected-cell {
@@ -95,36 +103,38 @@ custom CSS can be added below.
 }
 
 #miner-status-table thead {
-    background-color: var(--blue-dark);
     position: sticky;
     top: 0;
     z-index: 10;
+    border-bottom: 2px solid var(--teal);
 }
 
 #miner-status-table th {
-    font-weight: 600;
+    font-weight: 500;
     color: white;
-    font-size: 1.125rem;
+    font-size: 1.3rem;
     text-align: left;
-    border: 1px solid var(--blue-dark);
+    border: 1px solid var(--blue-darker);
+    padding: 0.7rem 0.5rem 0.25rem;
 }
 
 #intro-text,
 #prelim-text,
 #loading-text {
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    justify-content: center;
 }
 
-.right-column {
+.tab-content-wrapper {
     padding: 2rem;
+    height: calc(100% - var(--banner-height));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .graph-loading {
     height: 100%;
+    width: 100%;
 }
 
 .graph-loading .graph-loading > div:not(.display-none) {
@@ -186,12 +196,50 @@ custom CSS can be added below.
     margin-right: 1rem;
 }
 
-#miner-graph-and-table > div:first-child {
+#block-status {
+    font-style: italic;
+    margin-bottom: 0;
+    color: white;
+    margin-left: 2rem;
+}
+
+#view-select-and-block-status {
     display: flex;
     align-items: center;
 }
 
-#block-status {
-    font-style: italic;
-    margin-bottom: 0;
+@media screen and (max-width: 1350px) {
+    .graph-table-wrapper {
+        flex-direction: column;
+    }
+
+    #miner-status-table {
+        margin-top: 2rem;
+    }
+
+    .graph-table-wrapper > div:first-child {
+        height: 40vw;
+        width: 40vw;
+        margin-right: 0;
+    }
+}
+
+@media screen and (max-width: 1000px) {
+    #miner-status-table {
+        max-height: none;
+    }
+
+    .graph-table-wrapper > div:first-child {
+        height: 60vw;
+        width: 60vw;
+    }
+}
+
+@media screen and (max-width: 500px) {
+    #block-status,
+    #miner-status-table th:nth-child(3),
+    #miner-status-table td:nth-child(3),
+    .banner img {
+        display: none;
+    }
 }

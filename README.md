@@ -2,7 +2,7 @@
   https://img.shields.io/badge/Open%20in%20GitHub%20Codespaces-333?logo=github)](
   https://codespaces.new/dwave-examples/quantum-blockchain?quickstart=1)
 
-# Proof of Quantum Work Blockchains
+# Blockchain with Proof of Quantum Work
 
 Ledgers are widespread record keeping structures. A proof of work blockchain is a ledger supported
 by consensus mechanisms to ensure that no single authority is required to verify the ledger.
