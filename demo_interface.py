@@ -149,9 +149,7 @@ def input_number(label: str, id: str, config: dict) -> html.Div:
 def generate_options(options: list | EnumMeta | dict) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
     if isinstance(options, EnumMeta):
-        return [
-            {"label": option.label, "value": f"{option.value}"} for option in options
-        ]
+        return [{"label": option.label, "value": f"{option.value}"} for option in options]
 
     if isinstance(options, dict):
         return [{"label": key, "value": f"{value}"} for key, value in options.items()]
@@ -170,16 +168,12 @@ def generate_settings_form() -> html.Div:
     qpu_solver_opts = {f"Random {SolverMode.QPU.label}": -1}
 
     qpu_solver_opts.update(
-        {
-            solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)
-        }
+        {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
     )
 
     simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
     simulated_solver_opts.update(
-        {
-            solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)
-        }
+        {solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)}
     )
 
     solver_mode_options = generate_options(SolverMode)
@@ -196,9 +190,7 @@ def generate_settings_form() -> html.Div:
         ),
         html.Div(
             id="qpu-dropdown",
-            children=dropdown(
-                "Solver", "qpu-solver-select", generate_options(qpu_solver_opts)
-            ),
+            children=dropdown("Solver", "qpu-solver-select", generate_options(qpu_solver_opts)),
         ),
         html.Div(
             id="simulated-dropdown",
@@ -380,7 +372,10 @@ def create_interface():
                                         className="",
                                         children=[
                                             html.Div(
-                                                children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
+                                                children=[
+                                                    html.H3(INTRO_TEXT),
+                                                    html.P(INTRO_SUBTEXT),
+                                                ],
                                                 id="intro-text",
                                             ),
                                             html.H3(
@@ -424,9 +419,11 @@ def create_interface():
                                                                                 },
                                                                             ),
                                                                         ],
-                                                                        **{"role": "presentation"}
+                                                                        **{"role": "presentation"},
                                                                     )
-                                                                    for i, view in enumerate(ViewOpt)
+                                                                    for i, view in enumerate(
+                                                                        ViewOpt
+                                                                    )
                                                                 ],
                                                             ),
                                                             graph_legend(),
@@ -437,8 +434,8 @@ def create_interface():
                                             ),
                                         ],
                                     ),
-                                ]
-                            )
+                                ],
+                            ),
                         ],
                     ),
                 ],

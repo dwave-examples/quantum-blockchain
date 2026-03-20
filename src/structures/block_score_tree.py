@@ -235,10 +235,8 @@ class BlockScoreTree:
             raise Exception(f"Attempted to add duplicate block with hash {block.hash} to tree.")
         # make sure block predecessor exists
         elif block.prev_hash not in self.hash_to_branch_lookup:
-            raise Exception(
-                f"Block {block.hash} has predecessor {block.prev_hash} \
-                            which is not found in the tree."
-            )
+            raise Exception(f"Block {block.hash} has predecessor {block.prev_hash} \
+                            which is not found in the tree.")
         else:  # if it does, add it to the tree in the proper spot.
             parent_branch = self.hash_to_branch_lookup[block.prev_hash]
             new_branch = ScoreTreeBranch(block)
@@ -329,10 +327,8 @@ class BlockScoreTree:
                         (branch.hash[:SHORT_HASH_LEN], branch.prev_hash[:SHORT_HASH_LEN])
                         for branch in branch.parent.node_list
                     ]
-                    raise Exception(
-                        f"Triggering branch: {branch_txt} with parent: {parent_txt}. \
-                                    Root hash is {branch.root_hash} "
-                    )
+                    raise Exception(f"Triggering branch: {branch_txt} with parent: {parent_txt}. \
+                                    Root hash is {branch.root_hash} ")
 
         self.branches.sort(key=lambda x: x.depth)
 

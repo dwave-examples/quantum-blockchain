@@ -114,7 +114,7 @@ class TrialManager:
             quantum_hash_length,
             n_zeroes,
             allowable_err,
-            self.seeded_prng.integers(16 ** MAX_RNG_SEED_LEN - 1),
+            self.seeded_prng.integers(16**MAX_RNG_SEED_LEN - 1),
         )
         self.max_mining_attempts = MAX_MINING_ATTEMPTS
 
@@ -238,10 +238,8 @@ class TrialManager:
         current_block = Block.from_json(self.chain_data[-1]["block_json"])
         for miner_id, miner in self.miners.items():
             if current_block.previous_hash not in miner.blockchain.hash_to_branch_lookup:
-                raise Exception(
-                    f"{miner_id} failed to have latest \
-                                block {current_block.hash} with tree structure {miner.blockchain}"
-                )
+                raise Exception(f"{miner_id} failed to have latest \
+                                block {current_block.hash} with tree structure {miner.blockchain}")
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -281,10 +279,8 @@ class TrialManager:
                 self.round_progress += 1
                 return
 
-        raise Exception(
-            f"TrialManager exceeded max mining attempts of {self.max_mining_attempts}\
-                         without {self.mining_miner_id} finding mining a valid block."
-        )
+        raise Exception(f"TrialManager exceeded max mining attempts of {self.max_mining_attempts}\
+                         without {self.mining_miner_id} finding mining a valid block.")
 
     def _validation_step(self) -> None:
         """Chooses the next miner in validation order to perform validation for the mined block.

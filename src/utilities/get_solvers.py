@@ -51,7 +51,7 @@ def get_solver_lists():
 
 
 def get_all_solvers():
-    
+
     qpu, simulated = get_solver_lists()
     solver_list = qpu + simulated
     return {solver.solver_name: solver for solver in solver_list}

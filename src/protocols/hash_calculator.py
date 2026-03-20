@@ -65,7 +65,6 @@ class SolverName(Enum):
     SOLVER2 = "Advantage_system4.1"
     SOLVER3 = "Advantage_system6.4"
 
-
     SIMULATED1 = "simulated_Advantage2_prototype2.6"  # No longer generally available
     SIMULATED2 = "simulated_Advantage_system4.1"
     SIMULATED3 = "simulated_Advantage_system6.4"
@@ -115,10 +114,8 @@ def initialize_solver(solver_name: str) -> HashSolver:
         A HashSolver"""
 
     if solver_name not in [n.value for n in SolverName]:
-        raise Exception(
-            f"Unrecognized solver name {solver_name} passed. \
-                        Allowed names are {[name.value for name in SolverName]}"
-        )
+        raise Exception(f"Unrecognized solver name {solver_name} passed. \
+                        Allowed names are {[name.value for name in SolverName]}")
 
     if "simulated" in solver_name:
         return SimulatedHashSolver(solver_name)

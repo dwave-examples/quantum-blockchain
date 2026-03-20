@@ -424,7 +424,7 @@ def toggle_graph_display(selected_view: str, graphs: list[str]):
     """
 
     return_tuple = ["display-none"] * len(graphs)
-    return_tuple[int(selected_view)-1] = ""
+    return_tuple[int(selected_view) - 1] = ""
 
     return return_tuple
 

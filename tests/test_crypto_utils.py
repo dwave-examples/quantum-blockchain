@@ -35,14 +35,10 @@ def test_hash_functions():
                     msg_2 = input_string[j_1:j_2]
                     hash_2 = crypto_utils.calculate_hash(msg_2)
                     if msg_1 == msg_2:
-                        assert (
-                            hash_1 == hash_2
-                        ), f"Expected equal hashes {hash_1} and {hash_2} \
+                        assert hash_1 == hash_2, f"Expected equal hashes {hash_1} and {hash_2} \
                                                                      for {msg_1} and {msg_1}"
                     else:
-                        assert (
-                            hash_1 != hash_2
-                        ), f"Expected unequal hashes {hash_1} and {hash_2} \
+                        assert hash_1 != hash_2, f"Expected unequal hashes {hash_1} and {hash_2} \
                                                                        for {msg_1} and {msg_1}."
 
 
