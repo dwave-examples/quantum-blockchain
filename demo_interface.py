@@ -98,6 +98,7 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
                 data=options,
                 value=options[0]["value"],
                 allowDeselect=False,
+                **{"aria-label": " ".join(id.split("-"))} if not label else {},
             ),
         ],
     )
@@ -359,7 +360,7 @@ def create_interface():
                                     html.Div(
                                         [
                                             dropdown(
-                                                "Miner View Select",
+                                                "",
                                                 "view-select",
                                                 generate_options(ViewOpt),
                                             ),
@@ -410,6 +411,7 @@ def create_interface():
                                                                             "index": i,
                                                                         },
                                                                         className=f"graph-wrapper {'display-none' if i > 0 else ''}",
+                                                                        tabIndex=f"{10 + i}",
                                                                         children=[
                                                                             dcc.Graph(
                                                                                 id={
@@ -422,8 +424,9 @@ def create_interface():
                                                                                 },
                                                                             ),
                                                                         ],
+                                                                        **{"role": "presentation"}
                                                                     )
-                                                                    for i in range(len(ViewOpt))
+                                                                    for i, view in enumerate(ViewOpt)
                                                                 ],
                                                             ),
                                                             graph_legend(),

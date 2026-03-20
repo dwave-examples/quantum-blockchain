@@ -68,7 +68,6 @@ custom CSS can be added below.
 
 #miner-status-table {
     margin: 0 auto 2rem;
-    width: 100%;
     background-color: white;
     display: inline-block;
     overflow-y: auto;
@@ -96,7 +95,7 @@ custom CSS can be added below.
 }
 
 #miner-status-table td.validated-cell {
-    background-color: hsl(213, 75%, 80%);
+    background-color: hsl(213, 75%, 87%);
 }
 
 #miner-status-table td.rejected-cell {
@@ -204,34 +203,43 @@ custom CSS can be added below.
     margin-left: 2rem;
 }
 
-#view-select {
-    width: 9rem;
-}
-
 #view-select-and-block-status {
     display: flex;
     align-items: center;
 }
 
-#view-select-and-block-status label {
-    display: none;
+@media screen and (max-width: 1350px) {
+    .graph-table-wrapper {
+        flex-direction: column;
+    }
+
+    #miner-status-table {
+        margin-top: 2rem;
+    }
+
+    .graph-table-wrapper > div:first-child {
+        height: 40vw;
+        width: 40vw;
+        margin-right: 0;
+    }
 }
 
 @media screen and (max-width: 1000px) {
-    .graph-table-wrapper {
-        flex-direction: column;
+    #miner-status-table {
+        max-height: none;
     }
 
     .graph-table-wrapper > div:first-child {
         height: 60vw;
         width: 60vw;
-        margin-right: 0;
     }
+}
 
-    #miner-status-table {
-        width: auto;
-        margin-top: 2rem;
-        max-height: 60vw;
-        max-width: 100%;
+@media screen and (max-width: 500px) {
+    #block-status,
+    #miner-status-table th:nth-child(3),
+    #miner-status-table td:nth-child(3),
+    .banner img {
+        display: none;
     }
 }
