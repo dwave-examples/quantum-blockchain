@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 import time
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 import dash
 import plotly.graph_objects as go
@@ -84,7 +84,7 @@ def simulation(
     stored_blockchain_data: list,
     qpu_solver_select_val: str,
     simulated_solver_select_val: str,
-    solver_mode: Union[SolverMode, str],
+    solver_mode: str,
 ) -> tuple[dict, dict]:
     """Manages a single run of the blockchain simulation.
 
@@ -103,18 +103,18 @@ def simulation(
     Args:
         set_progress_miner_table: the progress function for passing data out to update the miner
             status table
-        start_simulation (bool): flag to signal that the 'run' button has been clicked. Passing it
+        start_simulation: flag to signal that the 'run' button has been clicked. Passing it
             this way (instead of the 'run' button itself being used as an input), allows certain
             UI updates (such as disabling/hiding components) to be processed immediately on
             clicking 'run', before the simulation starts
-        num_miners (int): value of the miner slider. Determines how many miners the simulation has.
-        num_blocks (int): the value of the blocks input. Determines how many blocks the simulation
+        num_miners: value of the miner slider. Determines how many miners the simulation has.
+        num_blocks: the value of the blocks input. Determines how many blocks the simulation
             will run for.
-        stored_blockchain_data (list): The data structure storing the current blockchain data.
+        stored_blockchain_data: The data structure storing the current blockchain data.
             This will be empty when starting a new trial, but if the trial has been paused,
             it will contain all the data about the blocks mined up to this point, allowing the
             trial to be restarted from the same state.
-        solver_mode (Union[SolverMode, str]): Value of the solver selector. Outputs as a
+        solver_mode: Value of the solver selector. Outputs as a
             string-typed integer value (e.g. "1", "2"), which can just be immediately typed back
             to int and put into the AVAILABLE_SOLVERS constant to get the solver
 
@@ -204,7 +204,7 @@ def simulation(
 def update_miner_display(
     current_block_data: dict,
     num_miners: int,
-    solver_mode: Union[SolverMode, str],
+    solver_mode: str,
     qpu_select: str,
     simulated_select: str,
     num_blocks: int,
@@ -276,8 +276,8 @@ def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationR
     """Runs a simulation with the selected number of miners and blocks.
 
     Args:
-        run_click (int): unused
-        simulation_is_active (bool): Returns 'True.' Flag to signal that one instance of
+        run_click: unused
+        simulation_is_active: Returns 'True.' Flag to signal that one instance of
             'simulation' callback is already running, so another should not be started"""
     if simulation_is_active:
         raise PreventUpdate
@@ -305,14 +305,14 @@ def pause_simulation(pause_click: int):
     can be restarted by reconstructing the state.
 
     Args:
-        pause_click (int): Unused. The pause button just needs to trigger the callback,
+        pause_click: Unused. The pause button just needs to trigger the callback,
             its value is irrelevant.
 
     Returns:
-        reset-button (dict): makes visible
-        resume-button (dict): makes visible
-        pause-button (dict): hides
-        is-active-simulation (bool): setting this to False allows the 'simulation' callback
+        reset-button: makes visible
+        resume-button: makes visible
+        pause-button: hides
+        is-active-simulation: setting this to False allows the 'simulation' callback
             to be restarted, either by the 'run' button or the 'resume' button.
     """
 
@@ -340,17 +340,17 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
     will then reconstruct its previous state and pick up where it left off.
 
     Args:
-        pause_click (int): Unused.
-        simulation_is_active (bool): Returns 'True.' Flag to signal that one instance of
+        pause_click: Unused.
+        simulation_is_active: Returns 'True.' Flag to signal that one instance of
             'simulation' callback is already running, so another should not be started
 
     Returns:
-        reset-button (dict): hides
-        resume-button (dict): hides
-        pause-button (dict): makes visible
-        start-simulation (bool): Altering this Store (even from True to True) triggers the
+        reset-button: hides
+        resume-button: hides
+        pause-button: makes visible
+        start-simulation: Altering this Store (even from True to True) triggers the
             'simulation' callback, in this case resuming an in-progress simulation.
-        is-active-simulation (bool): setting this to True allows the 'simulation' callback
+        is-active-simulation: setting this to True allows the 'simulation' callback
             to run, if it is not already.
     """
 
@@ -464,8 +464,8 @@ def toggle_left_column(collapse_trigger: int, to_collapse_class: str) -> tuple[s
     """Toggles a 'collapsed' class that hides and shows some aspect of the UI.
 
     Args:
-        collapse_trigger (int): The (total) number of times a collapse button has been clicked.
-        to_collapse_class (str): Current class name of the thing to collapse, 'collapsed' if not
+        collapse_trigger: The (total) number of times a collapse button has been clicked.
+        to_collapse_class: Current class name of the thing to collapse, 'collapsed' if not
             visible, empty string if visible.
 
     Returns:
