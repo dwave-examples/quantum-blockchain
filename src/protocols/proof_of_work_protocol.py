@@ -181,10 +181,8 @@ class ProofOfWorkProtocol:
         if self.quantum_hash_length > 0:
             calculated_hash, dot_vector = self.calculate_quantum_hash(block)
             if len(received_hash) != len(calculated_hash):
-                raise Exception(
-                    f"Expected quantum hash of length {len(calculated_hash)},\
-                                 received hash of length {len(received_hash)}"
-                )
+                raise Exception(f"Expected quantum hash of length {len(calculated_hash)},\
+                                 received hash of length {len(received_hash)}")
             validation_bits = compare_hashes(received_hash, calculated_hash)
 
         else:
@@ -238,10 +236,8 @@ class ProofOfWorkProtocol:
         log_confidence = np.float64(allowable_err)
         for idx, confidence in enumerate(validation_confidence):
             if confidence < 0:
-                raise ValueError(
-                    f"Invalid confidence value {confidence} at index {idx} from bit\
-                                {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}"
-                )
+                raise ValueError(f"Invalid confidence value {confidence} at index {idx} from bit\
+                                {valid_bits[idx]} and confidence value {bitwise_confidence[idx]}")
 
             if confidence == 0:
                 return min_confidence

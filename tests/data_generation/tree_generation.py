@@ -42,7 +42,7 @@ def generate_simple_tree_dicts(
 
     for depth in range(max_depth):
         for branch_num in range(1, num_primary_branches + 1):
-            length = primary_branch_length // (2 ** depth)
+            length = primary_branch_length // (2**depth)
             if length == 0 or blocks_remaining < length:
                 break
             parent = depth * num_primary_branches + max(depth, 1) * branch_num
@@ -65,17 +65,17 @@ def generate_binary_layered_tree_dicts(prim_branches: int = 4, num_layers: int =
     tree_data = []
     prim_branches = 4
     num_layers = 5
-    primary_branch_length = 2 ** num_layers
+    primary_branch_length = 2**num_layers
     tree_data.append({"length": 2 * primary_branch_length})
     for j in range(prim_branches):
         root = random.randint(0, 2 * primary_branch_length - 2)
         tree_data.append({"parent": 0, "root": root, "length": primary_branch_length})
 
     for i in range(1, num_layers):
-        length = primary_branch_length // (2 ** i)
+        length = primary_branch_length // (2**i)
         for j in range(
             prim_branches * (2 ** (i - 1)) - prim_branches + 1,
-            prim_branches * (2 ** i) - prim_branches + 1,
+            prim_branches * (2**i) - prim_branches + 1,
         ):
             parent = j
             for k in range(2):
@@ -199,7 +199,7 @@ def generate_random_tree(
         if not unbranched:  # Find where to start the new branch
             pred_idx = -len(active_branch)
             while len(active_branch) + pred_idx < earliest_branch:
-                branch_loc_roll = random.randint(1, 2 ** 10 - 1)
+                branch_loc_roll = random.randint(1, 2**10 - 1)
                 pred_idx = -math.ceil(branch_range * (10 - math.log2(branch_loc_roll)))
         else:
             pred_idx = -1

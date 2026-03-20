@@ -119,9 +119,7 @@ def test_id_recovery():
             except:
                 raised_exception = True
 
-            assert (
-                raised_exception
-            ), f"Test passed trial ID {orig_id} with invalid solver code \
+            assert raised_exception, f"Test passed trial ID {orig_id} with invalid solver code \
                 {orig_id[6:8]}:{int(orig_id[6:8], 16)}, yielding trial parameters {error_params}."
 
         else:

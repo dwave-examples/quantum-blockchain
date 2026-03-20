@@ -79,9 +79,7 @@ def test_prng_randomization():
             and {manager2.pow.prng_seed} respectively"
 
         for _ in range(num_blocks):
-            assert (
-                manager1.round_order == manager2.round_order
-            ), f"Managers had differing round \
+            assert manager1.round_order == manager2.round_order, f"Managers had differing round \
                         orders of {manager1.round_order} and {manager2.round_order} respectively"
             for __ in range(parameter_set[1]):  # Second param is num_miners. Controls how many
                 manager1.single_step()  # steps are in a given round
