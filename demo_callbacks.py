@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 import time
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 import dash
 import plotly.graph_objects as go
@@ -55,8 +55,8 @@ graph_layout_dict = dict(
 
 
 @dash.callback(
-    Output("reset-button", "className", allow_duplicate=True),
-    Output("pause-button", "className", allow_duplicate=True),
+    Output("reset-button", "style", allow_duplicate=True),
+    Output("pause-button", "style", allow_duplicate=True),
     inputs=[
         Input("start-simulation", "data"),
         State("miner-slider", "value"),
@@ -84,8 +84,8 @@ def simulation(
     stored_blockchain_data: list,
     qpu_solver_select_val: str,
     simulated_solver_select_val: str,
-    solver_mode: str,
-):
+    solver_mode: Union[SolverMode, str],
+) -> tuple[dict, dict]:
     """Manages a single run of the blockchain simulation.
 
     This callback is triggered (indirectly) by the "run" and "resume" buttons. When triggered
@@ -114,9 +114,9 @@ def simulation(
             This will be empty when starting a new trial, but if the trial has been paused,
             it will contain all the data about the blocks mined up to this point, allowing the
             trial to be restarted from the same state.
-        solver_mode (str): Value of the solver selector. Outputs as a string-typed integer value
-            (e.g. "1", "2"), which can just be immediately typed back to int and put into the
-            AVAILABLE_SOLVERS constant to get the solver
+        solver_mode (Union[SolverMode, str]): Value of the solver selector. Outputs as a
+            string-typed integer value (e.g. "1", "2"), which can just be immediately typed back
+            to int and put into the AVAILABLE_SOLVERS constant to get the solver
 
 
     Returns:
@@ -130,15 +130,15 @@ def simulation(
     if ctx.triggered_id != "start-simulation":
         raise PreventUpdate
 
-    solver_mode = SolverMode(solver_mode)
+    solver_mode = SolverMode(int(solver_mode))
     available_qpu_solvers, available_simulated_solvers = get_solver_lists()
     mode_config = {
         SolverMode.QPU: (int(qpu_solver_select_val), available_qpu_solvers),
         SolverMode.SIMULATED: (int(simulated_solver_select_val), available_simulated_solvers),
     }
     dropdown_idx, solvers = mode_config[solver_mode]
-    if dropdown_idx > 0:
-        solvers = [solvers[dropdown_idx - 1]]
+    if dropdown_idx >= 0:
+        solvers = [solvers[dropdown_idx]]
 
     manager = TrialManager(num_blocks, num_miners, solvers)
 
@@ -178,7 +178,7 @@ def simulation(
         if iter_total_time < MIN_SIMULATION_LOOP_TIME:
             time.sleep(MIN_SIMULATION_LOOP_TIME - iter_total_time)
 
-    return "", "display-none"
+    return {}, {"display": "none"}
 
 
 # ======================================================================================================
@@ -186,6 +186,7 @@ def simulation(
 
 @dash.callback(
     Output("miner-graph-and-table", "className", allow_duplicate=True),
+    Output("view-select-and-block-status", "className", allow_duplicate=True),
     Output("prelim-text", "className"),
     Output("block-status", "children", allow_duplicate=True),
     Output("miner-status-table", "children", allow_duplicate=True),
@@ -203,7 +204,7 @@ def simulation(
 def update_miner_display(
     current_block_data: dict,
     num_miners: int,
-    solver_mode: str,
+    solver_mode: Union[SolverMode, str],
     qpu_select: str,
     simulated_select: str,
     num_blocks: int,
@@ -211,16 +212,16 @@ def update_miner_display(
     """Processes blockchain structure data and uses it to update the miner status
     table and the graph display."""
 
-    solver_mode = SolverMode(solver_mode)
-    show_solvers = (solver_mode is SolverMode.QPU and int(qpu_select) == 0) or (
-        solver_mode is SolverMode.SIMULATED and int(simulated_select) == 0
+    solver_mode = SolverMode(int(solver_mode))
+    show_solvers = (solver_mode is SolverMode.QPU and int(qpu_select) == -1) or (
+        solver_mode is SolverMode.SIMULATED and int(simulated_select) == -1
     )
 
     block_number = current_block_data["block_number"]
     block_progress = len(current_block_data["scores"])
 
     block_status_text = (
-        f"Currently mining block number {block_number}"
+        f"Currently mining block {block_number}"
         if block_number < num_blocks or block_progress < num_miners
         else "Finished Simulation"
     )
@@ -229,7 +230,7 @@ def update_miner_display(
 
     graph_loading = "auto" if block_number > 1 else dash.no_update
 
-    return "", "display-none", block_status_text, miner_table_body, graph_loading
+    return "", "", "display-none", block_status_text, miner_table_body, graph_loading
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -242,9 +243,9 @@ def update_miner_display(
 class RunSimulationReturn(NamedTuple):
     """Return type for the ``run_simulation`` callback function."""
 
-    run_button_classname: str = "display-none"
-    reset_button_classname: str = "display-none"
-    pause_button_classname: str = ""
+    run_button_style: dict = {"display": "none"}
+    reset_button_style: dict = {"display": "none"}
+    pause_button_style: dict = {}
     start_simulation: bool = True
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
@@ -255,9 +256,9 @@ class RunSimulationReturn(NamedTuple):
 
 
 @dash.callback(
-    Output("run-button", "className", allow_duplicate=True),
-    Output("reset-button", "className", allow_duplicate=True),
-    Output("pause-button", "className", allow_duplicate=True),
+    Output("run-button", "style", allow_duplicate=True),
+    Output("reset-button", "style", allow_duplicate=True),
+    Output("pause-button", "style", allow_duplicate=True),
     Output("start-simulation", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
@@ -288,9 +289,9 @@ def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationR
 
 
 @dash.callback(
-    Output("reset-button", "className", allow_duplicate=True),
-    Output("resume-button", "className", allow_duplicate=True),
-    Output("pause-button", "className", allow_duplicate=True),
+    Output("reset-button", "style", allow_duplicate=True),
+    Output("resume-button", "style", allow_duplicate=True),
+    Output("pause-button", "style", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
@@ -308,20 +309,23 @@ def pause_simulation(pause_click: int):
             its value is irrelevant.
 
     Returns:
-        reset-button (str): makes visible
-        resume-button (str): makes visible
-        pause-button (str): hides"""
+        reset-button (dict): makes visible
+        resume-button (dict): makes visible
+        pause-button (dict): hides
+        is-active-simulation (bool): setting this to False allows the 'simulation' callback
+            to be restarted, either by the 'run' button or the 'resume' button.
+    """
 
-    return "", "", "display-none", False
+    return {}, {}, {"display": "none"}, False
 
 
 # ========================================================================================
 
 
 @dash.callback(
-    Output("reset-button", "className", allow_duplicate=True),
-    Output("resume-button", "className", allow_duplicate=True),
-    Output("pause-button", "className", allow_duplicate=True),
+    Output("reset-button", "style", allow_duplicate=True),
+    Output("resume-button", "style", allow_duplicate=True),
+    Output("pause-button", "style", allow_duplicate=True),
     Output("start-simulation", "data", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
@@ -341,16 +345,19 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
             'simulation' callback is already running, so another should not be started
 
     Returns:
-        reset-button (str): hides
-        resume-button (str): hides
-        pause-button (str): makes visible
+        reset-button (dict): hides
+        resume-button (dict): hides
+        pause-button (dict): makes visible
         start-simulation (bool): Altering this Store (even from True to True) triggers the
-            'simulation' callback, in this case resuming an in-progress simulation."""
+            'simulation' callback, in this case resuming an in-progress simulation.
+        is-active-simulation (bool): setting this to True allows the 'simulation' callback
+            to run, if it is not already.
+    """
 
     if simulation_is_active:
         raise PreventUpdate
 
-    return "display-none", "display-none", "", True, True
+    return {"display": "none"}, {"display": "none"}, {}, True, True
 
 
 # ========================================================================================
@@ -360,9 +367,10 @@ class ResetSimulationReturn(NamedTuple):
     intro_text_classname: str = ""
     loading_text_classname: str = "display-none"
     miner_graph_and_table_classname: str = "display-none"
-    run_button_classname: str = ""
-    reset_button_classname: str = "display-none"
-    resume_button_classname: str = "display-none"
+    view_select_and_block_status_classname: str = "visibility-hidden"
+    run_button_style: dict = {}
+    reset_button_style: dict = {"display": "none"}
+    resume_button_style: dict = {"display": "none"}
     prelim_text_classname: str = ""
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
@@ -376,9 +384,10 @@ class ResetSimulationReturn(NamedTuple):
     Output("intro-text", "className", allow_duplicate=True),
     Output("loading-text", "className", allow_duplicate=True),
     Output("miner-graph-and-table", "className", allow_duplicate=True),
-    Output("run-button", "className", allow_duplicate=True),
-    Output("reset-button", "className", allow_duplicate=True),
-    Output("resume-button", "className", allow_duplicate=True),
+    Output("view-select-and-block-status", "className", allow_duplicate=True),
+    Output("run-button", "style", allow_duplicate=True),
+    Output("reset-button", "style", allow_duplicate=True),
+    Output("resume-button", "style", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
@@ -415,7 +424,7 @@ def toggle_graph_display(selected_view: str, graphs: list[str]):
     """
 
     return_tuple = ["display-none"] * len(graphs)
-    return_tuple[int(selected_view)] = ""
+    return_tuple[int(selected_view)-1] = ""
 
     return return_tuple
 
@@ -432,7 +441,7 @@ def toggle_graph_display(selected_view: str, graphs: list[str]):
 )
 def toggle_solver_mode(solver_mode):
     """Toggles between QPU Solver mode and Simulated Solver Mode"""
-    solver_mode = SolverMode(solver_mode)
+    solver_mode = SolverMode(int(solver_mode))
 
     if solver_mode is SolverMode.QPU:
         return "", "display-none"

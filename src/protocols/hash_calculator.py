@@ -119,7 +119,8 @@ def initialize_solver(solver_name: str) -> HashSolver:
             f"Unrecognized solver name {solver_name} passed. \
                         Allowed names are {[name.value for name in SolverName]}"
         )
-    elif "simulated" in solver_name:
+
+    if "simulated" in solver_name:
         return SimulatedHashSolver(solver_name)
 
     return QuantumHashSolver(solver_name)

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
+from enum import EnumMeta
 
 import dash_mantine_components as dmc
 from dash import dcc, html
@@ -102,9 +103,7 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
     )
 
 
-def radio(
-    label: str, id: str, options: list, value: int, inline: bool = True, class_name=""
-) -> html.Div:
+def radio(label: str, id: str, options: list, value: str, inline: bool = True) -> html.Div:
     """Radio element for option selection.
 
     Args:
@@ -115,15 +114,19 @@ def radio(
         inline: Whether the options are displayed beside or below each other.
     """
     return html.Div(
-        className=class_name,
+        className="radio-wrapper",
         children=[
-            html.Label(label, htmlFor=id),
-            dcc.RadioItems(
+            dmc.RadioGroup(
                 id=id,
                 className=f"radio{' radio--inline' if inline else ''}",
-                inline=inline,
-                options=options,
+                label=label,
                 value=value,
+                children=dmc.Group(
+                    [
+                        dmc.Radio(option["label"], value=option["value"], color=THEME_COLOR)
+                        for option in options
+                    ]
+                ),
             ),
         ],
     )
@@ -142,14 +145,17 @@ def input_number(label: str, id: str, config: dict) -> html.Div:
     )
 
 
-def generate_options(options_list: list) -> list[dict]:
+def generate_options(options: list | EnumMeta | dict) -> list[dict]:
     """Generates options for dropdowns, checklists, radios, etc."""
-    return [{"label": label, "value": i} for i, label in enumerate(options_list)]
+    if isinstance(options, EnumMeta):
+        return [
+            {"label": option.label, "value": f"{option.value}"} for option in options
+        ]
 
+    if isinstance(options, dict):
+        return [{"label": key, "value": f"{value}"} for key, value in options.items()]
 
-def generate_options_dropdown(options_list: list) -> list[dict]:
-    """Generates options for dropdowns, checklists, radios, etc."""
-    return [{"label": label, "value": f"{i}"} for i, label in enumerate(options_list)]
+    return [{"label": option, "value": f"{option}"} for option in options]
 
 
 def generate_settings_form() -> html.Div:
@@ -160,28 +166,37 @@ def generate_settings_form() -> html.Div:
     """
     available_qpu_solvers, available_simulated_solvers = get_solver_lists()
 
-    qpu_solver_opts = [f"Random {SolverMode.QPU.label}"]
-    qpu_solver_opts += [solver.solver_name for solver in available_qpu_solvers]
+    qpu_solver_opts = {f"Random {SolverMode.QPU.label}": -1}
 
-    simulated_solver_opts = [f"Random {SolverMode.SIMULATED.label}"]
-    simulated_solver_opts += [solver.solver_name for solver in available_simulated_solvers]
+    qpu_solver_opts.update(
+        {
+            solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)
+        }
+    )
 
-    solver_mode_options = [
-        {"label": solver_mode.label, "value": solver_mode.value} for solver_mode in SolverMode
-    ]
+    simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
+    simulated_solver_opts.update(
+        {
+            solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)
+        }
+    )
+
+    solver_mode_options = generate_options(SolverMode)
 
     solver_settings = (
-        radio(
-            "Solver Mode",
-            "solver-mode-select",
-            solver_mode_options,
-            solver_mode_options[0]["value"],
-            class_name="display-none" if HIDE_SIMULATED_SOLVERS else "",
+        html.Div(
+            radio(
+                "Solver Mode",
+                "solver-mode-select",
+                solver_mode_options,
+                solver_mode_options[0]["value"],
+            ),
+            className="display-none" if HIDE_SIMULATED_SOLVERS else "",
         ),
         html.Div(
             id="qpu-dropdown",
             children=dropdown(
-                "Solver", "qpu-solver-select", generate_options_dropdown(qpu_solver_opts)
+                "Solver", "qpu-solver-select", generate_options(qpu_solver_opts)
             ),
         ),
         html.Div(
@@ -190,7 +205,7 @@ def generate_settings_form() -> html.Div:
             children=dropdown(
                 "Solver",
                 "simulated-solver-select",
-                generate_options_dropdown(simulated_solver_opts),
+                generate_options(simulated_solver_opts),
             ),
         ),
     )
@@ -210,12 +225,12 @@ def generate_run_buttons() -> html.Div:
     return html.Div(
         id="button-group",
         children=[
-            html.Button(id="run-button", children="Start Simulation", n_clicks=0, disabled=False),
+            html.Button(id="run-button", children="Start Simulation", className="button"),
             html.Button(
                 id="pause-button",
                 children="Pause",
-                n_clicks=0,
-                className="display-none",
+                className="button",
+                style={"display": "none"},
             ),
             html.Div(
                 id="reset-resume-buttons",
@@ -224,14 +239,14 @@ def generate_run_buttons() -> html.Div:
                     html.Button(
                         id="reset-button",
                         children="Reset",
-                        n_clicks=0,
-                        className="display-none",
+                        className="button",
+                        style={"display": "none"},
                     ),
                     html.Button(
                         id="resume-button",
                         children="Resume",
-                        n_clicks=0,
-                        className="display-none",
+                        className="button",
+                        style={"display": "none"},
                     ),
                 ],
             ),
@@ -247,7 +262,7 @@ def graph_legend() -> html.Div:
         ("background", ABANDONED_BRANCH_POINT_COLOR, "Abandoned"),
         ("background", ACTIVE_BRANCH_POINT_COLOR, "Undecided"),
         ("background", TRUNK_TIP_COLOR, "Available to Mine"),
-        ("border-color", MINING_BLOCK_BORDER_COLOR, "Currently Mining"),
+        ("borderColor", MINING_BLOCK_BORDER_COLOR, "Currently Mining"),
     )
     return html.Div(
         [
@@ -275,8 +290,6 @@ def create_interface():
             dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
-            # Header brand banner
-            html.Header(className="banner", children=[html.Img(src=THUMBNAIL, alt="D-Wave logo")]),
             # Settings and results columns
             html.Main(
                 className="columns-main",
@@ -293,23 +306,46 @@ def create_interface():
                                     html.Div(
                                         className="left-column-layer-2",  # Padding and content wrapper
                                         children=[
-                                            html.H1(MAIN_HEADER),
-                                            html.P(DESCRIPTION),
-                                            generate_settings_form(),
-                                            generate_run_buttons(),
+                                            html.Div(
+                                                [
+                                                    html.H1(MAIN_HEADER),
+                                                    html.P(DESCRIPTION),
+                                                ],
+                                                className="title-section",
+                                            ),
+                                            html.Div(
+                                                [
+                                                    html.Div(
+                                                        html.Div(
+                                                            [
+                                                                generate_settings_form(),
+                                                                generate_run_buttons(),
+                                                            ],
+                                                            className="settings-and-buttons",
+                                                        ),
+                                                        className="settings-and-buttons-wrapper",
+                                                    ),
+                                                    # Left column collapse button
+                                                    html.Div(
+                                                        html.Button(
+                                                            id={
+                                                                "type": "collapse-trigger",
+                                                                "index": 0,
+                                                            },
+                                                            className="left-column-collapse",
+                                                            title="Collapse sidebar",
+                                                            children=[
+                                                                html.Div(className="collapse-arrow")
+                                                            ],
+                                                            **{"aria-expanded": "true"},
+                                                        ),
+                                                    ),
+                                                ],
+                                                className="form-section",
+                                            ),
                                         ],
                                     )
                                 ],
-                            ),
-                            # Left column collapse button
-                            html.Div(
-                                html.Button(
-                                    id={"type": "collapse-trigger", "index": 0},
-                                    className="left-column-collapse",
-                                    title="Collapse sidebar",
-                                    children=[html.Div(className="collapse-arrow")],
-                                    **{"aria-expanded": "true"},
-                                ),
                             ),
                         ],
                     ),
@@ -317,78 +353,89 @@ def create_interface():
                     html.Div(
                         className="right-column",
                         children=[
-                            html.Div(
-                                id="prelim-text",
-                                className="",
-                                children=[
-                                    html.Div(
-                                        children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
-                                        id="intro-text",
-                                    ),
-                                    html.H3(
-                                        LOADING_TEXT,
-                                        id="loading-text",
-                                        className="display-none",
-                                    ),
-                                ],
-                            ),
-                            html.Div(
-                                className="display-none",
-                                id="miner-graph-and-table",
+                            html.Header(
+                                className="banner",
                                 children=[
                                     html.Div(
                                         [
                                             dropdown(
-                                                "",
+                                                "Miner View Select",
                                                 "view-select",
-                                                generate_options_dropdown(
-                                                    [view.label for view in ViewOpt]
-                                                ),
+                                                generate_options(ViewOpt),
                                             ),
                                             html.H4(id="block-status"),
                                         ],
+                                        className="visibility-hidden",
+                                        id="view-select-and-block-status",
                                     ),
-                                    html.Div(
-                                        className="graph-table-wrapper",
-                                        children=[
-                                            html.Div(
-                                                [
-                                                    dcc.Loading(
-                                                        parent_className="graph-loading",
-                                                        id="graph-loading",
-                                                        type="circle",
-                                                        color=THEME_COLOR,
-                                                        children=[
-                                                            html.Div(
-                                                                id={
-                                                                    "type": "view-wrapper",
-                                                                    "index": i,
-                                                                },
-                                                                className=f"graph-wrapper {'display-none' if i > 0 else ''}",
-                                                                children=[
-                                                                    dcc.Graph(
-                                                                        id={
-                                                                            "type": "view-graph",
-                                                                            "index": i,
-                                                                        },
-                                                                        responsive=True,
-                                                                        config={
-                                                                            "displayModeBar": False
-                                                                        },
-                                                                    ),
-                                                                ],
-                                                            )
-                                                            for i in range(len(ViewOpt))
-                                                        ],
-                                                    ),
-                                                    graph_legend(),
-                                                ]
-                                            ),
-                                            html.Div(html.Table(id="miner-status-table")),
-                                        ],
-                                    ),
+                                    html.Img(src=THUMBNAIL, alt="D-Wave logo"),
                                 ],
                             ),
+                            html.Div(
+                                className="tab-content-wrapper",
+                                children=[
+                                    html.Div(
+                                        id="prelim-text",
+                                        className="",
+                                        children=[
+                                            html.Div(
+                                                children=[html.H3(INTRO_TEXT), html.P(INTRO_SUBTEXT)],
+                                                id="intro-text",
+                                            ),
+                                            html.H3(
+                                                LOADING_TEXT,
+                                                id="loading-text",
+                                                className="display-none",
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        className="display-none",
+                                        id="miner-graph-and-table",
+                                        children=[
+                                            html.Div(
+                                                className="graph-table-wrapper",
+                                                children=[
+                                                    html.Div(
+                                                        [
+                                                            dcc.Loading(
+                                                                parent_className="graph-loading",
+                                                                id="graph-loading",
+                                                                type="circle",
+                                                                color=THEME_COLOR,
+                                                                children=[
+                                                                    html.Div(
+                                                                        id={
+                                                                            "type": "view-wrapper",
+                                                                            "index": i,
+                                                                        },
+                                                                        className=f"graph-wrapper {'display-none' if i > 0 else ''}",
+                                                                        children=[
+                                                                            dcc.Graph(
+                                                                                id={
+                                                                                    "type": "view-graph",
+                                                                                    "index": i,
+                                                                                },
+                                                                                responsive=True,
+                                                                                config={
+                                                                                    "displayModeBar": False
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                    )
+                                                                    for i in range(len(ViewOpt))
+                                                                ],
+                                                            ),
+                                                            graph_legend(),
+                                                        ]
+                                                    ),
+                                                    html.Div(html.Table(id="miner-status-table")),
+                                                ],
+                                            ),
+                                        ],
+                                    ),
+                                ]
+                            )
                         ],
                     ),
                 ],
