@@ -36,6 +36,7 @@ from src.protocols.trial_identification import generate_trial_id
 from src.utilities.display_update import render_miner_status
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
+from src.utilities.export_simulation_data import export_simulation_data
 
 graph_layout_dict = dict(
     autosize=False,
@@ -57,6 +58,9 @@ graph_layout_dict = dict(
 @dash.callback(
     Output("reset-button", "style", allow_duplicate=True),
     Output("pause-button", "style", allow_duplicate=True),
+    Output("save-button", "style", allow_duplicate=True),
+    Output("save-button", "children", allow_duplicate=True),
+    Output("save-button", "disabled", allow_duplicate=True),
     inputs=[
         Input("start-simulation", "data"),
         State("miner-slider", "value"),
@@ -85,7 +89,7 @@ def simulation(
     qpu_solver_select_val: str,
     simulated_solver_select_val: str,
     solver_mode: str,
-) -> tuple[dict, dict]:
+) -> tuple[dict, dict, dict, str, bool]:
     """Manages a single run of the blockchain simulation.
 
     This callback is triggered (indirectly) by the "run" and "resume" buttons. When triggered
@@ -141,8 +145,10 @@ def simulation(
         solvers = [solvers[dropdown_idx]]
 
     manager = TrialManager(num_blocks, num_miners, solvers)
+    trial_id = generate_trial_id(manager)
 
-    print(f"Starting trial with ID {generate_trial_id(manager)}")
+    print(f"Starting trial with ID {trial_id}")
+    set_props("simulation-id", {"data": trial_id})
     if len(stored_blockchain_data) > 0:
         manager.restart_trial(stored_blockchain_data)
 
@@ -178,7 +184,11 @@ def simulation(
         if iter_total_time < MIN_SIMULATION_LOOP_TIME:
             time.sleep(MIN_SIMULATION_LOOP_TIME - iter_total_time)
 
-    return {}, {"display": "none"}
+    set_props("blockchain-structure-data", {"data": manager.chain_data})
+    time.sleep(0.3)
+
+    # Show reset button, hide pause button, show save button with enabled state and default text
+    return {}, {"display": "none"}, {}, "Save Data", False #TODO check with Kate about what 'style' covers
 
 
 # ======================================================================================================
@@ -359,6 +369,25 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
 
     return {"display": "none"}, {"display": "none"}, {}, True, True
 
+# =========================================================================================
+
+@dash.callback(
+    Output("save-button", "children", allow_duplicate=True),
+    Output("save-button", "disabled", allow_duplicate=True),
+    inputs=[
+        Input("save-button", "n_clicks"),
+        State("blockchain-structure-data", "data"),
+        State("simulation-id", "data"),
+    ],
+    prevent_initial_call=True,
+)
+def save_simulation_data(n_clicks: int, blockchain_data: list, simulation_id: str):
+    """Saves the current trial data to a file when the 'save' button is clicked."""
+    if n_clicks == 0:
+        raise PreventUpdate
+    
+    export_simulation_data(blockchain_data, simulation_id)
+    return "Data Saved", True  # Change button text to indicate data has been saved and disable it to prevent multiple clicks
 
 # ========================================================================================
 class ResetSimulationReturn(NamedTuple):
@@ -371,6 +400,7 @@ class ResetSimulationReturn(NamedTuple):
     run_button_style: dict = {}
     reset_button_style: dict = {"display": "none"}
     resume_button_style: dict = {"display": "none"}
+    save_button_style: dict = {"display": "none"}
     prelim_text_classname: str = ""
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
@@ -388,6 +418,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("run-button", "style", allow_duplicate=True),
     Output("reset-button", "style", allow_duplicate=True),
     Output("resume-button", "style", allow_duplicate=True),
+    Output("save-button", "style", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
