@@ -73,6 +73,7 @@ class GraphBranch(ScoreTreeBranch):
         self.point_colors = [point_color] * len(self.node_list)
         self.edge_color = edge_color
         self.depth_adjustment = 0
+        self.customdata = []
 
     @property
     def start_idx(self) -> int:
@@ -161,8 +162,11 @@ class SpiralPlotter:
         return [GRAPH_POINT_MIN_SIZE + i * step_size for i in range(self.num_nodes + 1)]
 
     def import_plotting_data(
-        self, tree_data: BlockScoreTree, mining_hashes: list[str] | None = None
-    ):
+        self, 
+        tree_data: BlockScoreTree, 
+        hovertext_data: list,
+        mining_hashes: list[str]|None = None
+        ):
         """Takes a BlockScoreTree object and processes the data to prepare it to be plotted. When
         the data is imported, each of the branches of the original BlockScoreTree has its
         data used to define a GraphBranch: a child class of ScoreTreeBranch which uses the same
@@ -179,7 +183,7 @@ class SpiralPlotter:
 
         Args:
             tree_data (BlockScoreTree): a BlockScoreTree object containing data to be
-                plotted on a spiral plot."""
+                plotted on a spiral plot. """
 
         self.tree = tree_data
         self.tree.refactor_branches()
@@ -211,6 +215,14 @@ class SpiralPlotter:
         sorted_branches = tree_data.branches
         sorted_branches.sort(key=lambda x: x.depth)
 
+        data_labels = hovertext_data[0]
+        self.hover_template = "".join([
+                                    f"{label}:" + " %{customdata[" + f"{idx}" + "]}<br>" 
+                                    if idx < len(data_labels)-1 
+                                    else f"{label}:" + " %{customdata[" + f"{idx}" + "]}" 
+                                    for idx, label in enumerate(data_labels)
+                                    ])
+
         for branch in sorted_branches[1:]:
 
             new_graph_branch = GraphBranch(branch)
@@ -225,7 +237,15 @@ class SpiralPlotter:
 
             self.branches.append(new_graph_branch)
 
-    def calculate_points_per_rev(self):
+        for branch in self.branches:
+            for block in branch:
+                branch.customdata.append(hovertext_data[block.block_number])
+
+            if len(branch.customdata) != len(branch):
+                raise ValueError("Customdata length does not match number of points in branch")
+
+
+    def calculate_points_per_rev(self): 
         """Calculates how many points will be drawn in a single turn of the spiral. This changes
         dynamically so that graphs with small numbers of points will still have a distinctly
         spiral shape, but graphs with large numbers will be compressed enough to display data
@@ -453,7 +473,7 @@ class SpiralPlotter:
         for branch in self.branches:
 
             edges = go.Scatter(
-                x=branch.x_edges, y=branch.y_edges, mode="lines", line={"color": branch.edge_color}
+                x=branch.x_edges, y=branch.y_edges, mode="lines", line={"color": branch.edge_color}, hovertemplate=[None for _ in branch.x_edges]
             )
             edge_traces.append(edges)
 
@@ -462,6 +482,8 @@ class SpiralPlotter:
                 y=branch.y_points,
                 mode="markers",
                 marker={"color": branch.point_colors, "size": branch.size_chart},
+                customdata=branch.customdata,
+                hovertemplate=self.hover_template,
             )
 
             point_traces.append(points)
@@ -481,6 +503,8 @@ class SpiralPlotter:
                         "size": mining_size,
                         "line": {"width": 4, "color": MINING_BLOCK_BORDER_COLOR},
                     },
+                    customdata=[branch.customdata[mining_idx]],
+                    hovertemplate=self.hover_template,
                 )
                 point_traces.append(mining_trace)
 
@@ -497,7 +521,7 @@ class SpiralPlotter:
         self,
         tree: BlockScoreTree,
         mining_hashes: list[str],
-        is_global_tree: bool = False,
+        hovertext_data: list,
     ) -> go.Figure:
         """Given a BlockScoreTree object, creates a spiral plot displaying that tree. Calls all
         the necessary SpiralPlotter functions in order.
@@ -505,10 +529,7 @@ class SpiralPlotter:
         Args:
             tree (BlockScoreTree): the BlockScoreTree object you wish to plot.
             mining_hash (str): the hash of the block that is currently being mined.
-            is_global_tree (bool): Flag indicating whether the tree should be recolored to
-                represent the global view. Should be left on defaults for individual miner
-                graphs.
-
+            hovertext_data (list): a list of hovertext data for each block in the tree. TODO
 
         Returns:
             plot (go.Figure): a Plotly Graph Objects figure, containing the spiral plot for
@@ -517,8 +538,8 @@ class SpiralPlotter:
         """
 
         if len(mining_hashes) > 1:
-            self.import_plotting_data(tree_data=tree, mining_hashes=mining_hashes)
+            self.import_plotting_data(tree_data=tree, mining_hashes=mining_hashes, hovertext_data=hovertext_data)
         else:
-            self.import_plotting_data(tree_data=tree)
-        plot = self.draw_spiral(mining_hashes, is_global_tree)
+            self.import_plotting_data(tree_data=tree, hovertext_data=hovertext_data)
+        plot = self.draw_spiral(mining_hashes, is_global=bool("Acceptance Rate" in hovertext_data[0]))
         return plot

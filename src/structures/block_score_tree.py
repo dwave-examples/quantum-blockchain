@@ -147,6 +147,14 @@ class BlockScoreTree:
         all_blocks = [block for branch in self.branches for block in branch]
         most_recent_block = max(all_blocks, key=lambda node: node.block_number)
         return most_recent_block
+    
+    @property
+    def block_list(self):
+        block_list = []
+        for branch in self.branches:
+            block_list += branch.node_list
+
+        return sorted(block_list, key=lambda x: x.block_number)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================

@@ -144,6 +144,7 @@ class Miner:
         block_data_dict = dict(
             block_json=new_block.to_json,
             block_number=new_blocknode.block_number,
+            block_height=new_blocknode.block_height,
             scores={self.id: block_score},
             solvers={self.id: solver},
             miner_id=self.id,

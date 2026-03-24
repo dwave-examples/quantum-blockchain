@@ -15,6 +15,7 @@
 from dash import html
 
 from demo_configs import MINER_NAMES
+from src.structures.block import Block
 
 
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
@@ -74,3 +75,21 @@ def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=
         table_rows.append(html.Tr(new_row))
 
     return [table_head, html.Tbody(table_rows)]
+
+def compile_hover_data(block_data: list[dict], extra_data: list) -> list:
+    data_labels = ["Block Number", "Block Height", "Miner ID", "Solver"]
+    if "block_score" in extra_data[0]:
+        data_labels += ["Block Score", "Cumulative Score"]
+    else:
+        data_labels += ["Acceptance Rate"]
+    data_list = [data_labels]
+
+    for data_dict, extra_dict in zip(block_data, extra_data):
+        block_number = data_dict["block_number"]
+        block_height = data_dict["block_height"]
+        miner_id = data_dict["miner_id"]
+        solver = data_dict["solvers"][miner_id]
+        block_data_list = [block_number, block_height, miner_id, solver] + [val for val in extra_dict.values()]
+        data_list.append(block_data_list)
+
+    return data_list

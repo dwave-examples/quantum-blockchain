@@ -33,10 +33,10 @@ from demo_configs import MIN_SIMULATION_LOOP_TIME
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode, ViewOpt
 from src.protocols.trial_identification import generate_trial_id
-from src.utilities.display_update import render_miner_status
+from src.utilities.display_update import render_miner_status, compile_hover_data
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.utilities.export_simulation_data import export_simulation_data
+from src.utilities.save_simulation_data import save_simulation_data
 
 graph_layout_dict = dict(
     autosize=False,
@@ -168,13 +168,17 @@ def simulation(
 
         if manager.round_progress == 0:  # round_progress resets to 0 at the end of a round
             mining_hashes = manager.mining_hashes
-            global_fig = plotter.create_plot_from_tree(manager.global_tree, mining_hashes, True)
+            block_acceptance_rates = manager.get_acceptance_rates()
+            hovertext_data = compile_hover_data(manager.chain_data, block_acceptance_rates)
+            global_fig = plotter.create_plot_from_tree(manager.global_tree, mining_hashes, hovertext_data)
             global_fig.update_layout(**graph_layout_dict)
             set_props({"type": "view-graph", "index": 0}, {"figure": global_fig})
         elif miner_id in ViewOpt._member_names_:
             view_miner = manager.miners[miner_id]
             mining_hash = [manager.mining_hashes[0]]
-            miner_fig = plotter.create_plot_from_tree(view_miner.blockchain, mining_hash)
+            miner_scores = [{"block_score": block.block_score, "total_score": block.total_score} for block in view_miner.blockchain.block_list[1:]]
+            hovertext_data = compile_hover_data(manager.chain_data, miner_scores)
+            miner_fig = plotter.create_plot_from_tree(view_miner.blockchain, mining_hash, hovertext_data)
             miner_fig.update_layout(**graph_layout_dict)
             view_idx = ViewOpt[miner_id].value - 1  # ViewOpt vals are off by 1 from miner names
             set_props({"type": "view-graph", "index": view_idx}, {"figure": miner_fig})
@@ -386,7 +390,7 @@ def save_simulation_data(n_clicks: int, blockchain_data: list, simulation_id: st
     if n_clicks == 0:
         raise PreventUpdate
     
-    export_simulation_data(blockchain_data, simulation_id)
+    save_simulation_data(blockchain_data, simulation_id)
     return "Data Saved", True  # Change button text to indicate data has been saved and disable it to prevent multiple clicks
 
 # ========================================================================================

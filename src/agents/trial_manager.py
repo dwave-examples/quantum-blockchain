@@ -114,7 +114,7 @@ class TrialManager:
             quantum_hash_length,
             n_zeroes,
             allowable_err,
-            self.seeded_prng.integers(16**MAX_RNG_SEED_LEN - 1),
+            int(self.seeded_prng.integers(16**MAX_RNG_SEED_LEN - 1)),
         )
         self.max_mining_attempts = MAX_MINING_ATTEMPTS
 
@@ -123,6 +123,7 @@ class TrialManager:
         self.global_tree = BlockScoreTree()
         self.global_tree.add_block(self.genesis_block.hash, self.genesis_block.previous_hash, 1.0)
         self.chain_data = []
+        self.pass_rates = []
         self._initialize_miners(MINER_NAMES[:num_miners])
 
         # Attributes for tracking round status and progress
@@ -316,7 +317,7 @@ class TrialManager:
             if last_common_hash_tuple[0] not in self.global_tree.trunk:
                 next_trunk = self.global_tree.hash_to_branch_lookup[last_common_hash_tuple[0]]
                 self.global_tree.promote_to_trunk(next_trunk, last_common_hash_tuple[0])
-
+        
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
     #                             SECTION: Public Access Functions                                        |
@@ -386,3 +387,12 @@ class TrialManager:
         self._reload_blockchain(blockchain_list)
         self._reinitialize_miners()
         self._update_global_tree_structure()
+
+    def get_acceptance_rates(self):
+
+        pass_rates = [
+                    len([m for m in self.miners.values() if block.hash in m.blockchain.trunk])
+                    for block in self.global_tree.block_list[1:]
+                    ]
+        
+        return [{"acceptance_rate": f"{rate}/{self.num_miners}"} for rate in pass_rates]
