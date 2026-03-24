@@ -385,7 +385,7 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
     ],
     prevent_initial_call=True,
 )
-def save_simulation_data(n_clicks: int, blockchain_data: list, simulation_id: str):
+def save_data(n_clicks: int, blockchain_data: list, simulation_id: str):
     """Saves the current trial data to a file when the 'save' button is clicked."""
     if n_clicks == 0:
         raise PreventUpdate
