@@ -374,7 +374,10 @@ class BlockScoreTree:
 
         base_hashes = set(base_branch.hash_to_index_lookup.keys())
         if not base_hashes.issubset(set(self.hash_to_branch_lookup.keys())):
-            raise Exception()
+            raise Exception(
+                f"When promoting branch {branch_to_promote.base.hash}, found missing \
+                hashes: {base_hashes - set(self.hash_to_branch_lookup.keys())} after the promotion."
+                )
 
         return base_branch
 
@@ -419,7 +422,10 @@ class BlockScoreTree:
         demoted_hashes = set(demoted_section.hash_to_index_lookup.keys())
         self._append_branch(demoted_section)
         if not demoted_hashes.issubset(set(self.hash_to_branch_lookup.keys())):
-            raise Exception()
+            raise Exception(
+                f"When demoting branch {branch_to_truncate.base.hash}, found missing hashes:\
+                 {demoted_hashes - set(self.hash_to_branch_lookup.keys())} after the demotion."
+                )
 
     def refactor_branches(self):
         """This function rearranges the branches of the tree to put branches with the highest
@@ -445,7 +451,7 @@ class BlockScoreTree:
                 for branch in pruned_layer:
                     max_child = max([c for c in branch.children], key=lambda x: x.tip.block_number)
                     if max_child.tip.block_number > branch.tip.block_number:
-                        self.promote_branch(max_child)
+                        self.promote_branch(self.hash_to_branch_lookup[max_child.base.hash])
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
