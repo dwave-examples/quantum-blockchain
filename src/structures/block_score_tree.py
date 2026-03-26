@@ -449,7 +449,7 @@ class BlockScoreTree:
             for layer in reordered_descendants:
                 pruned_layer = [branch for branch in layer if len(branch.children) > 0]
                 for branch in pruned_layer:
-                    max_child = max([c for c in branch.children], key=lambda x: x.tip.block_number)
+                    max_child = max(branch.children, key=lambda x: x.tip.block_number)
                     if max_child.tip.block_number > branch.tip.block_number:
                         self.promote_branch(self.hash_to_branch_lookup[max_child.base.hash])
 
