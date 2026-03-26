@@ -59,7 +59,7 @@ def generate_trial_id(manager: TrialManager) -> str:
 
 
 def get_trial_params_from_id(trial_id: str) -> dict:
-    """ Takes in a trial ID and uses it to recover a diction of initialization parameters for 
+    """ Takes in a trial ID and uses it to recover a dictionary of initialization parameters for 
     TrialManager corresponding to that trial ID. Passing this dict to a TrialManager object
     as initialization kwargs will allow for replication of the corresponding trial: all of
     num_blocks, num_miners, the solver list, the quantum hash length, n_zeroes, allowable_err, 
