@@ -241,6 +241,12 @@ def generate_run_buttons() -> html.Div:
                         className="button",
                         style={"display": "none"},
                     ),
+                    html.Button(
+                        id="save-button",
+                        children="Save Data",
+                        className="button",
+                        style={"display": "none"},
+                    ),
                 ],
             ),
         ],
@@ -283,6 +289,7 @@ def create_interface():
             dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
+            dcc.Store(id="simulation-id", data=""),
             # Settings and results columns
             html.Main(
                 className="columns-main",
