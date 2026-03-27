@@ -6,12 +6,12 @@ from src.structures.block import Block
 
 def save_simulation_data(blockchain_data: list, simulation_id: str):
     """Export the blockchain data from a simulation to a CSV file in the outputs directory, using 
-    the simulation ID as a filename. 
+    the simulation ID as the first part of the filename. 
     
     Args:
         blockchain_data (list): A list of dictionaries, each containing data for a single block.
-        simulation_id (str): The unique identifier for the simulation, used as the filename for 
-            the output CSV."""
+        simulation_id (str): The unique identifier for the simulation, used as the first part of the
+        filename for the output CSV."""
 
     # Format the blockchain data so that each dictionary in the list is a single line of a CSV file, with the keys as the column headers. 
     # This makes it easier to read and analyze the data in a spreadsheet program or with pandas.
@@ -39,6 +39,9 @@ def save_simulation_data(blockchain_data: list, simulation_id: str):
     # Save the data to a CSV file in the outputs directory, with the filename as the simulation ID.
     # Check if a file with the same name already exists, and if so, append a number to the filename
     # to avoid overwriting.
+    if not os.path.exists(OUTPUTS_PATH):
+        os.makedirs(OUTPUTS_PATH)
+
     output_file = os.path.join(OUTPUTS_PATH, f"{simulation_id}_blockchain_data.csv")
     if os.path.exists(os.path.join(OUTPUTS_PATH, f"{simulation_id}_blockchain_data.csv")):
         i = 1
