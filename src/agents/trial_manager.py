@@ -22,7 +22,7 @@ import numpy as np
 
 from demo_configs import ALLOWABLE_ERR, MINER_NAMES, N_ZEROES, QUANTUM_HASH_LENGTH
 from src.agents.miner import Miner
-from src.protocols.hash_calculator import HashSolver, SolverName
+from src.protocols.hash_calculator import HashSolver
 from src.protocols.proof_of_work_protocol import ProofOfWorkProtocol
 from src.structures.block import Block
 from src.structures.block_score_tree import BlockScoreTree
@@ -52,7 +52,7 @@ def initialize_genesis_block(
     Returns:
         genesis_block (Block): If called with the default args, this Block will always have
             the same hash on every invocation, allowing for a consistent seed and starting
-            point for different blockchain trials."""
+            point for different blockchain simulations."""
 
     genesis_block = Block(miner_id, previous_block_hash, timestamp)
     genesis_block.set_quantum_hash()
@@ -62,9 +62,9 @@ def initialize_genesis_block(
 
 
 class TrialManager:
-    """This class manages a trial of blockchain mining. The purpose of this
+    """This class manages a single simulation of blockchain mining. The purpose of this
     class is to be able to iterate through a series of blocks and maintain
-    the state of the trial as it progresses."""
+    the state of the simulation as it progresses."""
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # =====================================================================================================
@@ -85,26 +85,23 @@ class TrialManager:
         """Initializes a new TrialManager object.
 
         Args:
-            num_blocks (int): the number of blocks the trial will run before it concludes
+            num_blocks (int): the number of blocks the simulation will run before it concludes
             miner_names (list[str]): a list of unique strings to use as names of miners in the
-                trial. TrialManager will use all such names passed, thus the length of the list
-                will determine the number of miners in the trial.
+                simulation. TrialManager will use all such names passed, thus the length of the list
+                will determine the number of miners in the simulation.
             solvers (list[HashSolver]): a list of HashSolver objects. One will be selected each
-                time a miner attempts to mine or validate. To run a trial with a single solver,
+                time a miner attempts to mine or validate. To run a simulation with a single solver,
                 pass a list containing only that solver.
             quantum_hash_length (int): length in bits of the quantum hash. This partly determines
-                the cross-validation difficulty for the trial.
+                the cross-validation difficulty for the simulation.
             n_zeroes (int): the number of leading zeros a block hash must have to pass the PoW
                 requirement. This determines how difficult mining is: each extra 0 will (on
                 average) double the number of attempts required to mine successfully.
             allowable_err (int): how much error is allowed in cross validation. Increasing
                 this will make cross-validation easier: see the 'scoring' function
-                in the ProofOfWorkProtocol class for a full mathematical description.
+                in the ProofOfWorkProtocol class for a full mathematical description."""
 
-        Instantiates:
-            TrialMiners object: object which declares and initializes miners for the trial."""
-
-        # Trial Parameters
+        # Simulation Parameters
         self.prng_seed = prng_seed
         self.seeded_prng = np.random.default_rng(self.prng_seed)
         self.max_blocks = max_blocks
@@ -160,7 +157,7 @@ class TrialManager:
         return [primary_hash] + list(hash_set)
 
     def _initialize_miners(self, miner_names: list[str]) -> None:
-        """Creates all the Miner objects necessary to run the trial, passing each one an id, a
+        """Creates all the Miner objects necessary to run the simulation, passing each one an id, a
         ProofOrWorkProtocol object (which should contain initialized solvers) and the genesis
         block to form the basis for the new blockchain.
 
@@ -181,7 +178,7 @@ class TrialManager:
         Args:
             blockchain_list (list[dict]): A list containing dicts of blockchain data, including
                 JSON-formatted blocks. The list should also include scoring data for all
-                the miners in the trial, but this won't be checked until reinitialize_miners
+                the miners in the simulation, but this won't be checked until reinitialize_miners
                 is called (see that docstring for more info).
 
         Modifies:
@@ -205,7 +202,7 @@ class TrialManager:
         must have a sub-dictionary named 'scores', whose keys match the miner names that the
         TrialManager object was instantiated with. The exception is the final block in
         self.chain_data, which can be missing some or all of the miner scores without causing
-        an error. Should only be called by the restart_trial method, after _reload_blockchain
+        an error. Should only be called by the restart_simulation method, after _reload_blockchain
         has been called to populate the self.chain_data list with suitable data.
 
         Modifies:
@@ -258,8 +255,8 @@ class TrialManager:
         self.seeded_prng.shuffle(self.round_order)
 
     def _mining_step(self) -> None:
-        """Executes the mining step for the single round of the trial. Miner mines a single block
-        (or times out after exceeding the maximum number of attempts) and stores its
+        """Executes the mining step for the single round of the simulation. Miner mines a single 
+        block (or times out after exceeding the maximum number of attempts) and stores its
         serialized form in self.block_broadcast.
 
         Modifies:
@@ -344,22 +341,23 @@ class TrialManager:
 
         return miner_id
 
-    def run_trial(self, num_blocks: int | None = None) -> None:
-        """Runs the trial through some number of complete block mining and validation events. By
-            default it will run until the trial finishes, but this can be overridden by passing a
-            smaller number as an argument.
+    def run_simulation(self, num_blocks: int | None = None) -> None:
+        """Runs the simulation through some number of complete block mining and validation events. 
+        By default it will run until the simulation finishes, but this can be overridden by passing
+        a smaller number as an argument.
 
         Args:
-            num_blocks (int): Defaults to None, which will simply cause the trial to run to completion. If an integer
-                less than or equal to the number of blocks remaining in the trial is passed, TrialManager will run for
-                only that number of blocks, allowing the trial to be broken up into stages if desired. Passing more than
+            num_blocks (int): Defaults to None, which will simply cause the simulation to run to completion. If an integer
+                less than or equal to the number of blocks remaining in the simulation is passed, TrialManager will run for
+                only that number of blocks, allowing the simulation to be broken up into stages if desired. Passing more than
                 the remaining number will raise an Exception."""
 
         if num_blocks is None:
             stopping_block = self.max_blocks
         elif num_blocks > self.max_blocks - self.blocks_mined:
             raise Exception(
-                f"Attempted to run trial for {num_blocks} rounds, with only {self.max_blocks - self.blocks_mined} blocks remaining."
+                f"Attempted to run simulation for {num_blocks} rounds, with only \
+                {self.max_blocks - self.blocks_mined} blocks remaining."
             )
         else:
             stopping_block = self.blocks_mined + num_blocks
@@ -367,12 +365,12 @@ class TrialManager:
         while self.blocks_mined < stopping_block:
             self.single_step()
 
-    def restart_trial(self, blockchain_list: list[dict]) -> None:
-        """Restarts an interrupted trial, reloading all necessary blockchain and miner data from
-        the list passed as an argument.
+    def restart_simulation(self, blockchain_list: list[dict]) -> None:
+        """Restarts an interrupted simulation, reloading all necessary blockchain and miner data 
+        from the list passed as an argument.
 
         Args:
-            blockchain_list (list[dict]): A list containing data for the interrupted trial.
+            blockchain_list (list[dict]): A list containing data for the interrupted simulation.
                 For this function to complete successfully, the list must include a dict for
                 each block in the chain, with a JSON-formatted copy of that block as well
                 as a dict of scores that the miners assigned to that block (keyed by miner id).

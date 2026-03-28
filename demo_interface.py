@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from enum import EnumMeta
+import copy
 
 import dash_mantine_components as dmc
 from dash import dcc, html
@@ -26,6 +27,7 @@ from demo_configs import (
     ABANDONED_BRANCH_POINT_COLOR,
     ACTIVE_BRANCH_POINT_COLOR,
     DESCRIPTION,
+    REPLICATION_ID,
     HIDE_SIMULATED_SOLVERS,
     INTRO_SUBTEXT,
     INTRO_TEXT,
@@ -41,8 +43,9 @@ from demo_configs import (
     TRUNK_TIP_COLOR,
 )
 from src.demo_enums import SolverMode, ViewOpt
-from src.utilities.get_solvers import get_solver_lists
-
+from src.utilities.get_solvers import get_solver_lists, SolverName
+from src.protocols.simulation_identification import get_simulation_params_from_id
+from src.utilities.save_simulation_data import get_save_data_filename
 THEME_COLOR = "#2d4376"
 
 ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
@@ -50,6 +53,47 @@ ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_nam
 GRAPH_VIEW_LABELS = ["Global View"] + [
     f'{" ".join(MINER_NAMES[i].split("_"))} View' for i in range(NUM_MINER_VIEWS)
 ]
+
+def generate_solver_configs():
+    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
+
+    qpu_solver_opts = {f"Random {SolverMode.QPU.label}": -1}
+
+    qpu_solver_opts.update(
+        {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
+    )
+
+    qpu_solver_configs = dict(   
+        label="Solver", 
+        id="qpu-solver-select", 
+        options = generate_options(qpu_solver_opts), 
+        initial_idx=0,
+        start_disabled=False
+    )
+
+    simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
+    simulated_solver_opts.update(
+        {solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)}
+    )
+
+    simulated_solver_configs = dict(   
+        label="Solver", 
+        id="simulated-solver-select", 
+        options = generate_options(simulated_solver_opts), 
+        initial_idx=0,
+        start_disabled=False
+    )
+
+    solver_mode_options = generate_options(SolverMode)
+
+    mode_select_configs = dict(                
+        label="Solver Mode",
+        id="solver-mode-select",
+        options=solver_mode_options,
+        value=solver_mode_options[0]["value"],
+    )
+
+    return qpu_solver_configs, simulated_solver_configs, mode_select_configs
 
 
 def slider(label: str, id: str, config: dict) -> html.Div:
@@ -80,13 +124,15 @@ def slider(label: str, id: str, config: dict) -> html.Div:
     )
 
 
-def dropdown(label: str, id: str, options: list) -> html.Div:
+def dropdown(label: str, id: str, options: list, initial_idx: int=0, start_disabled: bool=False) -> html.Div:
     """Dropdown element for option selection.
 
     Args:
         label: The title that goes above the dropdown.
         id: A unique selector for this element.
         options: A list of dictionaries of labels and values.
+        initial_idx: The index of the option that should be preselected.
+        start_disabled: Whether the dropdown should be initially disabled.
     """
 
     return html.Div(
@@ -96,8 +142,9 @@ def dropdown(label: str, id: str, options: list) -> html.Div:
             dmc.Select(
                 id=id,
                 data=options,
-                value=options[0]["value"],
+                value=options[initial_idx]["value"],
                 allowDeselect=False,
+                disabled=start_disabled,
                 **{"aria-label": " ".join(id.split("-"))} if not label else {},
             ),
         ],
@@ -163,51 +210,60 @@ def generate_settings_form() -> html.Div:
     Returns:
         html.Div: A Div containing the settings for selecting the scenario, model, and solver.
     """
-    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
 
-    qpu_solver_opts = {f"Random {SolverMode.QPU.label}": -1}
+    hide_simulated_solvers = HIDE_SIMULATED_SOLVERS
+    miner_slider_config = copy.copy(MINER_SLIDER)
+    num_blocks_config = copy.copy(NUM_BLOCKS)
+    qpu_solver_configs, simulated_solver_configs, mode_select_configs = generate_solver_configs()
 
-    qpu_solver_opts.update(
-        {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
-    )
+    # If a REPLICATION_ID is provided, the initial values of the settings will be set to match the
+    # parameters encoded in that ID, and the settings will be disabled until after the first
+    # simulation is run.
+    if REPLICATION_ID is not None:
+        init_params = get_simulation_params_from_id(REPLICATION_ID)
+        miner_slider_config.update({"value": init_params["num_miners"], "disabled": True})
+        num_blocks_config.update({"value": init_params["max_blocks"], "disabled": True})
+        solver_list = init_params["solvers"]
+        if len(solver_list) > 1:
+            solver_select_idx = 0
+        else:
+            solver_name = solver_list[0].solver_name
+            solver_name_list = [solver_name.value for solver_name in SolverName]
+            solver_select_idx = solver_name_list.index(solver_name)
 
-    simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
-    simulated_solver_opts.update(
-        {solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)}
-    )
+        if "simulated" in solver_list[0].solver_name:
+                solver_select_idx -= len([x for x in SolverName if "simulated" not in x.value])
+                hide_simulated_solvers = False
+                simulated_solver_configs["initial_idx"] = solver_select_idx
+                mode_select_configs["value"] = f"{SolverMode.SIMULATED.value}"
+        else:
+                qpu_solver_configs["initial_idx"] = solver_select_idx
 
-    solver_mode_options = generate_options(SolverMode)
+        simulated_solver_configs["start_disabled"] = True
+        qpu_solver_configs["start_disabled"] = True
+
 
     solver_settings = (
         html.Div(
-            radio(
-                "Solver Mode",
-                "solver-mode-select",
-                solver_mode_options,
-                solver_mode_options[0]["value"],
-            ),
-            className="display-none" if HIDE_SIMULATED_SOLVERS else "",
+            radio(**mode_select_configs),
+            className="display-none" if hide_simulated_solvers else "",
         ),
         html.Div(
             id="qpu-dropdown",
-            children=dropdown("Solver", "qpu-solver-select", generate_options(qpu_solver_opts)),
+            children=dropdown(**qpu_solver_configs),
         ),
         html.Div(
             id="simulated-dropdown",
             className="display-none",
-            children=dropdown(
-                "Solver",
-                "simulated-solver-select",
-                generate_options(simulated_solver_opts),
-            ),
+            children=dropdown(**simulated_solver_configs),
         ),
     )
 
     return html.Div(
         className="settings",
         children=[
-            slider("Number of Miners", "miner-slider", MINER_SLIDER),
-            input_number("Number of Blocks", "blocks-input", NUM_BLOCKS),
+            slider("Number of Miners", "miner-slider", miner_slider_config),
+            input_number("Number of Blocks", "blocks-input", num_blocks_config),
             *solver_settings,
         ],
     )
@@ -241,17 +297,16 @@ def generate_run_buttons() -> html.Div:
                         className="button",
                         style={"display": "none"},
                     ),
-                    html.Button(
-                        id="save-button",
-                        children="Save Data",
-                        className="button",
-                        style={"display": "none"},
-                    ),
                 ],
+            ),
+            html.Button(
+                    id="save-button",
+                    children="Save Data",
+                    className="button",
+                    style={"display": "none"},
             ),
         ],
     )
-
 
 def graph_legend() -> html.Div:
     """Generate graph legend"""
@@ -289,7 +344,11 @@ def create_interface():
             dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
-            dcc.Store(id="simulation-id", data=""),
+            dcc.Store(
+                id="simulation-save-filename", 
+                data="" if REPLICATION_ID is None else get_save_data_filename(REPLICATION_ID)
+            ), 
+
             # Settings and results columns
             html.Main(
                 className="columns-main",

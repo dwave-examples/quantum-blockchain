@@ -45,7 +45,7 @@ class ProofOfWorkProtocol:
         prng_seed: int | None = None,
     ):
         """Initializes a ProofOfWorkProtocol object. In the current implementation, TrialManager
-            initializes a single ProofOfWorkProtocol, which is shared by all miners in a trial.
+            initializes one ProofOfWorkProtocol, which is shared by all miners in a simulation.
 
         Args:
             hash_solvers (list[HashSolver]): list of HashSolver objects that this object can use to

@@ -38,3 +38,10 @@ def label(self):
 
 
 setattr(ViewOpt, "label", label)
+
+class InterfaceButton(Enum):
+    PAUSE = 0
+    START = 1
+    RESUME = 2
+    SAVE = 3
+    RESET = 4

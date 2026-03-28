@@ -124,15 +124,15 @@ The blockchain demo uses confidence-based Chainwork. We choose the quantum hash 
 Nmax (called ALLOWABLE_ERROR in demo) to be 1, which allows comparison to the paper statistics 
 demonstrating high efficiency and small delay if we account for changes to the compute environment. 
 Experiments determine the witness uncertain (due to sampling and control errors at 1 second of QPU
- access time) to be 0.16 with the current set of generally available QPUs (January 2026). The 
- discrepancy between generally available QPUs was larger (0.18) for the generally available QPUs 
- in the paper experiments. Furthermore number of reads is reduced in the demo (enhancing witness 
- uncertainty). A new default for the dW parameter is set accordingly, matching the paper methods. 
- Finally, to allow for easier debugging and repeatability of trials, the hash definition in the 
- demo has been modified to remove dependence on the block timestamp (which is still recorded, just 
- unused). This should not alter the expected experimental outcomes, as previous hash values and 
- random nonce choices easily offer sufficient entropy to robustly explore the space of potential 
- outcomes.
+access time) to be 0.16 with the current set of generally available QPUs (January 2026). The 
+discrepancy between generally available QPUs was larger (0.18) for the generally available QPUs 
+in the paper experiments. Furthermore number of reads is reduced in the demo (enhancing witness 
+uncertainty). A new default for the dW parameter is set accordingly, matching the paper methods. 
+Finally, to allow for easier debugging and repeatability of simulations, the hash definition in the
+demo has been modified to remove dependence on the block timestamp (which is still recorded, just 
+unused). This should not alter the expected experimental outcomes, as previous hash values and 
+random nonce choices easily offer sufficient entropy to robustly explore the space of potential 
+outcomes.
 
 Problem-Hamiltonian and/or annealing rescaling allows one processor to emulate another, 
 accommodating differences in the annealing schedules (energy scales). In both the paper and demo 
@@ -246,42 +246,43 @@ In order to access a new solver in the demo:
 2. The solver_name and energy-time rescaling tuple should be added as a key-value pair to 
 DEFAULT_ENERGY_TIME_RESCALING dictionary in src/values.py .
 
-### Repeatability of Trials:
+### Repeatability of Simulations:
 
 The demo uses NumPy random generator objects for all implementations of pseudorandom number 
 generation. All generator functions use seed values descending from the RANDOM_SEED parameter 
 found in demo_configs.py; setting the seed to a value other than 'None' before running the demo 
-will cause all trials to use that seed. This will cause things like mining order, solver choices 
-and nonce values to repeat from one trial to the next. Likewise it will cause those portions of 
-the quantum hash algorithm that rely on pseudorandom number generation to repeat. However, 
-measurements taken by the QPU will still be subject to the inherent randomness of quantum 
+will cause all simulations to use that seed. This will cause things like mining order, solver
+choices and nonce values to repeat from one simulation to the next. Likewise it will cause those
+portions of the quantum hash algorithm that rely on pseudorandom number generation to repeat. 
+However, measurements taken by the QPU will still be subject to the inherent randomness of quantum
 phenomena. This is because QPU measurements dictate block scores which in turn dictates where 
-miners choose to mine, so even two trials with identical initialization parameters and the same 
-pseudorandom seed may have their blockchain structures diverge significantly. Trials can only be 
-fully repeatable if run using simulated QPU solvers (setting `HIDE_SIMULATED_SOLVER = False` in 
-demo_configs.py and choosing "Simulated Solver" in the interface) and all other settings must be 
-identical. As repeating trials (wholly or partially) is not always desired behavior, setting 
+miners choose to mine, so even two simulations with identical initialization parameters and the 
+same  pseudorandom seed may have their blockchain structures diverge significantly. simulations are
+only fully repeatable if run using simulated QPU solvers (setting `HIDE_SIMULATED_SOLVER = False` 
+in demo_configs.py and choosing "Simulated Solver" in the interface) and all other settings must be
+identical. As repeating simulations (wholly or partially) is not always desired behavior, setting 
 RANDOM_SEED to `None` will initialize the NumPy generator objects with a randomly-chosen seed 
-which will differ from trial to trial. However, the value of the seed used for any such trial can 
-still be captured from the Trial ID, described below.
+which will differ from simulation to simulation. However, the value of the seed used for any such 
+simulation can still be captured from the simulation ID, described below.
 
-### Trial IDs and Reinitialization:
+### Simulation IDs and Reinitialization:
 
-All of parameters necessary to fully characterize a single trial (as it begins) can be compressed 
-into a single 22-digit hexadecimal number, allowing trials to be compared and repeated more 
-easily. This number can be composed from the internal state of a TrialManager object by calling 
-the `get_trial_id()` function found in src/protocols/trial_identification.py, and can be turned 
-back into a complete dictionary of initialization parameters for TrialManager by calling the 
-`get_trial_params_from_id()` function in the same file. However, this functionality cannot 
-currently be accessed automatically through the Dash interface, and its use is mostly limited to 
-debugging and helping organize trial data. The Trial ID for any trial run will be printed to the 
-console, where it can be read, copied or stored. Note that identical Trial IDs don't ensure two 
-trials will be fully repeatable if they are using QPU solvers (see Repeatability of Trials above).
+All of parameters necessary to fully characterize a single simulation (as it begins) can be 
+compressed into a single 22-digit hexadecimal number, allowing simulations to be compared and 
+repeated more easily. This number can be composed from the internal state of a TrialManager object
+by calling the `get_simulation_id()` function found in src/protocols/trial_identification.py, and 
+can be turned back into a complete dictionary of initialization parameters for TrialManager by 
+calling the `get_simulation_params_from_id()` function in the same file. However, this 
+functionality cannot currently be accessed automatically through the Dash interface, and its use 
+is mostly limited to debugging and helping organize simulation data. The Simulation ID for any 
+simulation run will be printed to the console, where it can be read, copied or stored. Note that 
+identical Simulation IDs don't ensure two simulations will be fully repeatable if they are using 
+QPU solvers (see Repeatability of Simulations above).
 
 ### Adjusting Settings and Parameter Values
 
 Parameter values within 'demo_configs.py' will generally include documentation indicating 
-reasonable values and supported ranges; many values can be changed outside these ranges, but doing 
+reasonable values and supported ranges; many values can be changed outside these ranges, but doing
 so is more likely to produce undesired behavior. Read below for a detailed description of the 
 considerations of adjusting various parameter values.
 
@@ -297,13 +298,13 @@ parameters determine how long a given simulation will take and how many QPU call
 For each block mined, each validating miner must make a single QPU call. Under default settings 
 the mining miner will usually also make 1 call (but see the information on N_ZEROES in the next 
 section). Each mining or validation event will generally take around 1.1 seconds to complete, so 
-the overall time to complete a trial will generally go as 1.1 x miners x blocks. This means that, 
-for example, a trial with 50 miners and 200 blocks will likely take at least 3 hours to run to 
-completion (and result in 1000 QPU calls). For this reason, keeping the number of miners limited 
-is recommended for most use cases (7-15 miners is generally sufficient to see interesting behavior 
-without slowing down the simulation). The other UI configurations are more straightforward: the 
-`NUM_MINER_VIEWS` parameter increases the number miners whose blockchain graphs are available to 
-view, the `HIDE_SIMULATED_SOLVERS` flag allows access to the simulated versions of QPU solvers 
+the overall time to complete a simulation will generally go as 1.1 x miners x blocks. This means 
+that, for example, a simulation with 50 miners and 200 blocks will likely take at least 3 hours 
+to run to completion (and result in 1000 QPU calls). For this reason, keeping the number of miners
+limited is recommended for most use cases (7-15 miners is generally sufficient to see interesting
+behavior without slowing down the simulation). Other UI configurations are more straightforward: 
+the `NUM_MINER_VIEWS` parameter increases the number miners whose blockchain graphs are available 
+to view, the `HIDE_SIMULATED_SOLVERS` flag allows access to the simulated versions of QPU solvers 
 (mostly useful for testing and debugging), and the `MINER_NAMES` list allows miner names to be 
 altered from their generic defaults of "MINER_1, MINER_2" and so on.
 

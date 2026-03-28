@@ -57,7 +57,7 @@ num_blocks = 5
 
 
 def test_prng_randomization():
-    """Tests the repeatability of the random elements in the trial by initializing two
+    """Tests the repeatability of the random elements in the simulation by initializing two
     TrialManager objects with identical parameters and in particular identical PRNG seeds. If
     everything is working correctly, these managers should get completely identical results when
     mining with any combination of simulated solvers. If an update causes this test to start

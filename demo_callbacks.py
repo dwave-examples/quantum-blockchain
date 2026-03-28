@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import time
+import os
 from typing import NamedTuple
 
 import dash
@@ -32,11 +33,12 @@ from dash.exceptions import PreventUpdate
 from demo_configs import MIN_SIMULATION_LOOP_TIME
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import SolverMode, ViewOpt
-from src.protocols.trial_identification import generate_trial_id
+from src.values import OUTPUTS_PATH
+from src.protocols.simulation_identification import simulation_parameter_fields, generate_simulation_id, get_simulation_params_from_id 
 from src.utilities.display_update import render_miner_status
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.utilities.save_simulation_data import save_simulation_data
+from src.utilities.save_simulation_data import save_simulation_data, get_save_data_filename
 
 graph_layout_dict = dict(
     autosize=False,
@@ -69,6 +71,7 @@ graph_layout_dict = dict(
         State("qpu-solver-select", "value"),
         State("simulated-solver-select", "value"),
         State("solver-mode-select", "value"),
+        State("simulation-save-filename", "data"),
     ],
     progress=[
         Output("current-block-data", "data"),
@@ -89,6 +92,7 @@ def simulation(
     qpu_solver_select_val: str,
     simulated_solver_select_val: str,
     solver_mode: str,
+    save_filename: str,
 ) -> tuple[dict, dict, dict, str, bool]:
     """Manages a single run of the blockchain simulation.
 
@@ -96,10 +100,10 @@ def simulation(
     by the "run" button, it will complete a full run of the blockchain simulation with the solver
     scheme and the numbers of blocks and miners each defined by their respective input fields. The
     execution of this function is internally divided up into 'rounds,' where one round covers a
-    single action (mining or validation) from each miner in the trial. Each action takes roughly
-    1 second, so a round will last for roughly as many seconds as there are miners. It will
-    run a number of rounds equal to the 'num_blocks' parameter. As this callback runs, it will
-    call the 'set_progress_miner_table' function to provide regular updates to the miner table
+    single action (mining or validation) from each miner in the simulation. Each action takes 
+    roughly 1 second, so a round will last for roughly as many seconds as there are miners. It 
+    will run a number of rounds equal to the 'num_blocks' parameter. As this callback runs, it
+    calls the 'set_progress_miner_table' function to provide regular updates to the miner table
     (approximately 1 per second). It will also use the 'set_props' function to keep the
     'blockchain-structure-data' dcc.Store up-to-date with the same frequency, and to update each of
     the graph views once per round.
@@ -115,9 +119,9 @@ def simulation(
         num_blocks: the value of the blocks input. Determines how many blocks the simulation
             will run for.
         stored_blockchain_data: The data structure storing the current blockchain data.
-            This will be empty when starting a new trial, but if the trial has been paused,
-            it will contain all the data about the blocks mined up to this point, allowing the
-            trial to be restarted from the same state.
+            This will be empty when starting a new simulation, but if the simulation has been 
+            paused, it will contain all the data about the blocks mined up to this point, allowing
+            the simulation to be restarted from the same state.
         solver_mode: Value of the solver selector. Outputs as a
             string-typed integer value (e.g. "1", "2"), which can just be immediately typed back
             to int and put into the AVAILABLE_SOLVERS constant to get the solver
@@ -134,24 +138,32 @@ def simulation(
 
     if ctx.triggered_id != "start-simulation":
         raise PreventUpdate
+    
+    if save_filename:
+        simulation_id = save_filename[:sum(simulation_parameter_fields.values())]
+        manager = TrialManager(**get_simulation_params_from_id(simulation_id))
+        init_status = "Replicating"
+        if len(stored_blockchain_data) > 0:
+            manager.restart_simulation(stored_blockchain_data)
+            init_status = "Restarting"
+    else:
+        solver_mode = SolverMode(int(solver_mode))
+        available_qpu_solvers, available_simulated_solvers = get_solver_lists()
+        mode_config = {
+            SolverMode.QPU: (int(qpu_solver_select_val), available_qpu_solvers),
+            SolverMode.SIMULATED: (int(simulated_solver_select_val), available_simulated_solvers),
+        }
+        dropdown_idx, solvers = mode_config[solver_mode]
+        if dropdown_idx >= 0:
+            solvers = [solvers[dropdown_idx]]
 
-    solver_mode = SolverMode(int(solver_mode))
-    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
-    mode_config = {
-        SolverMode.QPU: (int(qpu_solver_select_val), available_qpu_solvers),
-        SolverMode.SIMULATED: (int(simulated_solver_select_val), available_simulated_solvers),
-    }
-    dropdown_idx, solvers = mode_config[solver_mode]
-    if dropdown_idx >= 0:
-        solvers = [solvers[dropdown_idx]]
+        manager = TrialManager(num_blocks, num_miners, solvers)
+        simulation_id = generate_simulation_id(manager)
+        save_filename = get_save_data_filename(simulation_id)
+        init_status = "Starting"
 
-    manager = TrialManager(num_blocks, num_miners, solvers)
-    trial_id = generate_trial_id(manager)
-
-    print(f"Starting simulation with ID {trial_id} with {num_miners} miners and {num_blocks} blocks.")
-    set_props("simulation-id", {"data": trial_id})
-    if len(stored_blockchain_data) > 0:
-        manager.restart_trial(stored_blockchain_data)
+    print(f"{init_status} simulation with ID {simulation_id} with {manager.num_miners} miners and {manager.max_blocks} blocks.")
+    set_props("simulation-save-filename", {"data": save_filename})
 
     global_fig = None
 
@@ -302,6 +314,9 @@ def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationR
     Output("reset-button", "style", allow_duplicate=True),
     Output("resume-button", "style", allow_duplicate=True),
     Output("pause-button", "style", allow_duplicate=True),
+    Output("save-button", "style", allow_duplicate=True),
+    Output("save-button", "children", allow_duplicate=True),
+    Output("save-button", "disabled", allow_duplicate=True),   
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input("pause-button", "n_clicks"),
@@ -326,7 +341,8 @@ def pause_simulation(pause_click: int):
             to be restarted, either by the 'run' button or the 'resume' button.
     """
 
-    return {}, {}, {"display": "none"}, False
+    #      reset, resume, pause, save  
+    return {}, {}, {"display": "none"}, {}, "Save Data", False, False
 
 
 # ========================================================================================
@@ -336,6 +352,7 @@ def pause_simulation(pause_click: int):
     Output("reset-button", "style", allow_duplicate=True),
     Output("resume-button", "style", allow_duplicate=True),
     Output("pause-button", "style", allow_duplicate=True),
+    Output("save-button", "style", allow_duplicate=True),
     Output("start-simulation", "data", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
@@ -367,7 +384,7 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
     if simulation_is_active:
         raise PreventUpdate
 
-    return {"display": "none"}, {"display": "none"}, {}, True, True
+    return {"display": "none"}, {"display": "none"}, {}, {"display": "none"}, True, True
 
 # =========================================================================================
 
@@ -377,23 +394,24 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
     inputs=[
         Input("save-button", "n_clicks"),
         State("blockchain-structure-data", "data"),
-        State("simulation-id", "data"),
+        State("simulation-save-filename", "data"),
     ],
     prevent_initial_call=True,
 )
-def save_data(n_clicks: int, blockchain_data: list, simulation_id: str):
-    """Saves the current trial data to a file when the 'save' button is clicked.
+def save_data(n_clicks: int, blockchain_data: list, save_filename: str) -> tuple[str, bool]:
+    """Saves the current simulation data to a file when the 'save' button is clicked.
     
     Args:
-        n_clicks: 
+        n_clicks: number of clicks on the 'save' button. Trigger for the callback, value is 
+            otherwise irrelevant.
         blockchain_data: The data structure storing the current blockchain data.
-        simulation_id: The unique identifier for the simulation, used as the filename for the
-            output CSV."""
+        save_filename: The name of the file to save the blockchain data to, including the .csv extension."""
     
     if n_clicks == 0:
         raise PreventUpdate
     
-    save_simulation_data(blockchain_data, simulation_id)
+    save_simulation_data(blockchain_data, save_filename)
+    print(f"Simulation data saved to {os.path.join(OUTPUTS_PATH, save_filename)}.")
     return "Data Saved", True  # Change button text to indicate data has been saved and disable it to prevent multiple clicks
 
 
@@ -415,6 +433,7 @@ class ResetSimulationReturn(NamedTuple):
     qpu_solver_select_disabled: bool = False
     simulated_solver_select_disabled: bool = False
     blockchain_data: list = []
+    simulation_save_filename: str = ""
     graphs: list[go.Figure] = dash.no_update
 
 
@@ -433,6 +452,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
     Output("blockchain-structure-data", "data", allow_duplicate=True),
+    Output("simulation-save-filename", "data", allow_duplicate=True),
     Output({"type": "view-graph", "index": ALL}, "figure"),
     inputs=[
         Input("reset-button", "n_clicks"),

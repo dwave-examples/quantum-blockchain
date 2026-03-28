@@ -16,9 +16,26 @@ from dash import html
 
 from demo_configs import MINER_NAMES
 
+def visibility_for_buttons(
+        pause: bool|None = None, 
+        start: bool|None = None, 
+        resume: bool|None = None, 
+        save: bool|None = None, 
+        reset: bool|None = None, 
+        ) -> list[dict]:
+    outputs = []
+    for input in locals().values():
+        if input is None:
+            pass
+        elif input:
+            outputs.append({})
+        else:
+            outputs.append({"display": "none"})
+
+    return outputs
 
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
-    """Renders the status of the miners in the current trial. Each miner will be named
+    """Renders the status of the miners in the current simulation. Each miner will be named
         "Miner n" where n is one more than their ID in TrialManager (because numbering
         starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
         Validating, Valid" if they've started acting this round, or "..." if not.
