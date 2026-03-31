@@ -335,6 +335,8 @@ def create_interface():
             dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
+            dcc.Store(id="miner-status-data", data=[]),
+            dcc.Store(id="pause-target", data=False),
             dcc.Store(
                 id="simulation-save-filename", 
                 data="" if REPLICATION_ID is None else get_save_data_filename(REPLICATION_ID)

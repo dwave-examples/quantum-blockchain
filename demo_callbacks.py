@@ -83,7 +83,7 @@ START_BUTTON = {"type": "button", "index": InterfaceButton.START.value}
     running=[
         (Output("is-active-simulation", "data"), True, False),
     ],
-    cancel=[Input(PAUSE_BUTTON, "n_clicks")],
+    cancel=[Input("pause-target", "data")],
     prevent_initial_call=True,
     background=True,
 )
@@ -315,6 +315,7 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
     Output(SAVE_BUTTON, "children", allow_duplicate=True),
     Output(SAVE_BUTTON, "disabled", allow_duplicate=True),   
     Output("is-active-simulation", "data", allow_duplicate=True),
+    Output("pause-target", "data"),
     inputs=[
         Input(PAUSE_BUTTON, "n_clicks"),
     ],
@@ -340,7 +341,7 @@ def pause_simulation(pause_click: int):
 
     visible_buttons = is_button_visible(PAUSE=False, RESET=True, RESUME=True, SAVE=True)
 
-    return visible_buttons, "Save Data", False, False
+    return visible_buttons, "Save Data", False, False, True
 
 # ========================================================================================
 
