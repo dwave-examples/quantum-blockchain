@@ -32,10 +32,10 @@ from dash.exceptions import PreventUpdate
 
 from demo_configs import MIN_SIMULATION_LOOP_TIME
 from src.agents.trial_manager import TrialManager
-from src.demo_enums import SolverMode, ViewOpt
+from src.demo_enums import SolverMode, ViewOpt, InterfaceButton
 from src.values import OUTPUTS_PATH
 from src.protocols.simulation_identification import simulation_parameter_fields, generate_simulation_id, get_simulation_params_from_id 
-from src.utilities.display_update import render_miner_status
+from src.utilities.display_update import render_miner_status, is_button_visible
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.spiral_plotter import SpiralPlotter
 from src.utilities.save_simulation_data import save_simulation_data, get_save_data_filename
@@ -50,6 +50,12 @@ graph_layout_dict = dict(
     plot_bgcolor="white",
 )
 
+PAUSE_BUTTON = {"type": "button", "index": InterfaceButton.PAUSE.value} 
+RESET_BUTTON = {"type": "button", "index": InterfaceButton.RESET.value}
+RESUME_BUTTON = {"type": "button", "index": InterfaceButton.RESUME.value}
+SAVE_BUTTON = {"type": "button", "index": InterfaceButton.SAVE.value}
+START_BUTTON = {"type": "button", "index": InterfaceButton.START.value}
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
 #                             SECTION: Mining Round Steps                                             |
@@ -58,11 +64,9 @@ graph_layout_dict = dict(
 
 
 @dash.callback(
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
-    Output("save-button", "style", allow_duplicate=True),
-    Output("save-button", "children", allow_duplicate=True),
-    Output("save-button", "disabled", allow_duplicate=True),   
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
+    Output(SAVE_BUTTON, "children", allow_duplicate=True),
+    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),  
     inputs=[
         Input("start-simulation", "data"),
         State("miner-slider", "value"),
@@ -79,7 +83,7 @@ graph_layout_dict = dict(
     running=[
         (Output("is-active-simulation", "data"), True, False),
     ],
-    cancel=[Input("pause-button", "n_clicks")],
+    cancel=[Input(PAUSE_BUTTON, "n_clicks")],
     prevent_initial_call=True,
     background=True,
 )
@@ -93,7 +97,7 @@ def simulation(
     simulated_solver_select_val: str,
     solver_mode: str,
     save_filename: str,
-) -> tuple[dict, dict, dict, str, bool]:
+) -> tuple[dict, dict, dict, dict, dict, str, bool]:
     """Manages a single run of the blockchain simulation.
 
     This callback is triggered (indirectly) by the "run" and "resume" buttons. When triggered
@@ -131,10 +135,9 @@ def simulation(
         Most of the output of this function is passed by 'set_progress_miner_table' or with the
         'set_props' function, so the only actual return values simply toggle button visibility
 
-        reset-button: makes the 'reset' button visible
-        pause-button: hides the 'pause' button
-        save-button: makes the 'save' button visible, enables it, and resets text to "Save Data"
-    """
+        button_visibility: makes the 'save', and 'reset' buttons visible and hides the 'pause' button.
+        save_button_text: changes text to "Save Data"
+        save_button_disabled: enables the 'save' button """
 
     if ctx.triggered_id != "start-simulation":
         raise PreventUpdate
@@ -200,7 +203,8 @@ def simulation(
     set_props("blockchain-structure-data", {"data": manager.chain_data})
     time.sleep(0.3) # ensure final data update is processed before Save Button is enabled
 
-    return {}, {"display": "none"}, {"display": ""}, "Save Data", False
+    button_visibility = is_button_visible(PAUSE=False, RESET=True, SAVE=True)
+    return button_visibility, "Save Data", False
 
 
 # ======================================================================================================
@@ -262,12 +266,10 @@ def update_miner_display(
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-class RunSimulationReturn(NamedTuple):
+class StartSimulationReturn(NamedTuple):
     """Return type for the ``run_simulation`` callback function."""
 
-    run_button_style: dict = {"display": "none"}
-    reset_button_style: dict = {"display": "none"}
-    pause_button_style: dict = {}
+    button_styles: list = is_button_visible(PAUSE=True, START=False)
     start_simulation: bool = True
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
@@ -278,9 +280,7 @@ class RunSimulationReturn(NamedTuple):
 
 
 @dash.callback(
-    Output("run-button", "style", allow_duplicate=True),
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
     Output("start-simulation", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
@@ -289,37 +289,34 @@ class RunSimulationReturn(NamedTuple):
     Output("is-active-simulation", "data", allow_duplicate=True),
     Output("graph-loading", "display", allow_duplicate=True),
     inputs=[
-        Input("run-button", "n_clicks"),
+        Input(START_BUTTON, "n_clicks"),
         State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
 )
-def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationReturn:
+def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimulationReturn:
     """Runs a simulation with the selected number of miners and blocks.
 
     Args:
-        run_click: unused
+        start_click: unused
         simulation_is_active: Returns 'True.' Flag to signal that one instance of
             'simulation' callback is already running, so another should not be started"""
     if simulation_is_active:
         raise PreventUpdate
 
-    return RunSimulationReturn()
+    output = StartSimulationReturn()
 
+    return output
 
 # ========================================================================================
 
-
 @dash.callback(
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("resume-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
-    Output("save-button", "style", allow_duplicate=True),
-    Output("save-button", "children", allow_duplicate=True),
-    Output("save-button", "disabled", allow_duplicate=True),   
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
+    Output(SAVE_BUTTON, "children", allow_duplicate=True),
+    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),   
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
-        Input("pause-button", "n_clicks"),
+        Input(PAUSE_BUTTON, "n_clicks"),
     ],
     prevent_initial_call=True,
 )
@@ -334,29 +331,25 @@ def pause_simulation(pause_click: int):
             its value is irrelevant.
 
     Returns:
-        reset-button: makes visible
-        resume-button: makes visible
-        pause-button: hides
+        button_visibility_change: makes the 'reset', 'resume', and 'save' buttons visible and 
+            hides the 'pause' button.
+        save_button_text: changes text to "Save Data"
+        save_button_disabled: enables the 'save' button
         is-active-simulation: setting this to False allows the 'simulation' callback
-            to be restarted, either by the 'run' button or the 'resume' button.
-    """
+            to be restarted, either by the 'run' button or the 'resume' button."""
 
-    #      reset, resume, pause, save  
-    return {}, {}, {"display": "none"}, {}, "Save Data", False, False
+    visible_buttons = is_button_visible(PAUSE=False, RESET=True, RESUME=True, SAVE=True)
 
+    return visible_buttons, "Save Data", False, False
 
 # ========================================================================================
 
-
 @dash.callback(
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("resume-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
-    Output("save-button", "style", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
     Output("start-simulation", "data", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
-        Input("resume-button", "n_clicks"),
+        Input(RESUME_BUTTON, "n_clicks"),
         State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
@@ -372,9 +365,8 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
             'simulation' callback is already running, so another should not be started
 
     Returns:
-        reset-button: hides
-        resume-button: hides
-        pause-button: makes visible
+        button_visibility_change: makes the 'pause' button visible and hides the 'reset', 'resume',
+            and 'save' buttons.
         start-simulation: Altering this Store (even from True to True) triggers the
             'simulation' callback, in this case resuming an in-progress simulation.
         is-active-simulation: setting this to True allows the 'simulation' callback
@@ -383,16 +375,18 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
 
     if simulation_is_active:
         raise PreventUpdate
+    
+    visible_buttons = is_button_visible(PAUSE=True, RESET=False, RESUME=False, SAVE=False)
 
-    return {"display": "none"}, {"display": "none"}, {}, {"display": "none"}, True, True
+    return visible_buttons, True, True
 
 # =========================================================================================
 
 @dash.callback(
-    Output("save-button", "children", allow_duplicate=True),
-    Output("save-button", "disabled", allow_duplicate=True),
+    Output(SAVE_BUTTON, "children", allow_duplicate=True),
+    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
     inputs=[
-        Input("save-button", "n_clicks"),
+        Input(SAVE_BUTTON, "n_clicks"),
         State("blockchain-structure-data", "data"),
         State("simulation-save-filename", "data"),
     ],
@@ -423,10 +417,7 @@ class ResetSimulationReturn(NamedTuple):
     loading_text_classname: str = "display-none"
     miner_graph_and_table_classname: str = "display-none"
     view_select_and_block_status_classname: str = "visibility-hidden"
-    run_button_style: dict = {}
-    reset_button_style: dict = {"display": "none"}
-    resume_button_style: dict = {"display": "none"}
-    save_button_style: dict = {"display": "none"}
+    button_styles: list[dict] = is_button_visible(RESET=False, RESUME=False, SAVE=False)
     prelim_text_classname: str = ""
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
@@ -442,10 +433,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("loading-text", "className", allow_duplicate=True),
     Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("view-select-and-block-status", "className", allow_duplicate=True),
-    Output("run-button", "style", allow_duplicate=True),
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("resume-button", "style", allow_duplicate=True),
-    Output("save-button", "style", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
@@ -455,7 +443,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("simulation-save-filename", "data", allow_duplicate=True),
     Output({"type": "view-graph", "index": ALL}, "figure"),
     inputs=[
-        Input("reset-button", "n_clicks"),
+        Input(RESET_BUTTON, "n_clicks"),
         State({"type": "view-graph", "index": ALL}, "figure"),
     ],
     prevent_initial_call=True,

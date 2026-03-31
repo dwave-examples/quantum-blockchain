@@ -42,7 +42,7 @@ from demo_configs import (
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
 )
-from src.demo_enums import SolverMode, ViewOpt
+from src.demo_enums import SolverMode, InterfaceButton, ViewOpt
 from src.utilities.get_solvers import get_solver_lists, SolverName
 from src.protocols.simulation_identification import get_simulation_params_from_id
 from src.utilities.save_simulation_data import get_save_data_filename
@@ -270,41 +270,32 @@ def generate_settings_form() -> html.Div:
 
 
 def generate_run_buttons() -> html.Div:
-    """Run, Pause, Reset and Resume buttons for the simulation"""
+    """Start, Pause, Reset and Resume buttons for the simulation"""
+
+    
+    button_params = { 
+        button.name: dict(
+        id={"type": "button", "index": button.value},
+        children=button.label,
+        className="button",
+        style=button.init_style,
+        ) for button in InterfaceButton
+    }
+
     return html.Div(
         id="button-group",
         children=[
-            html.Button(id="run-button", children="Start Simulation", className="button"),
-            html.Button(
-                id="pause-button",
-                children="Pause",
-                className="button",
-                style={"display": "none"},
-            ),
+            html.Button(**button_params["PAUSE"]),
             html.Div(
                 id="reset-resume-buttons",
                 className="",
                 children=[
-                    html.Button(
-                        id="reset-button",
-                        children="Reset",
-                        className="button",
-                        style={"display": "none"},
-                    ),
-                    html.Button(
-                        id="resume-button",
-                        children="Resume",
-                        className="button",
-                        style={"display": "none"},
-                    ),
+                    html.Button(**button_params["RESET"]),
+                    html.Button(**button_params["RESUME"]),
                 ],
             ),
-            html.Button(
-                    id="save-button",
-                    children="Save Data",
-                    className="button",
-                    style={"display": "none"},
-            ),
+            html.Button(**button_params["SAVE"]),
+            html.Button(**button_params["START"]),
         ],
     )
 

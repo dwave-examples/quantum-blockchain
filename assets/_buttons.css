@@ -47,7 +47,7 @@ button {
     background: radial-gradient(61.22% 95.86% at 26.96% 100%, var(--blue-darker) 0%, var(--blue-darker) 100%);
 }
 
-#run-button,
+#start-button,
 #cancel-button {
     width: 100%;
 }

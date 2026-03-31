@@ -29,7 +29,7 @@ RANDOM_SEED = None
 
 # If you want to replicate a specific simulation, copy the simulation ID from the output logs of
 # that simulation and paste it here (inside quotation marks).
-REPLICATION_ID = "00060970004000015c7536"
+REPLICATION_ID = None # "00060970004000015c7536"
 
 INTRO_TEXT = 'Select a number of miners and blocks and press "Begin Simulation".'
 INTRO_SUBTEXT = "Results will display here while simulation is running."

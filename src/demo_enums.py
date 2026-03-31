@@ -41,7 +41,17 @@ setattr(ViewOpt, "label", label)
 
 class InterfaceButton(Enum):
     PAUSE = 0
-    START = 1
+    RESET = 1
     RESUME = 2
     SAVE = 3
-    RESET = 4
+    START = 4
+
+    @property
+    def init_style(self):
+        return {} if self.name == "START" else {"display": "none"}
+    
+    @property
+    def label(self):
+        if self.name == "SAVE":
+            return "Save Data"
+        return self.name.title()

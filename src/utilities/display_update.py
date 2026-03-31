@@ -12,25 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dash import html
+from dash import dash, html
 
 from demo_configs import MINER_NAMES
+from src.demo_enums import InterfaceButton
 
-def visibility_for_buttons(
-        pause: bool|None = None, 
-        start: bool|None = None, 
-        resume: bool|None = None, 
-        save: bool|None = None, 
-        reset: bool|None = None, 
+def is_button_visible(
+        PAUSE: bool|None = None, 
+        RESET: bool|None = None, 
+        RESUME: bool|None = None, 
+        SAVE: bool|None = None, 
+        START: bool|None = None,
         ) -> list[dict]:
-    outputs = []
-    for input in locals().values():
-        if input is None:
-            pass
-        elif input:
-            outputs.append({})
-        else:
-            outputs.append({"display": "none"})
+    outputs = [dash.no_update for _ in range(len(InterfaceButton))]
+    for name, val in list(locals().items())[:len(InterfaceButton)]:
+        if name not in InterfaceButton.__members__:
+            raise ValueError(f"Invalid button name {name} passed to is_button_visible. Valid names are {[button.name for button in InterfaceButton]}.")
+        if val:
+            outputs[InterfaceButton[name].value] = {} 
+        elif val is not None:
+            outputs[InterfaceButton[name].value] = {"display": "none"}
 
     return outputs
 
