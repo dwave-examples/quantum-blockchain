@@ -417,7 +417,7 @@ class ResetSimulationReturn(NamedTuple):
     loading_text_classname: str = "display-none"
     miner_graph_and_table_classname: str = "display-none"
     view_select_and_block_status_classname: str = "visibility-hidden"
-    button_styles: list[dict] = is_button_visible(RESET=False, RESUME=False, SAVE=False)
+    button_styles: list[dict] = is_button_visible(RESET=False, RESUME=False, SAVE=False, START=True)
     prelim_text_classname: str = ""
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
