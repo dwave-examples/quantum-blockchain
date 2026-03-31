@@ -17,23 +17,30 @@ from dash import dash, html
 from demo_configs import MINER_NAMES
 from src.demo_enums import InterfaceButton
 
-def is_button_visible(
-        PAUSE: bool|None = None, 
-        RESET: bool|None = None, 
-        RESUME: bool|None = None, 
-        SAVE: bool|None = None, 
-        START: bool|None = None,
-        ) -> list[dict]:
+
+def change_button_visibility(
+    buttons_to_show: list[InterfaceButton], buttons_to_hide: list[InterfaceButton]
+) -> list[dict]:
+    """Returns a list of style dicts to show or hide the given buttons. The order of the list
+        corresponds to the order of the InterfaceButton enum, so for example if buttons_to_show
+        is [InterfaceButton.PAUSE], the returned list will have a dict of {} at index 0 and
+        {"display": "none"} at all other indices.
+
+    Args:
+        buttons_to_show: List of buttons to show.
+        buttons_to_hide: List of buttons to hide.
+
+    Returns:
+        List of style dicts to show or hide the given buttons.
+    """
     outputs = [dash.no_update for _ in range(len(InterfaceButton))]
-    for name, val in list(locals().items())[:len(InterfaceButton)]:
-        if name not in InterfaceButton.__members__:
-            raise ValueError(f"Invalid button name {name} passed to is_button_visible. Valid names are {[button.name for button in InterfaceButton]}.")
-        if val:
-            outputs[InterfaceButton[name].value] = {} 
-        elif val is not None:
-            outputs[InterfaceButton[name].value] = {"display": "none"}
+    for button in buttons_to_show:
+        outputs[button.value] = {}
+    for button in buttons_to_hide:
+        outputs[button.value] = {"display": "none"}
 
     return outputs
+
 
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
     """Renders the status of the miners in the current simulation. Each miner will be named

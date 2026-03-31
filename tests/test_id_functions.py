@@ -13,7 +13,10 @@
 # limitations under the License.
 
 from src.agents.trial_manager import TrialManager
-from src.protocols.simulation_identification import generate_simulation_id, get_simulation_params_from_id
+from src.protocols.simulation_identification import (
+    generate_simulation_id,
+    get_simulation_params_from_id,
+)
 from src.utilities.get_solvers import get_all_solvers
 
 miner_nums = [7, 4, 189, 27]
@@ -111,7 +114,9 @@ def test_id_recovery():
     causes get_simulation_params_from_id to raise an Exception."""
 
     for orig_id in test_ids:
-        if int(orig_id[6:8], 16) >= 128:  # Validation checks in get_simulation_params_from_id should
+        if (
+            int(orig_id[6:8], 16) >= 128
+        ):  # Validation checks in get_simulation_params_from_id should
             error_params = ""  # Catch IDs above 127 (hex values over 7f), raising an Exception.
             try:
                 error_params = get_simulation_params_from_id(orig_id)
@@ -119,7 +124,9 @@ def test_id_recovery():
             except:
                 raised_exception = True
 
-            assert raised_exception, f"Test passed simulation ID {orig_id} with invalid solver code \
+            assert (
+                raised_exception
+            ), f"Test passed simulation ID {orig_id} with invalid solver code \
                 {orig_id[6:8]}:{int(orig_id[6:8], 16)}, yielding simulation parameters {error_params}."
 
         else:

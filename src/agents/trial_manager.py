@@ -255,7 +255,7 @@ class TrialManager:
         self.seeded_prng.shuffle(self.round_order)
 
     def _mining_step(self) -> None:
-        """Executes the mining step for the single round of the simulation. Miner mines a single 
+        """Executes the mining step for the single round of the simulation. Miner mines a single
         block (or times out after exceeding the maximum number of attempts) and stores its
         serialized form in self.block_broadcast.
 
@@ -342,7 +342,7 @@ class TrialManager:
         return miner_id
 
     def run_simulation(self, num_blocks: int | None = None) -> None:
-        """Runs the simulation through some number of complete block mining and validation events. 
+        """Runs the simulation through some number of complete block mining and validation events.
         By default it will run until the simulation finishes, but this can be overridden by passing
         a smaller number as an argument.
 
@@ -355,10 +355,8 @@ class TrialManager:
         if num_blocks is None:
             stopping_block = self.max_blocks
         elif num_blocks > self.max_blocks - self.blocks_mined:
-            raise Exception(
-                f"Attempted to run simulation for {num_blocks} rounds, with only \
-                {self.max_blocks - self.blocks_mined} blocks remaining."
-            )
+            raise Exception(f"Attempted to run simulation for {num_blocks} rounds, with only \
+                {self.max_blocks - self.blocks_mined} blocks remaining.")
         else:
             stopping_block = self.blocks_mined + num_blocks
 
@@ -366,7 +364,7 @@ class TrialManager:
             self.single_step()
 
     def restart_simulation(self, blockchain_list: list[dict]) -> None:
-        """Restarts an interrupted simulation, reloading all necessary blockchain and miner data 
+        """Restarts an interrupted simulation, reloading all necessary blockchain and miner data
         from the list passed as an argument.
 
         Args:

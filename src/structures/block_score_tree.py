@@ -377,7 +377,7 @@ class BlockScoreTree:
             raise Exception(
                 f"When promoting branch {branch_to_promote.base.hash}, found missing \
                 hashes: {base_hashes - set(self.hash_to_branch_lookup.keys())} after the promotion."
-                )
+            )
 
         return base_branch
 
@@ -425,7 +425,7 @@ class BlockScoreTree:
             raise Exception(
                 f"When demoting branch {branch_to_truncate.base.hash}, found missing hashes:\
                  {demoted_hashes - set(self.hash_to_branch_lookup.keys())} after the demotion."
-                )
+            )
 
     def refactor_branches(self):
         """This function rearranges the branches of the tree to put branches with the highest

@@ -20,8 +20,8 @@
 
 from __future__ import annotations
 
-import time
 import os
+import time
 from typing import NamedTuple
 
 import dash
@@ -32,13 +32,17 @@ from dash.exceptions import PreventUpdate
 
 from demo_configs import MIN_SIMULATION_LOOP_TIME
 from src.agents.trial_manager import TrialManager
-from src.demo_enums import SolverMode, ViewOpt, InterfaceButton
-from src.values import OUTPUTS_PATH
-from src.protocols.simulation_identification import simulation_parameter_fields, generate_simulation_id, get_simulation_params_from_id 
-from src.utilities.display_update import render_miner_status, is_button_visible
+from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
+from src.protocols.simulation_identification import (
+    generate_simulation_id,
+    get_simulation_params_from_id,
+    simulation_parameter_fields,
+)
+from src.utilities.display_update import change_button_visibility, render_miner_status
 from src.utilities.get_solvers import get_solver_lists
+from src.utilities.save_simulation_data import get_save_data_filename, save_simulation_data
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.utilities.save_simulation_data import save_simulation_data, get_save_data_filename
+from src.values import OUTPUTS_PATH
 
 graph_layout_dict = dict(
     autosize=False,
@@ -50,7 +54,7 @@ graph_layout_dict = dict(
     plot_bgcolor="white",
 )
 
-PAUSE_BUTTON = {"type": "button", "index": InterfaceButton.PAUSE.value} 
+PAUSE_BUTTON = {"type": "button", "index": InterfaceButton.PAUSE.value}
 RESET_BUTTON = {"type": "button", "index": InterfaceButton.RESET.value}
 RESUME_BUTTON = {"type": "button", "index": InterfaceButton.RESUME.value}
 SAVE_BUTTON = {"type": "button", "index": InterfaceButton.SAVE.value}
@@ -66,7 +70,7 @@ START_BUTTON = {"type": "button", "index": InterfaceButton.START.value}
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
     Output(SAVE_BUTTON, "children", allow_duplicate=True),
-    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),  
+    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
     inputs=[
         Input("start-simulation", "data"),
         State("miner-slider", "value"),
@@ -104,8 +108,8 @@ def simulation(
     by the "run" button, it will complete a full run of the blockchain simulation with the solver
     scheme and the numbers of blocks and miners each defined by their respective input fields. The
     execution of this function is internally divided up into 'rounds,' where one round covers a
-    single action (mining or validation) from each miner in the simulation. Each action takes 
-    roughly 1 second, so a round will last for roughly as many seconds as there are miners. It 
+    single action (mining or validation) from each miner in the simulation. Each action takes
+    roughly 1 second, so a round will last for roughly as many seconds as there are miners. It
     will run a number of rounds equal to the 'num_blocks' parameter. As this callback runs, it
     calls the 'set_progress_miner_table' function to provide regular updates to the miner table
     (approximately 1 per second). It will also use the 'set_props' function to keep the
@@ -123,7 +127,7 @@ def simulation(
         num_blocks: the value of the blocks input. Determines how many blocks the simulation
             will run for.
         stored_blockchain_data: The data structure storing the current blockchain data.
-            This will be empty when starting a new simulation, but if the simulation has been 
+            This will be empty when starting a new simulation, but if the simulation has been
             paused, it will contain all the data about the blocks mined up to this point, allowing
             the simulation to be restarted from the same state.
         solver_mode: Value of the solver selector. Outputs as a
@@ -137,13 +141,13 @@ def simulation(
 
         button_visibility: makes the 'save', and 'reset' buttons visible and hides the 'pause' button.
         save_button_text: changes text to "Save Data"
-        save_button_disabled: enables the 'save' button """
+        save_button_disabled: enables the 'save' button"""
 
     if ctx.triggered_id != "start-simulation":
         raise PreventUpdate
-    
+
     if save_filename:
-        simulation_id = save_filename[:sum(simulation_parameter_fields.values())]
+        simulation_id = save_filename[: sum(simulation_parameter_fields.values())]
         manager = TrialManager(**get_simulation_params_from_id(simulation_id))
         init_status = "Replicating"
         if len(stored_blockchain_data) > 0:
@@ -165,7 +169,9 @@ def simulation(
         save_filename = get_save_data_filename(simulation_id)
         init_status = "Starting"
 
-    print(f"{init_status} simulation with ID {simulation_id} with {manager.num_miners} miners and {manager.max_blocks} blocks.")
+    print(
+        f"{init_status} simulation with ID {simulation_id} with {manager.num_miners} miners and {manager.max_blocks} blocks."
+    )
     set_props("simulation-save-filename", {"data": save_filename})
 
     global_fig = None
@@ -201,9 +207,12 @@ def simulation(
             time.sleep(MIN_SIMULATION_LOOP_TIME - iter_total_time)
 
     set_props("blockchain-structure-data", {"data": manager.chain_data})
-    time.sleep(0.3) # ensure final data update is processed before Save Button is enabled
+    time.sleep(0.3)  # ensure final data update is processed before Save Button is enabled
 
-    button_visibility = is_button_visible(PAUSE=False, RESET=True, SAVE=True)
+    button_visibility = change_button_visibility(
+        buttons_to_show=[InterfaceButton.RESET, InterfaceButton.SAVE],
+        buttons_to_hide=[InterfaceButton.PAUSE],
+    )
     return button_visibility, "Save Data", False
 
 
@@ -269,7 +278,9 @@ def update_miner_display(
 class StartSimulationReturn(NamedTuple):
     """Return type for the ``run_simulation`` callback function."""
 
-    button_styles: list = is_button_visible(PAUSE=True, START=False)
+    button_styles: list = change_button_visibility(
+        buttons_to_show=[InterfaceButton.PAUSE], buttons_to_hide=[InterfaceButton.START]
+    )
     start_simulation: bool = True
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
@@ -308,12 +319,14 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
 
     return output
 
+
 # ========================================================================================
+
 
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
     Output(SAVE_BUTTON, "children", allow_duplicate=True),
-    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),   
+    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     Output("pause-target", "data"),
     inputs=[
@@ -332,18 +345,23 @@ def pause_simulation(pause_click: int):
             its value is irrelevant.
 
     Returns:
-        button_visibility_change: makes the 'reset', 'resume', and 'save' buttons visible and 
+        button_visibility_change: makes the 'reset', 'resume', and 'save' buttons visible and
             hides the 'pause' button.
         save_button_text: changes text to "Save Data"
         save_button_disabled: enables the 'save' button
         is-active-simulation: setting this to False allows the 'simulation' callback
             to be restarted, either by the 'run' button or the 'resume' button."""
 
-    visible_buttons = is_button_visible(PAUSE=False, RESET=True, RESUME=True, SAVE=True)
+    visible_buttons = change_button_visibility(
+        buttons_to_show=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
+        buttons_to_hide=[InterfaceButton.PAUSE],
+    )
 
     return visible_buttons, "Save Data", False, False, True
 
+
 # ========================================================================================
+
 
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
@@ -376,12 +394,17 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
 
     if simulation_is_active:
         raise PreventUpdate
-    
-    visible_buttons = is_button_visible(PAUSE=True, RESET=False, RESUME=False, SAVE=False)
+
+    visible_buttons = change_button_visibility(
+        buttons_to_show=[InterfaceButton.PAUSE],
+        buttons_to_hide=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
+    )
 
     return visible_buttons, True, True
 
+
 # =========================================================================================
+
 
 @dash.callback(
     Output(SAVE_BUTTON, "children", allow_duplicate=True),
@@ -395,19 +418,23 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
 )
 def save_data(n_clicks: int, blockchain_data: list, save_filename: str) -> tuple[str, bool]:
     """Saves the current simulation data to a file when the 'save' button is clicked.
-    
+
     Args:
-        n_clicks: number of clicks on the 'save' button. Trigger for the callback, value is 
+        n_clicks: number of clicks on the 'save' button. Trigger for the callback, value is
             otherwise irrelevant.
         blockchain_data: The data structure storing the current blockchain data.
-        save_filename: The name of the file to save the blockchain data to, including the .csv extension."""
-    
+        save_filename: The name of the file to save the blockchain data to, including the .csv extension.
+    """
+
     if n_clicks == 0:
         raise PreventUpdate
-    
+
     save_simulation_data(blockchain_data, save_filename)
     print(f"Simulation data saved to {os.path.join(OUTPUTS_PATH, save_filename)}.")
-    return "Data Saved", True  # Change button text to indicate data has been saved and disable it to prevent multiple clicks
+    return (
+        "Data Saved",
+        True,
+    )  # Change button text to indicate data has been saved and disable it to prevent multiple clicks
 
 
 # ========================================================================================
@@ -418,7 +445,10 @@ class ResetSimulationReturn(NamedTuple):
     loading_text_classname: str = "display-none"
     miner_graph_and_table_classname: str = "display-none"
     view_select_and_block_status_classname: str = "visibility-hidden"
-    button_styles: list[dict] = is_button_visible(RESET=False, RESUME=False, SAVE=False, START=True)
+    button_styles: list[dict] = change_button_visibility(
+        buttons_to_show=[InterfaceButton.START],
+        buttons_to_hide=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
+    )
     prelim_text_classname: str = ""
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False

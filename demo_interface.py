@@ -16,9 +16,9 @@
 
 from __future__ import annotations
 
+import copy
 from collections import namedtuple
 from enum import EnumMeta
-import copy
 
 import dash_mantine_components as dmc
 from dash import dcc, html
@@ -27,7 +27,6 @@ from demo_configs import (
     ABANDONED_BRANCH_POINT_COLOR,
     ACTIVE_BRANCH_POINT_COLOR,
     DESCRIPTION,
-    REPLICATION_ID,
     HIDE_SIMULATED_SOLVERS,
     INTRO_SUBTEXT,
     INTRO_TEXT,
@@ -38,14 +37,16 @@ from demo_configs import (
     MINING_BLOCK_BORDER_COLOR,
     NUM_BLOCKS,
     NUM_MINER_VIEWS,
+    REPLICATION_ID,
     THUMBNAIL,
     TRUNK_POINT_COLOR,
     TRUNK_TIP_COLOR,
 )
-from src.demo_enums import SolverMode, InterfaceButton, ViewOpt
-from src.utilities.get_solvers import get_solver_lists, SolverName
+from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
 from src.protocols.simulation_identification import get_simulation_params_from_id
+from src.utilities.get_solvers import SolverName, get_solver_lists
 from src.utilities.save_simulation_data import get_save_data_filename
+
 THEME_COLOR = "#2d4376"
 
 ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_name", "miner_number"])
@@ -53,6 +54,7 @@ ViewOption = namedtuple("ViewOption", ["menu_select", "graph_name", "wrapper_nam
 GRAPH_VIEW_LABELS = ["Global View"] + [
     f'{" ".join(MINER_NAMES[i].split("_"))} View' for i in range(NUM_MINER_VIEWS)
 ]
+
 
 def generate_solver_configs():
     available_qpu_solvers, available_simulated_solvers = get_solver_lists()
@@ -63,12 +65,12 @@ def generate_solver_configs():
         {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
     )
 
-    qpu_solver_configs = dict(   
-        label="Solver", 
-        id="qpu-solver-select", 
-        options = generate_options(qpu_solver_opts), 
+    qpu_solver_configs = dict(
+        label="Solver",
+        id="qpu-solver-select",
+        options=generate_options(qpu_solver_opts),
         initial_idx=0,
-        start_disabled=False
+        start_disabled=False,
     )
 
     simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
@@ -76,17 +78,17 @@ def generate_solver_configs():
         {solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)}
     )
 
-    simulated_solver_configs = dict(   
-        label="Solver", 
-        id="simulated-solver-select", 
-        options = generate_options(simulated_solver_opts), 
+    simulated_solver_configs = dict(
+        label="Solver",
+        id="simulated-solver-select",
+        options=generate_options(simulated_solver_opts),
         initial_idx=0,
-        start_disabled=False
+        start_disabled=False,
     )
 
     solver_mode_options = generate_options(SolverMode)
 
-    mode_select_configs = dict(                
+    mode_select_configs = dict(
         label="Solver Mode",
         id="solver-mode-select",
         options=solver_mode_options,
@@ -124,7 +126,9 @@ def slider(label: str, id: str, config: dict) -> html.Div:
     )
 
 
-def dropdown(label: str, id: str, options: list, initial_idx: int=0, start_disabled: bool=False) -> html.Div:
+def dropdown(
+    label: str, id: str, options: list, initial_idx: int = 0, start_disabled: bool = False
+) -> html.Div:
     """Dropdown element for option selection.
 
     Args:
@@ -232,16 +236,15 @@ def generate_settings_form() -> html.Div:
             solver_select_idx = solver_name_list.index(solver_name)
 
         if "simulated" in solver_list[0].solver_name:
-                solver_select_idx -= len([x for x in SolverName if "simulated" not in x.value])
-                hide_simulated_solvers = False
-                simulated_solver_configs["initial_idx"] = solver_select_idx
-                mode_select_configs["value"] = f"{SolverMode.SIMULATED.value}"
+            solver_select_idx -= len([x for x in SolverName if "simulated" not in x.value])
+            hide_simulated_solvers = False
+            simulated_solver_configs["initial_idx"] = solver_select_idx
+            mode_select_configs["value"] = f"{SolverMode.SIMULATED.value}"
         else:
-                qpu_solver_configs["initial_idx"] = solver_select_idx
+            qpu_solver_configs["initial_idx"] = solver_select_idx
 
         simulated_solver_configs["start_disabled"] = True
         qpu_solver_configs["start_disabled"] = True
-
 
     solver_settings = (
         html.Div(
@@ -272,14 +275,14 @@ def generate_settings_form() -> html.Div:
 def generate_run_buttons() -> html.Div:
     """Start, Pause, Reset and Resume buttons for the simulation"""
 
-    
-    button_params = { 
+    button_params = {
         button.name: dict(
-        id={"type": "button", "index": button.value},
-        children=button.label,
-        className="button",
-        style=button.init_style,
-        ) for button in InterfaceButton
+            id={"type": "button", "index": button.value},
+            children=button.label,
+            className="button",
+            style=button.init_style,
+        )
+        for button in InterfaceButton
     }
 
     return html.Div(
@@ -298,6 +301,7 @@ def generate_run_buttons() -> html.Div:
             html.Button(**button_params["START"]),
         ],
     )
+
 
 def graph_legend() -> html.Div:
     """Generate graph legend"""
@@ -338,10 +342,9 @@ def create_interface():
             dcc.Store(id="miner-status-data", data=[]),
             dcc.Store(id="pause-target", data=False),
             dcc.Store(
-                id="simulation-save-filename", 
-                data="" if REPLICATION_ID is None else get_save_data_filename(REPLICATION_ID)
-            ), 
-
+                id="simulation-save-filename",
+                data="" if REPLICATION_ID is None else get_save_data_filename(REPLICATION_ID),
+            ),
             # Settings and results columns
             html.Main(
                 className="columns-main",
