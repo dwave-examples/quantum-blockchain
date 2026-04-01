@@ -272,12 +272,12 @@ compressed into a single 22-digit hexadecimal number, allowing simulations to be
 repeated more easily. This number can be composed from the internal state of a TrialManager object
 by calling the `get_simulation_id()` function found in src/protocols/trial_identification.py, and 
 can be turned back into a complete dictionary of initialization parameters for TrialManager by 
-calling the `get_simulation_params_from_id()` function in the same file. However, this 
-functionality cannot currently be accessed automatically through the Dash interface, and its use 
-is mostly limited to debugging and helping organize simulation data. The Simulation ID for any 
-simulation run will be printed to the console, where it can be read, copied or stored. Note that 
-identical Simulation IDs don't ensure two simulations will be fully repeatable if they are using 
-QPU solvers (see Repeatability of Simulations above).
+calling the `get_simulation_params_from_id()` function in the same file. The Simulation ID for any 
+simulation run will be printed to the console when the simulation starts and will also be used as
+the first part of the file name if simulation data is saved. To repeat a previous simulation, copy
+the simulation ID from either of these places to the REPLICATION_ID field of 'demo_configs.py'. 
+This will replicate all the parameters of that simulation, locking the controls on those values
+until the simulation is run (after which they will return to normal functioning).
 
 ### Adjusting Settings and Parameter Values
 
@@ -326,6 +326,14 @@ for almost all use cases. If it is set above 0, each mining event will take more
 QPU calls, slowing down the simulation somewhat. For structural reasons, the maximum supported 
 value is 255, but the exponential slowdown of mining and a built-in timeout will generally stop 
 values above 10 or 12 from being practically useful.
+
+### Saving Simulation Data
+
+When a simulation is paused or complete, a 'Save Data' button will appear. Clicking the button will
+save all of the current simulation data to a file in the 'outputs' directory, whose name is based
+on the Simulation ID. Multiple saves during the same simulation will save to the same filename, 
+(effectively extending the existing file with new data), but clicking 'Save Data' in different
+simulations will produce distinct files, even if those simulations have the same Simulation ID.
 
 ## References
 

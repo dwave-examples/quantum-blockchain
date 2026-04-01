@@ -333,14 +333,14 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-            # The data in this first store is irrelevant: it acts as a pass-through to trigger the
-            # simulation callback when targeted by other callbacks.
-            dcc.Store(id="start-simulation", data=False),
+            # The data in the two stores are irrelevant: they act as pass-throughs to trigger and 
+            # cancel the simulation  callback when targeted by other callbacks.
+            dcc.Store(id="simulation-start-target", data=False),
+            dcc.Store(id="simulation-pause-target", data=False),
             dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
             dcc.Store(id="miner-status-data", data=[]),
-            dcc.Store(id="pause-target", data=False),
             dcc.Store(
                 id="simulation-save-filename",
                 data="" if REPLICATION_ID is None else get_save_data_filename(REPLICATION_ID),

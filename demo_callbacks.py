@@ -72,7 +72,7 @@ START_BUTTON = {"type": "button", "index": InterfaceButton.START.value}
     Output(SAVE_BUTTON, "children", allow_duplicate=True),
     Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
     inputs=[
-        Input("start-simulation", "data"),
+        Input("simulation-start-target", "data"),
         State("miner-slider", "value"),
         State("blocks-input", "value"),
         State("blockchain-structure-data", "data"),
@@ -87,7 +87,7 @@ START_BUTTON = {"type": "button", "index": InterfaceButton.START.value}
     running=[
         (Output("is-active-simulation", "data"), True, False),
     ],
-    cancel=[Input("pause-target", "data")],
+    cancel=[Input("simulation-pause-target", "data")],
     prevent_initial_call=True,
     background=True,
 )
@@ -143,7 +143,7 @@ def simulation(
         save_button_text: changes text to "Save Data"
         save_button_disabled: enables the 'save' button"""
 
-    if ctx.triggered_id != "start-simulation":
+    if ctx.triggered_id != "simulation-start-target":
         raise PreventUpdate
 
     if save_filename:
@@ -173,8 +173,6 @@ def simulation(
         f"{init_status} simulation with ID {simulation_id} with {manager.num_miners} miners and {manager.max_blocks} blocks."
     )
     set_props("simulation-save-filename", {"data": save_filename})
-
-    global_fig = None
 
     while manager.blocks_mined < num_blocks or manager.round_progress > 0:
         iter_start_time = time.time()
@@ -315,10 +313,7 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
     if simulation_is_active:
         raise PreventUpdate
 
-    output = StartSimulationReturn()
-
-    return output
-
+    return StartSimulationReturn()
 
 # ========================================================================================
 
@@ -328,7 +323,7 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
     Output(SAVE_BUTTON, "children", allow_duplicate=True),
     Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
-    Output("pause-target", "data"),
+    Output("simulation-pause-target", "data"),
     inputs=[
         Input(PAUSE_BUTTON, "n_clicks"),
     ],
@@ -365,7 +360,7 @@ def pause_simulation(pause_click: int):
 
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
-    Output("start-simulation", "data", allow_duplicate=True),
+    Output("simulation-start-target", "data", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input(RESUME_BUTTON, "n_clicks"),
@@ -386,7 +381,7 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
     Returns:
         button_visibility_change: makes the 'pause' button visible and hides the 'reset', 'resume',
             and 'save' buttons.
-        start-simulation: Altering this Store (even from True to True) triggers the
+        simulation-start-target: Altering this Store (even from True to True) triggers the
             'simulation' callback, in this case resuming an in-progress simulation.
         is-active-simulation: setting this to True allows the 'simulation' callback
             to run, if it is not already.

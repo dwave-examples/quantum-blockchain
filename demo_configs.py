@@ -27,9 +27,11 @@ A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
 #  except those drawing on the QPU. See "Repeatability of Simulations" in README for details.
 RANDOM_SEED = None
 
-# If you want to replicate a specific simulation, copy the simulation ID from the output logs of
-# that simulation and paste it here (inside quotation marks).
-REPLICATION_ID = None  # "00060970004000015c7536"
+# Default value is None. If you want to replicate a specific simulation, copy the simulation ID 
+# from the output logs of that simulation and paste it here (inside quotation marks). If you
+# do this, the input options will be overridden by the values used in that simulation, and locked
+# to those values until the replication has been run, after which they will function normally.
+REPLICATION_ID = None  
 
 INTRO_TEXT = 'Select a number of miners and blocks and press "Begin Simulation".'
 INTRO_SUBTEXT = "Results will display here while simulation is running."
