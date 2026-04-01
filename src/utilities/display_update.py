@@ -24,7 +24,7 @@ def change_button_visibility(
     """Returns a list of style dicts to show or hide the given buttons. The order of the list
         corresponds to the order of the InterfaceButton enum, so for example if buttons_to_show
         is [InterfaceButton.PAUSE], the returned list will have a dict of {} at index 0 and
-        {"display": "none"} at all other indices.
+        dash.no_update at all other indices.
 
     Args:
         buttons_to_show: List of buttons to show.
@@ -33,7 +33,7 @@ def change_button_visibility(
     Returns:
         List of style dicts to show or hide the given buttons.
     """
-    outputs = [dash.no_update for _ in range(len(InterfaceButton))]
+    outputs = [dash.no_update]*len(InterfaceButton)
     for button in buttons_to_show:
         outputs[button.value] = {}
     for button in buttons_to_hide:

@@ -114,9 +114,8 @@ def test_id_recovery():
     causes get_simulation_params_from_id to raise an Exception."""
 
     for orig_id in test_ids:
-        if (
-            int(orig_id[6:8], 16) >= 128
-        ):  # Validation checks in get_simulation_params_from_id should
+        # Validation checks in get_simulation_params_from_id should
+        if int(orig_id[6:8], 16) >= 128:
             error_params = ""  # Catch IDs above 127 (hex values over 7f), raising an Exception.
             try:
                 error_params = get_simulation_params_from_id(orig_id)
