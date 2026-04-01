@@ -65,9 +65,6 @@ BUTTONS = {
         for button in InterfaceButton
     }
 
-print(f" Test output {BUTTONS['PAUSE'].id}")
-
-
 def generate_solver_configs():
     available_qpu_solvers, available_simulated_solvers = get_solver_lists()
 

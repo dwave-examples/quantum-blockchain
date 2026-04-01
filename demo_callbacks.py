@@ -416,9 +416,6 @@ def save_data(n_clicks: int, blockchain_data: list, save_filename: str) -> tuple
         save_filename: The name of the file to save the blockchain data to, including the .csv extension.
     """
 
-    if n_clicks == 0:
-        raise PreventUpdate
-
     save_simulation_data(blockchain_data, save_filename)
     print(f"Simulation data saved to {os.path.join(OUTPUTS_PATH, save_filename)}.")
     return (

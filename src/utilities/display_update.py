@@ -41,7 +41,6 @@ def change_button_visibility(
 
     return outputs
 
-
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
     """Renders the status of the miners in the current simulation. Each miner will be named
         "Miner n" where n is one more than their ID in TrialManager (because numbering
