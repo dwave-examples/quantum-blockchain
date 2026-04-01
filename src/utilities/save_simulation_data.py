@@ -35,7 +35,6 @@ def save_simulation_data(blockchain_data: list, filename: str):
     """
 
     # Format the blockchain data so that each dictionary in the list is a single line of a CSV file, with the keys as the column headers.
-    # This makes it easier to read and analyze the data in a spreadsheet program or with pandas.
 
     data_rows = []
     for block_dict in blockchain_data:
