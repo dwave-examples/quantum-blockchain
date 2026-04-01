@@ -31,6 +31,7 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
 from demo_configs import MIN_SIMULATION_LOOP_TIME
+from demo_interface import BUTTONS
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
 from src.protocols.simulation_identification import (
@@ -54,12 +55,6 @@ graph_layout_dict = dict(
     plot_bgcolor="white",
 )
 
-PAUSE_BUTTON = {"type": "button", "index": InterfaceButton.PAUSE.value}
-RESET_BUTTON = {"type": "button", "index": InterfaceButton.RESET.value}
-RESUME_BUTTON = {"type": "button", "index": InterfaceButton.RESUME.value}
-SAVE_BUTTON = {"type": "button", "index": InterfaceButton.SAVE.value}
-START_BUTTON = {"type": "button", "index": InterfaceButton.START.value}
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # =====================================================================================================
 #                             SECTION: Mining Round Steps                                             |
@@ -69,8 +64,8 @@ START_BUTTON = {"type": "button", "index": InterfaceButton.START.value}
 
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
-    Output(SAVE_BUTTON, "children", allow_duplicate=True),
-    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "children", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "disabled", allow_duplicate=True),
     inputs=[
         Input("simulation-start-target", "data"),
         State("miner-slider", "value"),
@@ -290,7 +285,7 @@ class StartSimulationReturn(NamedTuple):
 
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
-    Output("start-simulation", "data", allow_duplicate=True),
+    Output("simulation-start-target", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
@@ -298,7 +293,7 @@ class StartSimulationReturn(NamedTuple):
     Output("is-active-simulation", "data", allow_duplicate=True),
     Output("graph-loading", "display", allow_duplicate=True),
     inputs=[
-        Input(START_BUTTON, "n_clicks"),
+        Input(BUTTONS["START"].id, "n_clicks"),
         State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
@@ -320,12 +315,12 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
 
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
-    Output(SAVE_BUTTON, "children", allow_duplicate=True),
-    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "children", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "disabled", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     Output("simulation-pause-target", "data"),
     inputs=[
-        Input(PAUSE_BUTTON, "n_clicks"),
+        Input(BUTTONS["PAUSE"].id, "n_clicks"),
     ],
     prevent_initial_call=True,
 )
@@ -363,7 +358,7 @@ def pause_simulation(pause_click: int):
     Output("simulation-start-target", "data", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
-        Input(RESUME_BUTTON, "n_clicks"),
+        Input(BUTTONS["RESUME"].id, "n_clicks"),
         State("is-active-simulation", "data"),
     ],
     prevent_initial_call=True,
@@ -402,10 +397,10 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
 
 
 @dash.callback(
-    Output(SAVE_BUTTON, "children", allow_duplicate=True),
-    Output(SAVE_BUTTON, "disabled", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "children", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "disabled", allow_duplicate=True),
     inputs=[
-        Input(SAVE_BUTTON, "n_clicks"),
+        Input(BUTTONS["SAVE"].id, "n_clicks"),
         State("blockchain-structure-data", "data"),
         State("simulation-save-filename", "data"),
     ],
@@ -469,7 +464,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("simulation-save-filename", "data", allow_duplicate=True),
     Output({"type": "view-graph", "index": ALL}, "figure"),
     inputs=[
-        Input(RESET_BUTTON, "n_clicks"),
+        Input(BUTTONS["RESET"].id, "n_clicks"),
         State({"type": "view-graph", "index": ALL}, "figure"),
     ],
     prevent_initial_call=True,

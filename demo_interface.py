@@ -55,6 +55,18 @@ GRAPH_VIEW_LABELS = ["Global View"] + [
     f'{" ".join(MINER_NAMES[i].split("_"))} View' for i in range(NUM_MINER_VIEWS)
 ]
 
+BUTTONS = {
+        button.name: html.Button(
+            id={"type": "button", "index": button.value},
+            children=button.label,
+            className="button",
+            style=button.init_style,
+        )
+        for button in InterfaceButton
+    }
+
+print(f" Test output {BUTTONS['PAUSE'].id}")
+
 
 def generate_solver_configs():
     available_qpu_solvers, available_simulated_solvers = get_solver_lists()
@@ -275,30 +287,20 @@ def generate_settings_form() -> html.Div:
 def generate_run_buttons() -> html.Div:
     """Start, Pause, Reset and Resume buttons for the simulation"""
 
-    button_params = {
-        button.name: dict(
-            id={"type": "button", "index": button.value},
-            children=button.label,
-            className="button",
-            style=button.init_style,
-        )
-        for button in InterfaceButton
-    }
-
     return html.Div(
         id="button-group",
         children=[
-            html.Button(**button_params["PAUSE"]),
+            BUTTONS["PAUSE"],
             html.Div(
                 id="reset-resume-buttons",
                 className="",
                 children=[
-                    html.Button(**button_params["RESET"]),
-                    html.Button(**button_params["RESUME"]),
+                    BUTTONS["RESET"],
+                    BUTTONS["RESUME"],
                 ],
             ),
-            html.Button(**button_params["SAVE"]),
-            html.Button(**button_params["START"]),
+            BUTTONS["SAVE"],
+            BUTTONS["START"],
         ],
     )
 
