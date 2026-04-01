@@ -59,7 +59,7 @@ BUTTONS = {
     button.name: html.Button(
         id={"type": "button", "index": button.value},
         children=button.label,
-        className="button",
+        className=f"button {button.name.lower()}-button",
         style=button.init_style,
     )
     for button in InterfaceButton
