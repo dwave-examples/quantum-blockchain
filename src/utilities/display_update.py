@@ -17,7 +17,6 @@ from dash import dash, html
 from demo_configs import MINER_NAMES
 from src.demo_enums import InterfaceButton
 
-
 def change_button_visibility(
     buttons_to_show: list[InterfaceButton], buttons_to_hide: list[InterfaceButton]
 ) -> list[dict]:
@@ -42,14 +41,14 @@ def change_button_visibility(
     return outputs
 
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
-    """Renders the status of the miners in the current simulation. Each miner will be named
-        "Miner n" where n is one more than their ID in TrialManager (because numbering
-        starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
-        Validating, Valid" if they've started acting this round, or "..." if not.
+    """Renders the status of the miners in the current simulation. Miner names will be drawn from
+        the MINER_NAMES list in demo_configs.py. Miners will have a status of "Mined" or "Validate"
+        if they've started acting this round, and blank status otherwise.
 
     Args:
-        block_number: The current block.
-        miner_status: The current statuses of all the miners.
+        current_block_data: The data for the current block, which includes the miner IDs, their scores,
+            and the solvers they used.
+        num_miners: The total number of miners in the simulation
         show_solvers: Whether to have a third column showing the solver used.
 
     Returns:

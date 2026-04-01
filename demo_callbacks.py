@@ -305,6 +305,7 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
         start_click: unused
         simulation_is_active: Returns 'True.' Flag to signal that one instance of
             'simulation' callback is already running, so another should not be started"""
+    
     if simulation_is_active:
         raise PreventUpdate
 
@@ -340,7 +341,9 @@ def pause_simulation(pause_click: int):
         save_button_text: changes text to "Save Data"
         save_button_disabled: enables the 'save' button
         is-active-simulation: setting this to False allows the 'simulation' callback
-            to be restarted, either by the 'run' button or the 'resume' button."""
+            to be restarted, either by the 'run' button or the 'resume' button.
+        simulation-pause-target: Altering this Store (even from True to True) triggers the
+            cancellation of the 'simulation' callback, effectively pausing the simulation."""
 
     visible_buttons = change_button_visibility(
         buttons_to_show=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
@@ -407,7 +410,8 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
     prevent_initial_call=True,
 )
 def save_data(n_clicks: int, blockchain_data: list, save_filename: str) -> tuple[str, bool]:
-    """Saves the current simulation data to a file when the 'save' button is clicked.
+    """Saves the current simulation data to a file when the 'save' button is clicked. Disables
+        the 'save' button (changing its text to "Data Saved") to avoid redundant writes.
 
     Args:
         n_clicks: number of clicks on the 'save' button. Trigger for the callback, value is
@@ -418,10 +422,9 @@ def save_data(n_clicks: int, blockchain_data: list, save_filename: str) -> tuple
 
     save_simulation_data(blockchain_data, save_filename)
     print(f"Simulation data saved to {os.path.join(OUTPUTS_PATH, save_filename)}.")
-    return (
-        "Data Saved",
-        True,
-    )  # Change button text to indicate data has been saved and disable it to prevent multiple clicks
+    # Change button text to indicate data has been saved and disable it to prevent multiple clicks
+    return "Data Saved", True
+    
 
 
 # ========================================================================================

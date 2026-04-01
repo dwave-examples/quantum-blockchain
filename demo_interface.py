@@ -78,8 +78,8 @@ def generate_solver_configs():
         label="Solver",
         id="qpu-solver-select",
         options=generate_options(qpu_solver_opts),
-        initial_idx=0,
-        start_disabled=False,
+        value = "",
+        disabled=False,
     )
 
     simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
@@ -91,8 +91,8 @@ def generate_solver_configs():
         label="Solver",
         id="simulated-solver-select",
         options=generate_options(simulated_solver_opts),
-        initial_idx=0,
-        start_disabled=False,
+        value = "",
+        disabled=False,
     )
 
     solver_mode_options = generate_options(SolverMode)
@@ -136,7 +136,7 @@ def slider(label: str, id: str, config: dict) -> html.Div:
 
 
 def dropdown(
-    label: str, id: str, options: list, initial_idx: int = 0, start_disabled: bool = False
+    label: str, id: str, options: list, value: str = "", disabled: bool = False
 ) -> html.Div:
     """Dropdown element for option selection.
 
@@ -144,8 +144,8 @@ def dropdown(
         label: The title that goes above the dropdown.
         id: A unique selector for this element.
         options: A list of dictionaries of labels and values.
-        initial_idx: The index of the option that should be preselected.
-        start_disabled: Whether the dropdown should be initially disabled.
+        value: The value of the option that should be preselected.
+        disabled: Whether the dropdown should be initially disabled.
     """
 
     return html.Div(
@@ -155,9 +155,9 @@ def dropdown(
             dmc.Select(
                 id=id,
                 data=options,
-                value=options[initial_idx]["value"],
+                value=value if value in [opt["value"] for opt in options] else options[0]["value"],
                 allowDeselect=False,
-                disabled=start_disabled,
+                disabled=disabled,
                 **{"aria-label": " ".join(id.split("-"))} if not label else {},
             ),
         ],
@@ -238,22 +238,19 @@ def generate_settings_form() -> html.Div:
         num_blocks_config.update({"value": init_params["max_blocks"], "disabled": True})
         solver_list = init_params["solvers"]
         if len(solver_list) > 1:
-            solver_select_idx = 0
+            solver_name = ""
         else:
             solver_name = solver_list[0].solver_name
-            solver_name_list = [solver_name.value for solver_name in SolverName]
-            solver_select_idx = solver_name_list.index(solver_name)
 
         if "simulated" in solver_list[0].solver_name:
-            solver_select_idx -= len([x for x in SolverName if "simulated" not in x.value])
             hide_simulated_solvers = False
-            simulated_solver_configs["initial_idx"] = solver_select_idx
+            simulated_solver_configs["value"] = solver_name
             mode_select_configs["value"] = f"{SolverMode.SIMULATED.value}"
         else:
-            qpu_solver_configs["initial_idx"] = solver_select_idx
+            qpu_solver_configs["value"] = solver_name
 
-        simulated_solver_configs["start_disabled"] = True
-        qpu_solver_configs["start_disabled"] = True
+        simulated_solver_configs["disabled"] = True
+        qpu_solver_configs["disabled"] = True
 
     solver_settings = (
         html.Div(
@@ -300,7 +297,6 @@ def generate_run_buttons() -> html.Div:
             BUTTONS["START"],
         ],
     )
-
 
 def graph_legend() -> html.Div:
     """Generate graph legend"""
