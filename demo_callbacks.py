@@ -101,7 +101,7 @@ def simulation(
     simulated_solver_select_val: str,
     solver_mode: str,
     save_filename: str,
-) -> tuple[dict, dict, dict, dict, dict, str, bool]:
+) -> tuple[list[dict], str, bool]:
     """Manages a single run of the blockchain simulation.
 
     This callback is triggered (indirectly) by the "run" and "resume" buttons. When triggered
