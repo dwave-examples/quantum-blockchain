@@ -305,11 +305,12 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
         start_click: unused
         simulation_is_active: Returns 'True.' Flag to signal that one instance of
             'simulation' callback is already running, so another should not be started"""
-    
+
     if simulation_is_active:
         raise PreventUpdate
 
     return StartSimulationReturn()
+
 
 # ========================================================================================
 
@@ -424,7 +425,6 @@ def save_data(n_clicks: int, blockchain_data: list, save_filename: str) -> tuple
     print(f"Simulation data saved to {os.path.join(OUTPUTS_PATH, save_filename)}.")
     # Change button text to indicate data has been saved and disable it to prevent multiple clicks
     return "Data Saved", True
-    
 
 
 # ========================================================================================

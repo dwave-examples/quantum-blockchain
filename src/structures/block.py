@@ -186,7 +186,7 @@ class Block:
             locked. Raises an exception otherwise.
 
         Args:
-            value (int): value to set the nonce to.
+            value: value to set the nonce to.
 
         Modifies:
                 self._header["hash"]: removes the block hash and the quantum hash and the signature
@@ -311,7 +311,7 @@ class Block:
             that invalid blocks are never treated as valid.
 
         Args:
-            validate_hash (bool). Defaults to True. Determines whether the function will check the
+            validate_hash: Defaults to True. Determines whether the function will check the
                 block hash stored in the passed dict against the hash value calculated for the
                 assembled block (raising an Exception if they don't match)."""
 
@@ -345,7 +345,7 @@ class Block:
             which performs a check on the hash of the reconstructed Block to ensure integrity.
 
         Args:
-            validate_hash (bool): Defaults to True. Whether to check passed hash against
+            validate_hash: Defaults to True. Whether to check passed hash against
                 calculated hash of the reconstructed block. See .from_json for more details."""
 
         block_dict = json.loads(json_block)

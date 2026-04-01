@@ -23,10 +23,10 @@ def calculate_hash(data_in: str) -> str:
         formatting data to and from strings to call hashlib's sha256.
 
     Args:
-        data_in (str): the data to be hashed, formatted as a hexadecimal string
+        data_in: the data to be hashed, formatted as a hexadecimal string
 
     Returns:
-        output_hash (str): the hash of the passed data, formatted as a hex string."""
+        output_hash: the hash of the passed data, formatted as a hex string."""
 
     if type(data_in) != str:
         raise Exception(f"Passed non-string data {data_in} of type {type(data_in)}")
@@ -42,11 +42,11 @@ def validate_zeroes(hash: str, num_zeroes: int = 0) -> bool:
     into a byte array so that the number of zeroes can be checked directly.
 
     Args:
-        hash (str): the hash to be validated
-        num_zeroes (int): the number of leading zeroes required to pass validation
+        hash: the hash to be validated
+        num_zeroes: the number of leading zeroes required to pass validation
 
     Returns:
-        passes_validation (bool): True if the hash passes, False otherwise."""
+        passes_validation: True if the hash passes, False otherwise."""
 
     if 4 * len(hash) < num_zeroes:
         raise Exception(f"Passed {num_zeroes} 0s, but hash {hash} with length {len(hash)} \
@@ -65,11 +65,11 @@ def compare_hashes(first_hash: str, second_hash: str) -> np.ndarray:
     and returns the resulting bitstring in the same format.
 
     Args:
-        first_hash (str): a hash formatted as a hexadecimal string
-        second_hash (str): a second hash, with the same length and format as the first
+        first_hash: a hash formatted as a hexadecimal string
+        second_hash: a second hash, with the same length and format as the first
 
     Returns:
-        hash_comparison (str): a hexadecimal string encoding the bits where the two hashes match and those where they don't.
+        hash_comparison: a hexadecimal string encoding the bits where the two hashes match and those where they don't.
     """
 
     hash_bytes = [binascii.unhexlify(hash_bits) for hash_bits in (first_hash, second_hash)]

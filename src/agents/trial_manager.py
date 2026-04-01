@@ -85,19 +85,19 @@ class TrialManager:
         """Initializes a new TrialManager object.
 
         Args:
-            num_blocks (int): the number of blocks the simulation will run before it concludes
-            miner_names (list[str]): a list of unique strings to use as names of miners in the
+            num_blocks: the number of blocks the simulation will run before it concludes
+            miner_names: a list of unique strings to use as names of miners in the
                 simulation. TrialManager will use all such names passed, thus the length of the list
                 will determine the number of miners in the simulation.
-            solvers (list[HashSolver]): a list of HashSolver objects. One will be selected each
+            solvers: a list of HashSolver objects. One will be selected each
                 time a miner attempts to mine or validate. To run a simulation with a single solver,
                 pass a list containing only that solver.
-            quantum_hash_length (int): length in bits of the quantum hash. This partly determines
+            quantum_hash_length: length in bits of the quantum hash. This partly determines
                 the cross-validation difficulty for the simulation.
-            n_zeroes (int): the number of leading zeros a block hash must have to pass the PoW
+            n_zeroes: the number of leading zeros a block hash must have to pass the PoW
                 requirement. This determines how difficult mining is: each extra 0 will (on
                 average) double the number of attempts required to mine successfully.
-            allowable_err (int): how much error is allowed in cross validation. Increasing
+            allowable_err: how much error is allowed in cross validation. Increasing
                 this will make cross-validation easier: see the 'scoring' function
                 in the ProofOfWorkProtocol class for a full mathematical description."""
 
@@ -176,7 +176,7 @@ class TrialManager:
         global blockchain representation. Should only be called by the restart_trial method.
 
         Args:
-            blockchain_list (list[dict]): A list containing dicts of blockchain data, including
+            blockchain_list: A list containing dicts of blockchain data, including
                 JSON-formatted blocks. The list should also include scoring data for all
                 the miners in the simulation, but this won't be checked until reinitialize_miners
                 is called (see that docstring for more info).
@@ -327,7 +327,7 @@ class TrialManager:
             attribute, which is incremented by one on each step executed.
 
         Returns:
-            miner_id (string): ID of the miner that mined or validated this round"""
+            miner_id: ID of the miner that mined or validated this round"""
 
         miner_id = self.round_order[self.round_progress]
         if self.round_progress == 0:
@@ -347,7 +347,7 @@ class TrialManager:
         a smaller number as an argument.
 
         Args:
-            num_blocks (int): Defaults to None, which will simply cause the simulation to run to completion. If an integer
+            num_blocks: Defaults to None, which will simply cause the simulation to run to completion. If an integer
                 less than or equal to the number of blocks remaining in the simulation is passed, TrialManager will run for
                 only that number of blocks, allowing the simulation to be broken up into stages if desired. Passing more than
                 the remaining number will raise an Exception."""
@@ -368,7 +368,7 @@ class TrialManager:
         from the list passed as an argument.
 
         Args:
-            blockchain_list (list[dict]): A list containing data for the interrupted simulation.
+            blockchain_list: A list containing data for the interrupted simulation.
                 For this function to complete successfully, the list must include a dict for
                 each block in the chain, with a JSON-formatted copy of that block as well
                 as a dict of scores that the miners assigned to that block (keyed by miner id).

@@ -17,6 +17,7 @@ from dash import dash, html
 from demo_configs import MINER_NAMES
 from src.demo_enums import InterfaceButton
 
+
 def change_button_visibility(
     buttons_to_show: list[InterfaceButton], buttons_to_hide: list[InterfaceButton]
 ) -> list[dict]:
@@ -32,13 +33,14 @@ def change_button_visibility(
     Returns:
         List of style dicts to show or hide the given buttons.
     """
-    outputs = [dash.no_update]*len(InterfaceButton)
+    outputs = [dash.no_update] * len(InterfaceButton)
     for button in buttons_to_show:
         outputs[button.value] = {}
     for button in buttons_to_hide:
         outputs[button.value] = {"display": "none"}
 
     return outputs
+
 
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
     """Renders the status of the miners in the current simulation. Miner names will be drawn from

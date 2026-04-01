@@ -57,9 +57,9 @@ class GraphBranch(ScoreTreeBranch):
         """Initializes the graph branch.
 
         Args:
-            branch (ScoreTreeBranch): the branch to be graphed
-            point_color (str): the color assigned to the branch's points
-            edge_color (str): the color assigned to the branch's edges"""
+            branch: the branch to be graphed
+            point_color: the color assigned to the branch's points
+            edge_color: the color assigned to the branch's edges"""
 
         super().__init__()
         for node in branch.node_list:
@@ -96,9 +96,9 @@ class GraphBranch(ScoreTreeBranch):
         scaled down.
 
         Args:
-            master_size_chart (list): size chart for the trunk. Branch size charts are computed relative
+            master_size_chart: size chart for the trunk. Branch size charts are computed relative
                 to the trunk.
-            size_scale (float): Defaults to 1.0. Factor by which to scale the points in the branch.
+            size_scale: Defaults to 1.0. Factor by which to scale the points in the branch.
                 In general, non-trunk branches should be passed values less than 1, so they are drawn
                 smaller than the points on the trunk."""
 
@@ -151,8 +151,8 @@ class SpiralPlotter:
         closer to the tip will appear larger.
 
         Returns:
-            master_size_chart (list[float]): A list of floats indicating how to scale the sizes
-                points in the trunk. Points nearer the center (earlier in the trunk) will be
+            master_size_chart: A list of floats indicating how to scale the sizes points
+                in the trunk. Points nearer the center (earlier in the trunk) will be
                 close to GRAPH_MIN_POINT_SIZE. Moving out from there, points will grow
                 smoothly larger as they approach the trunk tip. The points at the tip
                 should be close to GRAPH_MAX_POINT_SIZE."""
@@ -178,8 +178,7 @@ class SpiralPlotter:
         the data of the BlockScoreTree object.
 
         Args:
-            tree_data (BlockScoreTree): a BlockScoreTree object containing data to be
-                plotted on a spiral plot."""
+            tree_data: a BlockScoreTree object containing data to be plotted on a spiral plot."""
 
         self.tree = tree_data
         self.tree.refactor_branches()
@@ -234,8 +233,7 @@ class SpiralPlotter:
         is not too big of a change from the previous graph.
 
         Returns:
-            points_per_rev (int): the number of points that will be drawn in a single
-                revolution."""
+            points_per_rev: the number of points that will be drawn in a single revolution."""
 
         allowed_vals = list(
             range(GRAPH_MIN_POINTS_PER_REVOLUTION, GRAPH_MAX_POINTS_PER_REVOLUTION + 1, 4)
@@ -263,9 +261,9 @@ class SpiralPlotter:
         very many revolutions).
 
         Args:
-            node_num (int or float): the block number (order in the blockchain) of the node
-                being computed. Allows for fractional node numbers to assist in drawing
-                graph lines, which requires plotting points in between the actual graph nodes.
+            node_num: the block number (order in the blockchain) of the node being computed.
+                Allows for fractional node numbers to assist in drawing graph lines, which
+                requires plotting points in between the actual graph nodes.
 
         Returns:
             radius: distance from the center at which this graph point should be drawn."""
@@ -305,7 +303,7 @@ class SpiralPlotter:
         the trunk, passed as the branch_depth argument.
 
         Args:
-            branch_depth (int): The number of branches (self included) between this branch and
+            branch_depth: The number of branches (self included) between this branch and
                 the trunk. The trunk should always be depth 0, a branch with no other branches
                 near it will be depth 1, and so on."""
         adjustment_fraction = branch_depth * (1 - GRAPH_MAX_BRANCH_DISTANCE)
@@ -337,10 +335,10 @@ class SpiralPlotter:
         between them so as to create a smooth curve.
 
         Args:
-            branch (GraphBranch): the branch to be plotted
-            trunk (bool): Defaults to 'True'. Flag to signal whether the branch
-            is the trunk: non-trunk branches need a 'stem' segment drawn
-                to connect them to their parent branch."""
+            branch: the branch to be plotted
+            trunk: Defaults to 'True'. Flag to signal whether the branch
+            is the trunk: non-trunk branches need a 'stem' segment drawn to connect
+                them to their parent branch."""
 
         if branch.parent is not None:  # Adds straight "stem" segment connecting branch to parent
             root_idx = branch.parent.hash_to_index_lookup[branch.root_hash]
@@ -376,8 +374,7 @@ class SpiralPlotter:
         all of which should either be in active branches or the trunk.
 
         Args:
-            mining_hashes (list[str]): a list of block hashes that are currently candidates
-                to be mined."""
+            mining_hashes: a list of block hashes that are currently candidates to be mined."""
 
         # In miner view, trunk tip will always be a mining block, in global view it may not be
         self.trunk.point_colors[-1] = TRUNK_POINT_COLOR
@@ -397,9 +394,10 @@ class SpiralPlotter:
         very simple straight segments extending from the center of the plot to the edge,
         lining up with the angles at which points are drawn.
 
-        Return:
-            traces (list[go.Scatter]). A list of Plotly Graph Objects Scatter objects,
-            each one containing a single radial line."""
+        Returns:
+            traces: A list of Plotly Graph Objects Scatter objects, each one containing a single
+                radial line."""
+
         traces = []
         for angle in self.angles:
             x_end = self.center[0] + GRAPH_MAX_RADIUS * math.cos(angle)
@@ -423,10 +421,9 @@ class SpiralPlotter:
         graph will have one set of points (indicating the blocks that are part of that branch)
         and one set of lines, arranged so as to connect those points in a curving spiral shape.
 
-        mining_hashes (list[str]): list of block hashes for blocks that are candidates for
-            miners to mine.
-        is_global (bool): flag to indicate whether graph is a global view graph, and should
-            be colored accordingly
+        mining_hashes: list of block hashes for blocks that are candidates for miners to mine.
+        is_global: flag to indicate whether graph is a global view graph, and should be colored
+            accordingly
 
         Returns:
             fig: The Plotly figure with the spiral graphed as determined by the data stored in
@@ -503,18 +500,15 @@ class SpiralPlotter:
         the necessary SpiralPlotter functions in order.
 
         Args:
-            tree (BlockScoreTree): the BlockScoreTree object you wish to plot.
-            mining_hash (str): the hash of the block that is currently being mined.
-            is_global_tree (bool): Flag indicating whether the tree should be recolored to
+            tree: the BlockScoreTree object you wish to plot.
+            mining_hashes: list of block hashes for blocks that are candidates for miners to mine.
+            is_global_tree: Flag indicating whether the tree should be recolored to
                 represent the global view. Should be left on defaults for individual miner
                 graphs.
 
 
         Returns:
-            plot (go.Figure): a Plotly Graph Objects figure, containing the spiral plot for
-                the tree.
-
-        """
+            plot : a Plotly Graph Objects figure, containing the spiral plot for the tree."""
 
         if len(mining_hashes) > 1:
             self.import_plotting_data(tree_data=tree, mining_hashes=mining_hashes)

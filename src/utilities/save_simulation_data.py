@@ -11,7 +11,7 @@ def get_save_data_filename(simulation_id: str) -> str:
     If a file with the same name already exists, append a number to the filename to avoid overwriting.
 
     Args:
-        simulation_id (str): The unique identifier for the simulation, used as the first part of the filename for the output CSV.
+        simulation_id: The unique identifier for the simulation, used as the first part of the filename for the output CSV.
     """
 
     basename = f"{simulation_id}_blockchain_data"
@@ -30,8 +30,8 @@ def save_simulation_data(blockchain_data: list, filename: str):
     the provided filename.
 
     Args:
-        blockchain_data (list): A list of dictionaries, each containing data for a single block.
-        filename (str): The name of the file to save the blockchain data to, including the .csv extension.
+        blockchain_data: A list of dictionaries, each containing data for a single block.
+        filename: The name of the file to save the blockchain data to, including the .csv extension.
     """
 
     # Format the blockchain data so that each dictionary in the list is a single line of a CSV file, with the keys as the column headers.

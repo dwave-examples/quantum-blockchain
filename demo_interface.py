@@ -56,56 +56,14 @@ GRAPH_VIEW_LABELS = ["Global View"] + [
 ]
 
 BUTTONS = {
-        button.name: html.Button(
-            id={"type": "button", "index": button.value},
-            children=button.label,
-            className="button",
-            style=button.init_style,
-        )
-        for button in InterfaceButton
-    }
-
-def generate_solver_configs():
-    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
-
-    qpu_solver_opts = {f"Random {SolverMode.QPU.label}": -1}
-
-    qpu_solver_opts.update(
-        {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
+    button.name: html.Button(
+        id={"type": "button", "index": button.value},
+        children=button.label,
+        className="button",
+        style=button.init_style,
     )
-
-    qpu_solver_configs = dict(
-        label="Solver",
-        id="qpu-solver-select",
-        options=generate_options(qpu_solver_opts),
-        value = "",
-        disabled=False,
-    )
-
-    simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
-    simulated_solver_opts.update(
-        {solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)}
-    )
-
-    simulated_solver_configs = dict(
-        label="Solver",
-        id="simulated-solver-select",
-        options=generate_options(simulated_solver_opts),
-        value = "",
-        disabled=False,
-    )
-
-    solver_mode_options = generate_options(SolverMode)
-
-    mode_select_configs = dict(
-        label="Solver Mode",
-        id="solver-mode-select",
-        options=solver_mode_options,
-        value=solver_mode_options[0]["value"],
-    )
-
-    return qpu_solver_configs, simulated_solver_configs, mode_select_configs
-
+    for button in InterfaceButton
+}
 
 def slider(label: str, id: str, config: dict) -> html.Div:
     """Slider element for value selection.
@@ -218,16 +176,32 @@ def generate_options(options: list | EnumMeta | dict) -> list[dict]:
 
 
 def generate_settings_form() -> html.Div:
-    """This function generates settings for selecting the scenario, model, and solver.
+    """This function generates settings for selecting number of blocks and miners, as well as the 
+    solver settings. The HIDE_SIMULATED_SOLVERS and REPLICATION_ID parameters from demo_configs.py 
+    affect the initial state of the solver settings options, as described in that file.
 
     Returns:
-        html.Div: A Div containing the settings for selecting the scenario, model, and solver.
-    """
+        html.Div: A Div containing the settings form."""
 
     hide_simulated_solvers = HIDE_SIMULATED_SOLVERS
     miner_slider_config = copy.copy(MINER_SLIDER)
     num_blocks_config = copy.copy(NUM_BLOCKS)
-    qpu_solver_configs, simulated_solver_configs, mode_select_configs = generate_solver_configs()
+
+    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
+    qpu_solver_opts = {f"Random {SolverMode.QPU.label}": -1}
+    qpu_solver_opts.update(
+        {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
+    )
+    qpu_solver_value = ""
+
+    simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
+    simulated_solver_opts.update(
+        {solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)}
+    )
+    simulated_solver_value = ""
+
+    solver_mode_options = generate_options(SolverMode)
+    solver_mode_value = solver_mode_options[0]["value"]
 
     # If a REPLICATION_ID is provided, the initial values of the settings will be set to match the
     # parameters encoded in that ID, and the settings will be disabled until after the first
@@ -237,34 +211,44 @@ def generate_settings_form() -> html.Div:
         miner_slider_config.update({"value": init_params["num_miners"], "disabled": True})
         num_blocks_config.update({"value": init_params["max_blocks"], "disabled": True})
         solver_list = init_params["solvers"]
-        if len(solver_list) > 1:
-            solver_name = ""
-        else:
-            solver_name = solver_list[0].solver_name
 
         if "simulated" in solver_list[0].solver_name:
             hide_simulated_solvers = False
-            simulated_solver_configs["value"] = solver_name
-            mode_select_configs["value"] = f"{SolverMode.SIMULATED.value}"
+            simulated_solver_value = "" if len(solver_list) > 1 else solver_list[0].solver_name
+            solver_mode_value = f"{SolverMode.SIMULATED.value}"
         else:
-            qpu_solver_configs["value"] = solver_name
-
-        simulated_solver_configs["disabled"] = True
-        qpu_solver_configs["disabled"] = True
+            qpu_solver_value = "" if len(solver_list) > 1 else solver_list[0].solver_name
 
     solver_settings = (
         html.Div(
-            radio(**mode_select_configs),
+            radio(
+                label="Solver Mode",
+                id="solver-mode-select",
+                options=solver_mode_options,
+                value=solver_mode_value,
+            ),
             className="display-none" if hide_simulated_solvers else "",
         ),
         html.Div(
             id="qpu-dropdown",
-            children=dropdown(**qpu_solver_configs),
+            children=dropdown(
+                label="Solver",
+                id="qpu-solver-select",
+                options=generate_options(qpu_solver_opts),
+                value=qpu_solver_value,
+                disabled=REPLICATION_ID is not None,
+            ),
         ),
         html.Div(
             id="simulated-dropdown",
             className="display-none",
-            children=dropdown(**simulated_solver_configs),
+            children=dropdown(
+                label="Solver",
+                id="simulated-solver-select",
+                options=generate_options(simulated_solver_opts),
+                value=simulated_solver_value,
+                disabled=REPLICATION_ID is not None,
+            ),
         ),
     )
 
@@ -298,6 +282,7 @@ def generate_run_buttons() -> html.Div:
         ],
     )
 
+
 def graph_legend() -> html.Div:
     """Generate graph legend"""
 
@@ -328,7 +313,7 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-            # The data in the two stores are irrelevant: they act as pass-throughs to trigger and 
+            # The data in the two stores are irrelevant: they act as pass-throughs to trigger and
             # cancel the simulation  callback when targeted by other callbacks.
             dcc.Store(id="simulation-start-target", data=False),
             dcc.Store(id="simulation-pause-target", data=False),

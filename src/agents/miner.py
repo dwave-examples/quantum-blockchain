@@ -59,7 +59,7 @@ class Miner:
         to the one the miner had before the simulation was paused.
 
         Args:
-            node_list (list of dicts): A list of dicts containing JSON blocks and metadata.
+            node_list: A list of dicts containing JSON blocks and metadata.
                 should be passed to each miner by simulation callback during restart.
 
         Modifies:
@@ -76,8 +76,8 @@ class Miner:
             blockchain beliefs based on the logic of the update_blockchain_beliefs function.
 
         Args:
-            block (Block): a block
-            block_score (int or float): score assigned to the block
+            block: a block
+            block_score: score assigned to the block
 
         Modifies:
             self.blockchain: the miner's blockchain
@@ -108,7 +108,7 @@ class Miner:
         """Assembles a new block
 
         Returns:
-            new_block (Block): a new block that is assembled with a random nonce, but has not yet had its quantum hash
+            new_block: a new block that is assembled with a random nonce, but has not yet had its quantum hash
                 or block hash set."""
 
         if previous_block_hash is None:
@@ -124,8 +124,8 @@ class Miner:
             and the block hash and validating against the PoW requirement.
 
         Returns:
-            succeeded (bool): whether the mining succeeded or failed
-            sample_time (float): the time in seconds spent performing the quantum experiment."""
+            succeeded: whether the mining succeeded or failed
+            sample_time: the time in seconds spent performing the quantum experiment."""
 
         if mining_block is None:
             if self.mining_block is None:
@@ -155,7 +155,7 @@ class Miner:
             and adds it to the miner's blockchain.
 
         Args:
-            new_block_str (str): A new block, serialized into a JSON-formatted string.
+            new_block_str: A new block, serialized into a JSON-formatted string.
 
         Returns:
             score: the score assigned to the block."""
@@ -174,10 +174,10 @@ class Miner:
             raise an Exception).
 
         Args:
-            block (Block): the Block object to be validated.
+            block: the Block object to be validated.
 
         returns:
-            score (float): the Block's score, as determined from evaluating its quantum hash against the miner's
+            score: the Block's score, as determined from evaluating its quantum hash against the miner's
                 scoring function. The current convention across all scoring functions is that positive score blocks
                 are initially presumed valid (and added to the Miner's trunk if applicable) while zero or negative
                 scores are presumed invalid and will create a secondary branch if their predecessor is in the trunk
