@@ -30,7 +30,6 @@ from src.values import (
     GENESIS_BLOCK_PREV_HASH,
     GENESIS_BLOCK_TIMESTAMP,
     GENESIS_MINER_ID,
-    MANAGER_PRNG_SEED,
     MAX_MINING_ATTEMPTS,
     MAX_RNG_SEED_LEN,
 )
@@ -80,7 +79,7 @@ class TrialManager:
         quantum_hash_length: int = QUANTUM_HASH_LENGTH,
         n_zeroes: int = N_ZEROES,
         allowable_err: int = ALLOWABLE_ERR,
-        prng_seed: int = MANAGER_PRNG_SEED,
+        prng_seed: int = 0,
     ):
         """Initializes a new TrialManager object.
 

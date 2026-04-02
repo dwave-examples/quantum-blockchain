@@ -65,6 +65,13 @@ BUTTONS = {
     for button in InterfaceButton
 }
 
+available_qpu_solvers, simulated_solvers = get_solver_lists()
+single_qpu_opts = {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
+QPU_SOLVER_OPTS = {f"Random {SolverMode.QPU.label}": -1} | single_qpu_opts
+single_simulated_opts = {solver.solver_name: i for i, solver in enumerate(simulated_solvers)}
+SIMULATED_SOLVER_OPTS = {f"Random {SolverMode.SIMULATED.label}": -1} | single_simulated_opts
+
+
 def slider(label: str, id: str, config: dict) -> html.Div:
     """Slider element for value selection.
 
@@ -122,7 +129,9 @@ def dropdown(
     )
 
 
-def radio(label: str, id: str, options: list, value: str, inline: bool = True) -> html.Div:
+def radio(
+    label: str, id: str, options: list, value: str, inline: bool = True, disabled: bool = False
+) -> html.Div:
     """Radio element for option selection.
 
     Args:
@@ -131,7 +140,9 @@ def radio(label: str, id: str, options: list, value: str, inline: bool = True) -
         options: A list of dictionaries of labels and values.
         value: The value of the radio that should be preselected.
         inline: Whether the options are displayed beside or below each other.
+        disabled: Whether the radio should be initially disabled.
     """
+
     return html.Div(
         className="radio-wrapper",
         children=[
@@ -142,7 +153,12 @@ def radio(label: str, id: str, options: list, value: str, inline: bool = True) -
                 value=value,
                 children=dmc.Group(
                     [
-                        dmc.Radio(option["label"], value=option["value"], color=THEME_COLOR)
+                        dmc.Radio(
+                            option["label"],
+                            value=option["value"],
+                            disabled=disabled,
+                            color=THEME_COLOR,
+                        )
                         for option in options
                     ]
                 ),
@@ -176,8 +192,8 @@ def generate_options(options: list | EnumMeta | dict) -> list[dict]:
 
 
 def generate_settings_form() -> html.Div:
-    """This function generates settings for selecting number of blocks and miners, as well as the 
-    solver settings. The HIDE_SIMULATED_SOLVERS and REPLICATION_ID parameters from demo_configs.py 
+    """This function generates settings for selecting number of blocks and miners, as well as the
+    solver settings. The HIDE_SIMULATED_SOLVERS and REPLICATION_ID parameters from demo_configs.py
     affect the initial state of the solver settings options, as described in that file.
 
     Returns:
@@ -187,17 +203,7 @@ def generate_settings_form() -> html.Div:
     miner_slider_config = copy.copy(MINER_SLIDER)
     num_blocks_config = copy.copy(NUM_BLOCKS)
 
-    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
-    qpu_solver_opts = {f"Random {SolverMode.QPU.label}": -1}
-    qpu_solver_opts.update(
-        {solver.solver_name: i for i, solver in enumerate(available_qpu_solvers)}
-    )
     qpu_solver_value = ""
-
-    simulated_solver_opts = {f"Random {SolverMode.SIMULATED.label}": -1}
-    simulated_solver_opts.update(
-        {solver.solver_name: i for i, solver in enumerate(available_simulated_solvers)}
-    )
     simulated_solver_value = ""
 
     solver_mode_options = generate_options(SolverMode)
@@ -226,6 +232,7 @@ def generate_settings_form() -> html.Div:
                 id="solver-mode-select",
                 options=solver_mode_options,
                 value=solver_mode_value,
+                disabled=REPLICATION_ID is not None,
             ),
             className="display-none" if hide_simulated_solvers else "",
         ),
@@ -234,7 +241,7 @@ def generate_settings_form() -> html.Div:
             children=dropdown(
                 label="Solver",
                 id="qpu-solver-select",
-                options=generate_options(qpu_solver_opts),
+                options=generate_options(QPU_SOLVER_OPTS),
                 value=qpu_solver_value,
                 disabled=REPLICATION_ID is not None,
             ),
@@ -245,7 +252,7 @@ def generate_settings_form() -> html.Div:
             children=dropdown(
                 label="Solver",
                 id="simulated-solver-select",
-                options=generate_options(simulated_solver_opts),
+                options=generate_options(SIMULATED_SOLVER_OPTS),
                 value=simulated_solver_value,
                 disabled=REPLICATION_ID is not None,
             ),
@@ -313,9 +320,8 @@ def create_interface():
                 id="skip-to-main",
                 className="skip-link",
             ),
-            # The data in the two stores are irrelevant: they act as pass-throughs to trigger and
-            # cancel the simulation  callback when targeted by other callbacks.
-            dcc.Store(id="simulation-start-target", data=False),
+            # First store exists only to be a target to trigger callbacks when the data is updated;
+            # actual value of its data is irrelevant.
             dcc.Store(id="simulation-pause-target", data=False),
             dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),

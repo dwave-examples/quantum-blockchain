@@ -28,7 +28,7 @@ simulation_parameter_fields = {
 }
 
 
-def generate_simulation_id(manager: TrialManager) -> str:
+def generate_simulation_id(**kwargs) -> str:
     """Creates an ID for a simulation in the form of a hexadecimal string. This ID will encode all the
     parameters necessary to replicate the simulation. Two simulations will have identical IDs if
     and only if they use all the same parameters. Every parameter besides 'solvers' contributes to
@@ -39,13 +39,18 @@ def generate_simulation_id(manager: TrialManager) -> str:
     otherwise. The digits for the 7 current solvers are then padded with an 8th digit (always 0),
     to enable the binary value to be converted smoothly into hexadecimal."""
 
+    if set(kwargs.keys()) != set(simulation_parameter_fields.keys()):
+        raise Exception(
+            "Can't generate simulation ID: missing or extra parameters. Required parameters \
+            are " + ", ".join(simulation_parameter_fields.keys())
+        )
+
     simulation_id = ""
 
     for param_name, length in simulation_parameter_fields.items():
-        param_val = getattr(manager, param_name)
+        param_val = kwargs[param_name]
         if param_name == "solvers":
-            manager_solver_names = {s.solver_name for s in param_val}
-            solver_bits = reversed([int(x.value in manager_solver_names) for x in SolverName])
+            solver_bits = reversed([int(x.value in param_val) for x in SolverName])
             param_val = sum([a * 2**idx for idx, a in enumerate(solver_bits)])
         else:
             if param_val > 16**length - 1:
@@ -56,6 +61,18 @@ def generate_simulation_id(manager: TrialManager) -> str:
         simulation_id += format(param_val, f"0{length}x")
 
     return simulation_id
+
+
+def recover_simulation_id(manager: TrialManager):
+    param_dict = {}
+    for param_name in simulation_parameter_fields.keys():
+        if param_name == "solvers":
+            param_val = [solver.solver_name for solver in manager.solvers]
+        else:
+            param_val = getattr(manager, param_name)
+        param_dict[param_name] = param_val
+
+    return generate_simulation_id(**param_dict)
 
 
 def get_simulation_params_from_id(simulation_id: str) -> dict:

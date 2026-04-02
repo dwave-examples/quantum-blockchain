@@ -29,13 +29,22 @@ import plotly.graph_objects as go
 from dash import ALL, MATCH, ctx, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
+import numpy as np
 
-from demo_configs import MIN_SIMULATION_LOOP_TIME
-from demo_interface import BUTTONS
+from demo_configs import (
+    MIN_SIMULATION_LOOP_TIME,
+    QUANTUM_HASH_LENGTH,
+    ALLOWABLE_ERR,
+    N_ZEROES,
+    REPLICATION_ID,
+    RANDOM_SEED,
+)
+from demo_interface import BUTTONS, QPU_SOLVER_OPTS, SIMULATED_SOLVER_OPTS
 from src.agents.trial_manager import TrialManager
 from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
 from src.protocols.simulation_identification import (
     generate_simulation_id,
+    recover_simulation_id,
     get_simulation_params_from_id,
     simulation_parameter_fields,
 )
@@ -43,7 +52,7 @@ from src.utilities.display_update import change_button_visibility, render_miner_
 from src.utilities.get_solvers import get_solver_lists
 from src.utilities.save_simulation_data import get_save_data_filename, save_simulation_data
 from src.utilities.spiral_plotter import SpiralPlotter
-from src.values import OUTPUTS_PATH
+from src.values import MAX_RNG_SEED_LEN, OUTPUTS_PATH
 
 graph_layout_dict = dict(
     autosize=False,
@@ -67,14 +76,8 @@ graph_layout_dict = dict(
     Output(BUTTONS["SAVE"].id, "children", allow_duplicate=True),
     Output(BUTTONS["SAVE"].id, "disabled", allow_duplicate=True),
     inputs=[
-        Input("simulation-start-target", "data"),
-        State("miner-slider", "value"),
-        State("blocks-input", "value"),
+        Input("simulation-save-filename", "data"),
         State("blockchain-structure-data", "data"),
-        State("qpu-solver-select", "value"),
-        State("simulated-solver-select", "value"),
-        State("solver-mode-select", "value"),
-        State("simulation-save-filename", "data"),
     ],
     progress=[
         Output("current-block-data", "data"),
@@ -88,14 +91,8 @@ graph_layout_dict = dict(
 )
 def simulation(
     set_progress_miner_table,  # set_progress function for 'progress' argument
-    start_simulation: bool,
-    num_miners: int,
-    num_blocks: int,
-    stored_blockchain_data: list,
-    qpu_solver_select_val: str,
-    simulated_solver_select_val: str,
-    solver_mode: str,
     save_filename: str,
+    stored_blockchain_data: list,
 ) -> tuple[list[dict], str, bool]:
     """Manages a single run of the blockchain simulation.
 
@@ -138,38 +135,18 @@ def simulation(
         save_button_text: changes text to "Save Data"
         save_button_disabled: enables the 'save' button"""
 
-    if ctx.triggered_id != "simulation-start-target":
+    if not save_filename:
         raise PreventUpdate
 
-    if save_filename:
-        simulation_id = save_filename[: sum(simulation_parameter_fields.values())]
-        manager = TrialManager(**get_simulation_params_from_id(simulation_id))
-        init_status = "Replicating"
-        if len(stored_blockchain_data) > 0:
-            manager.restart_simulation(stored_blockchain_data)
-            init_status = "Restarting"
+    simulation_id = save_filename[: sum(simulation_parameter_fields.values())]
+    manager = TrialManager(**get_simulation_params_from_id(simulation_id))
+    if len(stored_blockchain_data) > 0:
+        manager.restart_simulation(stored_blockchain_data)
+        print("Simulation Restarts")
     else:
-        solver_mode = SolverMode(int(solver_mode))
-        available_qpu_solvers, available_simulated_solvers = get_solver_lists()
-        mode_config = {
-            SolverMode.QPU: (int(qpu_solver_select_val), available_qpu_solvers),
-            SolverMode.SIMULATED: (int(simulated_solver_select_val), available_simulated_solvers),
-        }
-        dropdown_idx, solvers = mode_config[solver_mode]
-        if dropdown_idx >= 0:
-            solvers = [solvers[dropdown_idx]]
+        print("Simulation Begins")
 
-        manager = TrialManager(num_blocks, num_miners, solvers)
-        simulation_id = generate_simulation_id(manager)
-        save_filename = get_save_data_filename(simulation_id)
-        init_status = "Starting"
-
-    print(
-        f"{init_status} simulation with ID {simulation_id} with {manager.num_miners} miners and {manager.max_blocks} blocks."
-    )
-    set_props("simulation-save-filename", {"data": save_filename})
-
-    while manager.blocks_mined < num_blocks or manager.round_progress > 0:
+    while manager.blocks_mined < manager.max_blocks or manager.round_progress > 0:
         iter_start_time = time.time()
         miner_id = manager.single_step()
 
@@ -201,6 +178,8 @@ def simulation(
 
     set_props("blockchain-structure-data", {"data": manager.chain_data})
     time.sleep(0.3)  # ensure final data update is processed before Save Button is enabled
+
+    print("Simulation Ends")
 
     button_visibility = change_button_visibility(
         buttons_to_show=[InterfaceButton.RESET, InterfaceButton.SAVE],
@@ -271,34 +250,51 @@ def update_miner_display(
 class StartSimulationReturn(NamedTuple):
     """Return type for the ``run_simulation`` callback function."""
 
+    save_filename: str
     button_styles: list = change_button_visibility(
         buttons_to_show=[InterfaceButton.PAUSE], buttons_to_hide=[InterfaceButton.START]
     )
-    start_simulation: bool = True
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
     qpu_solver_select_disabled: bool = True
     simulated_solver_select_disabled: bool = True
+    solver_mode_select_disabled: bool = True
     simulation_is_active: bool = True
     graph_loading_display: str = "show"
 
 
 @dash.callback(
+    Output("simulation-save-filename", "data", allow_duplicate=True),
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
-    Output("simulation-start-target", "data", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
+    Output("solver-mode-select", "disabled", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     Output("graph-loading", "display", allow_duplicate=True),
     inputs=[
         Input(BUTTONS["START"].id, "n_clicks"),
         State("is-active-simulation", "data"),
+        State("miner-slider", "value"),
+        State("blocks-input", "value"),
+        State("solver-mode-select", "value"),
+        State("qpu-solver-select", "value"),
+        State("simulated-solver-select", "value"),
+        State("simulation-save-filename", "data"),
     ],
     prevent_initial_call=True,
 )
-def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimulationReturn:
+def start_simulation(
+    start_click: int,
+    simulation_is_active: bool,
+    miner_slider_val: int,
+    blocks_input_val: int,
+    solver_mode_val: int,
+    qpu_solver_select_val: int,
+    simulated_solver_select_val: int,
+    save_filename: str,
+) -> StartSimulationReturn:
     """Runs a simulation with the selected number of miners and blocks.
 
     Args:
@@ -306,10 +302,49 @@ def start_simulation(start_click: int, simulation_is_active: bool) -> StartSimul
         simulation_is_active: Returns 'True.' Flag to signal that one instance of
             'simulation' callback is already running, so another should not be started"""
 
-    if simulation_is_active:
-        raise PreventUpdate
+    # if simulation_is_active: TODO having this here causes the 'start' button to be less responsive. Sometimes the first few clicks
+    #  raise PreventUpdate   do nothing after resetting. Worth checking how useful the active-simulation flag still is: I suspect
+    # it may not be doing much.
 
-    return StartSimulationReturn()
+    if save_filename:
+        print(
+            f"Replicating Simulation with ID {save_filename[:sum(simulation_parameter_fields.values())]}."
+        )
+        return StartSimulationReturn(save_filename)
+
+    init_rng = np.random.default_rng(RANDOM_SEED)
+    manager_prng_seed = int(init_rng.integers(0, 16**MAX_RNG_SEED_LEN - 1))
+
+    solver_mode = SolverMode(int(solver_mode_val))
+    if solver_mode is SolverMode.QPU:
+        dropdown_idx = int(qpu_solver_select_val)
+        solver_opts = QPU_SOLVER_OPTS
+    else:
+        dropdown_idx = int(simulated_solver_select_val)
+        solver_opts = SIMULATED_SOLVER_OPTS
+
+    solver_lookup = {idx: solver_name for solver_name, idx in solver_opts.items()}
+    solver_selection = (
+        list(solver_opts.keys()) if dropdown_idx == -1 else [solver_lookup[dropdown_idx]]
+    )
+    params_dict = dict(
+        max_blocks=blocks_input_val,
+        num_miners=miner_slider_val,
+        solvers=solver_selection,
+        quantum_hash_length=QUANTUM_HASH_LENGTH,
+        n_zeroes=N_ZEROES,
+        allowable_err=ALLOWABLE_ERR,
+        prng_seed=manager_prng_seed,
+    )
+
+    simulation_id = generate_simulation_id(**params_dict)
+    save_filename = get_save_data_filename(simulation_id)
+
+    print(
+        f"Starting simulation with ID {simulation_id} with {miner_slider_val} miners and {blocks_input_val} blocks."
+    )
+
+    return StartSimulationReturn(save_filename)
 
 
 # ========================================================================================
@@ -351,6 +386,8 @@ def pause_simulation(pause_click: int):
         buttons_to_hide=[InterfaceButton.PAUSE],
     )
 
+    print("Simulation Paused")
+
     return visible_buttons, "Save Data", False, False, True
 
 
@@ -359,15 +396,16 @@ def pause_simulation(pause_click: int):
 
 @dash.callback(
     Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
-    Output("simulation-start-target", "data", allow_duplicate=True),
+    Output("simulation-save-filename", "data", allow_duplicate=True),
     Output("is-active-simulation", "data", allow_duplicate=True),
     inputs=[
         Input(BUTTONS["RESUME"].id, "n_clicks"),
         State("is-active-simulation", "data"),
+        State("simulation-save-filename", "data"),
     ],
     prevent_initial_call=True,
 )
-def resume_simulation(pause_click: int, simulation_is_active: bool):
+def resume_simulation(pause_click: int, simulation_is_active: bool, save_file: str):
     """Resumes a paused simulation. In practice, this means starting a new instance of the
     'simulation' callback, but without resetting the blockchain data. The simulation
     will then reconstruct its previous state and pick up where it left off.
@@ -394,7 +432,9 @@ def resume_simulation(pause_click: int, simulation_is_active: bool):
         buttons_to_hide=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
     )
 
-    return visible_buttons, True, True
+    print(f"Resuming simulation with ID {save_file[:sum(simulation_parameter_fields.values())]}.")
+
+    return visible_buttons, save_file, True
 
 
 # =========================================================================================
@@ -444,6 +484,7 @@ class ResetSimulationReturn(NamedTuple):
     blocks_input_disabled: bool = False
     qpu_solver_select_disabled: bool = False
     simulated_solver_select_disabled: bool = False
+    solver_mode_select_disabled: bool = False
     blockchain_data: list = []
     simulation_save_filename: str = ""
     graphs: list[go.Figure] = dash.no_update
@@ -460,6 +501,7 @@ class ResetSimulationReturn(NamedTuple):
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
+    Output("solver-mode-select", "disabled", allow_duplicate=True),
     Output("blockchain-structure-data", "data", allow_duplicate=True),
     Output("simulation-save-filename", "data", allow_duplicate=True),
     Output({"type": "view-graph", "index": ALL}, "figure"),
