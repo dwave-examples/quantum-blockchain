@@ -272,8 +272,8 @@ compressed into a single 22-digit hexadecimal number, allowing simulations to be
 repeated more easily. This number can be composed from the internal state of a TrialManager object
 by calling the `get_simulation_id()` function found in src/protocols/trial_identification.py, and 
 can be turned back into a complete dictionary of initialization parameters for TrialManager by 
-calling the `get_simulation_params_from_id()` function in the same file. The Simulation ID for any 
-simulation run will be printed to the console when the simulation starts and will also be used as
+calling the `get_simulation_params_from_id()` function in the same file. The Simulation ID, for any 
+simulation run, will be printed to the console when the simulation starts and will also be used as
 the first part of the file name if simulation data is saved. To repeat a previous simulation, copy
 the simulation ID from either of these places to the REPLICATION_ID field of 'demo_configs.py'. 
 This will replicate all the parameters of that simulation, locking the controls on those values

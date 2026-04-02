@@ -44,7 +44,7 @@ def change_button_visibility(
 
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
     """Renders the status of the miners in the current simulation. Miner names will be drawn from
-        the MINER_NAMES list in demo_configs.py. Miners will have a status of "Mined" or "Validate"
+        the MINER_NAMES list in demo_configs.py. Miners will have a status of "Mined" or "Validated"
         if they've started acting this round, and blank status otherwise.
 
     Args:

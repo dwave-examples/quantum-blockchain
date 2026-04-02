@@ -44,7 +44,7 @@ from demo_configs import (
 )
 from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
 from src.protocols.simulation_identification import get_simulation_params_from_id
-from src.utilities.get_solvers import SolverName, get_solver_lists
+from src.utilities.get_solvers import  get_solver_lists
 from src.utilities.save_simulation_data import get_save_data_filename
 
 THEME_COLOR = "#2d4376"
