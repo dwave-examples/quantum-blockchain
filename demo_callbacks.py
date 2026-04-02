@@ -26,7 +26,7 @@ from typing import NamedTuple
 
 import dash
 import plotly.graph_objects as go
-from dash import ALL, MATCH, ctx, set_props
+from dash import ALL, MATCH, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import numpy as np
@@ -36,7 +36,6 @@ from demo_configs import (
     QUANTUM_HASH_LENGTH,
     ALLOWABLE_ERR,
     N_ZEROES,
-    REPLICATION_ID,
     RANDOM_SEED,
 )
 from demo_interface import BUTTONS, QPU_SOLVER_OPTS, SIMULATED_SOLVER_OPTS
@@ -44,12 +43,10 @@ from src.agents.trial_manager import TrialManager
 from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
 from src.protocols.simulation_identification import (
     generate_simulation_id,
-    recover_simulation_id,
     get_simulation_params_from_id,
     simulation_parameter_fields,
 )
 from src.utilities.display_update import change_button_visibility, render_miner_status
-from src.utilities.get_solvers import get_solver_lists
 from src.utilities.save_simulation_data import get_save_data_filename, save_simulation_data
 from src.utilities.spiral_plotter import SpiralPlotter
 from src.values import MAX_RNG_SEED_LEN, OUTPUTS_PATH
@@ -413,7 +410,7 @@ def resume_simulation(pause_click: int, save_file: str):
         buttons_to_hide=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
     )
 
-    print(f"Resuming simulation with ID {save_file[:sum(simulation_parameter_fields.values())]}.")
+    print(f"Resuming simulation with ID {save_file[:sum(simulation_parameter_fields.values())]}")
 
     return visible_buttons, save_file
 
