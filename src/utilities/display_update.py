@@ -12,20 +12,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dash import html
+from dash import dash, html
 
 from demo_configs import MINER_NAMES
+from src.demo_enums import InterfaceButton
+
+
+def change_button_visibility(
+    buttons_to_show: list[InterfaceButton], buttons_to_hide: list[InterfaceButton]
+) -> list[dict]:
+    """Returns a list of style dicts to show or hide the given buttons. The order of the list
+        corresponds to the order of the InterfaceButton enum, so for example if buttons_to_show
+        is [InterfaceButton.PAUSE], the returned list will have a dict of {} at index 0 and
+        dash.no_update at all other indices.
+
+    Args:
+        buttons_to_show: List of buttons to show.
+        buttons_to_hide: List of buttons to hide.
+
+    Returns:
+        List of style dicts to show or hide the given buttons.
+    """
+    outputs = [dash.no_update] * len(InterfaceButton)
+    for button in buttons_to_show:
+        outputs[button.value] = {}
+    for button in buttons_to_hide:
+        outputs[button.value] = {"display": "none"}
+
+    return outputs
 
 
 def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=False) -> list:
-    """Renders the status of the miners in the current trial. Each miner will be named
-        "Miner n" where n is one more than their ID in TrialManager (because numbering
-        starting from Miner 0 is less aesthetic), and will have a status of "Mining, Mined,
-        Validating, Valid" if they've started acting this round, or "..." if not.
+    """Renders the status of the miners in the current simulation. Miner names will be drawn from
+        the MINER_NAMES list in demo_configs.py. Miners will have a status of "Mined" or "Validated"
+        if they've started acting this round, and blank status otherwise.
 
     Args:
-        block_number: The current block.
-        miner_status: The current statuses of all the miners.
+        current_block_data: The data for the current block, which includes the miner IDs, their scores,
+            and the solvers they used.
+        num_miners: The total number of miners in the simulation
         show_solvers: Whether to have a third column showing the solver used.
 
     Returns:

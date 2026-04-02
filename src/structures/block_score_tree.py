@@ -296,8 +296,8 @@ class BlockScoreTree:
         passing no value).
 
         Args:
-            better_branch (ScoreTreeBranch): the branch of the tree being promoted to the trunk
-                cutoff_hash (optional, str): the hash of the last block to be included in the
+            better_branch: the branch of the tree being promoted to the trunk
+            cutoff_hash: the hash of the last block to be included in the
                 promoted trunk. Used when it's necessary to only promote part of the trunk. The
                 block with the passed hash and every preceding block will be promoted. Later
                 blocks will be moved to a new branch which will extend from the new trunk tip."""
@@ -377,7 +377,7 @@ class BlockScoreTree:
             raise Exception(
                 f"When promoting branch {branch_to_promote.base.hash}, found missing \
                 hashes: {base_hashes - set(self.hash_to_branch_lookup.keys())} after the promotion."
-                )
+            )
 
         return base_branch
 
@@ -393,8 +393,8 @@ class BlockScoreTree:
         a sensible coloration.
 
         Args:
-            hashes_to_promote (list[str]): a list of block hashes indicating blocks whose
-                branches should be promoted to as low a depth as possible."""
+            hashes_to_promote: a list of block hashes indicating blocks whose branches should be
+                promoted to as low a depth as possible."""
         promoted_branch_tips = set()  # Promoting a branch will change its root but not its tip
         for mining_hash in hashes_to_promote:
             mining_branch = self.hash_to_branch_lookup[mining_hash]
@@ -413,8 +413,8 @@ class BlockScoreTree:
         will be updated.
 
         Args:
-            branch_to_truncate (ScoreTreeBranch): the branch to be altered
-            cut_idx (int): the index at which the branch is to be cut. The block at this index
+            branch_to_truncate: the branch to be altered
+            cut_idx: the index at which the branch is to be cut. The block at this index
                 and all blocks at higher indices will become part of a new branch, which is
                 linked as a child of the original branch."""
 
@@ -425,7 +425,7 @@ class BlockScoreTree:
             raise Exception(
                 f"When demoting branch {branch_to_truncate.base.hash}, found missing hashes:\
                  {demoted_hashes - set(self.hash_to_branch_lookup.keys())} after the demotion."
-                )
+            )
 
     def refactor_branches(self):
         """This function rearranges the branches of the tree to put branches with the highest
@@ -469,10 +469,10 @@ class BlockScoreTree:
         """Writes a string representation of the BlockScoreTree object to file.
 
         Args:
-            filename (str): name of the file to write
-            truncate (bool): whether to shorten to hashes in the string representations
-                            of the BlockNodes for easy human-readability or to leave them
-                            at full length for accuracy."""
+            filename: name of the file to write
+            truncate: whether to shorten to hashes in the string representations
+                      of the BlockNodes for easy human-readability or to leave them
+                      at full length for accuracy."""
 
         short_hash_len = self.short_hash_len
         if not truncate:

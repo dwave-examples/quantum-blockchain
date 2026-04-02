@@ -13,7 +13,10 @@
 # limitations under the License.
 
 from src.agents.trial_manager import TrialManager
-from src.protocols.trial_identification import generate_trial_id, get_trial_params_from_id
+from src.protocols.simulation_identification import (
+    get_simulation_params_from_id,
+    recover_simulation_id
+)
 from src.utilities.get_solvers import get_all_solvers
 
 miner_nums = [7, 4, 189, 27]
@@ -48,15 +51,15 @@ parameter_sets = [
 
 def test_manager_state_recovery():
     """This test checks that a TrialManager object's initialization state is being faithfully
-    captured by the generate_trial_id function and successfully reconstructed by the
-    get_trial_params_from_id function. It compares the parameters of the original TrialManager
+    captured by the generate_simulation_id function and successfully reconstructed by the
+    get_simulation_params_from_id function. It compares the parameters of the original TrialManager
     object to those of a new TrialManager object whose initialization parameters are recovered
-    from the Trial ID, and fails if any of those parameters differ."""
+    from the Simulation ID, and fails if any of those parameters differ."""
 
     for param_set in parameter_sets:
         orig_manager = TrialManager(*param_set)
-        manager_id = generate_trial_id(orig_manager)
-        recovered_manager = TrialManager(**get_trial_params_from_id(manager_id))
+        manager_id = recover_simulation_id(orig_manager)
+        recovered_manager = TrialManager(**get_simulation_params_from_id(manager_id))
         assert (
             orig_manager.num_miners == recovered_manager.num_miners
         ), f"Original manager and recovered manager had different num_miners, \
@@ -105,33 +108,37 @@ test_ids = [
 
 
 def test_id_recovery():
-    """This test checks to ensure that a TrialManager instantiated from a Trial ID via
-    get_trial_params_from_id will yield back an identical TrialID when passed into
-    get_trial_params_from_id. It also checks that an invalid solver configuration properly causes
-    get_trial_params_from_id to raise an Exception."""
+    """This test checks to ensure that a TrialManager instantiated from a Simulation ID via
+    get_simulation_params_from_id will yield back an identical Simulation ID when passed into
+    get_simulation_params_from_id. It also checks that an invalid solver configuration properly
+    causes get_simulation_params_from_id to raise an Exception."""
 
     for orig_id in test_ids:
-        if int(orig_id[6:8], 16) >= 128:  # Validation checks in get_trial_params_from_id should
-            error_params = ""  # Catch IDs above 127 (hex values over 7f), raising an Exception.
+        # Validation checks in get_simulation_params_from_id should
+        # Catch IDs above 127 (hex values over 7f), raising an Exception.
+        if int(orig_id[6:8], 16) >= 128:
+            error_params = ""
             try:
-                error_params = get_trial_params_from_id(orig_id)
+                error_params = get_simulation_params_from_id(orig_id)
                 raised_exception = False
             except:
                 raised_exception = True
 
-            assert raised_exception, f"Test passed trial ID {orig_id} with invalid solver code \
-                {orig_id[6:8]}:{int(orig_id[6:8], 16)}, yielding trial parameters {error_params}."
+            assert (
+                raised_exception
+            ), f"Test passed simulation ID {orig_id} with invalid solver code \
+                {orig_id[6:8]}:{int(orig_id[6:8], 16)}, yielding simulation parameters {error_params}."
 
         else:
             solvers_available = True
             try:
-                manager_params = get_trial_params_from_id(orig_id)
+                manager_params = get_simulation_params_from_id(orig_id)
             except:
                 print(f"Could not test ID {orig_id} due to missing solver")
                 solvers_available = False
             if solvers_available:
                 manager = TrialManager(**manager_params)
-                recovered_id = generate_trial_id(manager)
+                recovered_id = recover_simulation_id(manager)
                 assert (
                     orig_id == recovered_id
                 ), f"orig_id {orig_id} and recovered_id {recovered_id} differ"

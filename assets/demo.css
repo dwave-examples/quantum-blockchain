@@ -28,23 +28,24 @@ custom CSS can be added below.
     margin-top: 2.5rem;
 }
 
-#pause-button {
+.button {
     width: 100%;
 }
 
-#reset-button,
-#pause-button {
+.reset-button,
+.pause-button {
     background: radial-gradient(61.22% 95.86% at 26.96% 100%, var(--red-light) 0%, var(--red-dark) 100%);
     border: 1px solid rgb(245, 118, 119, 0.4);
 }
 
-#reset-button:hover,
-#pause-button:hover {
+.reset-button:hover,
+.pause-button:hover {
     background: radial-gradient(61.22% 95.86% at 26.96% 100%, var(--red-dark) 0%, var(--red-dark) 100%);
 }
 
 #reset-resume-buttons {
     display: flex;
+    margin-bottom: 0.5rem;
 }
 
 #reset-resume-buttons button {

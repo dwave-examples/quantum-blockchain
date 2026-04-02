@@ -23,9 +23,15 @@ DESCRIPTION = """\
 A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
 """
 
-# Setting an integer value for this allows for repeatability in all random aspects of the
-# simulation except those drawing on the QPU. See "Repeatability of Trials" in README for details.
+# Setting an integer value here allows for repeatability in all random aspects of the simulation
+#  except those drawing on the QPU. See "Repeatability of Simulations" in README for details.
 RANDOM_SEED = None
+
+# Default value is None. If you want to replicate a specific simulation, copy the simulation ID
+# from the output logs of that simulation and paste it here (inside quotation marks). If you
+# do this, the input options will be overridden by the values used in that simulation, and locked
+# to those values until the replication has been run, after which they will function normally.
+REPLICATION_ID = None
 
 INTRO_TEXT = 'Select a number of miners and blocks and press "Begin Simulation".'
 INTRO_SUBTEXT = "Results will display here while simulation is running."
@@ -90,7 +96,7 @@ NUM_BLOCKS = {"min": 5, "max": 600, "step": 1, "value": 20}
 # The number of miner views that will be selectable in the UI.
 # Recommended Value: 3
 # Minimum Supported Value: 0, Maximum Supported Value: 255
-# Values above the value of num_miners (in a given trial) have no effect.
+# Values above the value of num_miners (in a given simulation) have no effect.
 NUM_MINER_VIEWS = 3
 
 # Set to 'False' for testing code with the simulated solvers, which generate quantum hashes

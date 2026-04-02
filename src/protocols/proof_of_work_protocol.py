@@ -45,19 +45,19 @@ class ProofOfWorkProtocol:
         prng_seed: int | None = None,
     ):
         """Initializes a ProofOfWorkProtocol object. In the current implementation, TrialManager
-            initializes a single ProofOfWorkProtocol, which is shared by all miners in a trial.
+            initializes one ProofOfWorkProtocol, which is shared by all miners in a simulation.
 
         Args:
-            hash_solvers (list[HashSolver]): list of HashSolver objects that this object can use to
+            hash_solvers: list of HashSolver objects that this object can use to
                 call the .calculate_quantum_hash() method. If there is more than one solver on the
                 list, each mining or validation attempt will choose a solver to use at random.
-            quantum_hash_length (int): length of the quantum hash. In general, the longer this is
+            quantum_hash_length: length of the quantum hash. In general, the longer this is
                 the greater the chance that a mined block will fail validation due to measurement
                 error. But see 'allowable_err' below.
-            n_zeroes (int): the number of leading zeroes a block hash must have to be considered
+            n_zeroes: the number of leading zeroes a block hash must have to be considered
                 valid. Increasing this makes mining more difficult: miners must try more nonces
                 (and thus make more QPU calls) to find a valid block.
-            allowable_err (int): the error tolerance of validation. Increasing this means hashes
+            allowable_err: the error tolerance of validation. Increasing this means hashes
                 with more and larger error will still pass validation (but hashes with fewer
                 errors will still score higher)."""
 
@@ -101,7 +101,7 @@ class ProofOfWorkProtocol:
             with a very low score.
 
         Args:
-            block (Block): The Block object to be validated
+            block: The Block object to be validated
 
         Returns:
             valid: a bool indicating whether the block passed all classical validation checks and
@@ -135,7 +135,7 @@ class ProofOfWorkProtocol:
         sample time.
 
         Args:
-            block (Block): A block that is finalized except for the quantum hash, quantum signature
+            block: A block that is finalized except for the quantum hash, quantum signature
                 (if applicable) and the classical hash. This method will not alter the nonce value:
                 miners should do that on their own.
 
@@ -145,7 +145,7 @@ class ProofOfWorkProtocol:
             score: the score assessed for the block. This will be 0 if the block fails the N_zeroes
                 check, otherwise the miner will evaluate their own confidence in the block based
                 on their measurement data.
-            solver_name (str): the name of the solver used for this mining attempt"""
+            solver_name: the name of the solver used for this mining attempt"""
 
         new_quantum_hash, dot_vector = self.calculate_quantum_hash(block)
         block.set_quantum_hash(new_quantum_hash)
@@ -171,7 +171,7 @@ class ProofOfWorkProtocol:
         codebase.
 
         Args:
-            block (Block): the Block object to be scored
+            block: the Block object to be scored
 
         Returns:
             block_score: the score of the block assigned by the stored scoring function."""
@@ -203,24 +203,24 @@ class ProofOfWorkProtocol:
         allow for reasonable validation rates.
 
         Args:
-            valid_bits (np.ndarray): a vector of binary values representing which bits of the
+            valid_bits: a vector of binary values representing which bits of the
                 original hash appeared to be valid (i.e matched the validator's calculated hash).
                 Will hold 1 if the corresponding hash bit is valid, or a 0 otherwise.
-            allowable_err (int or float): the error tolerance of the scoring procedure. Roughly
+            allowable_err: the error tolerance of the scoring procedure. Roughly
                 speaking, increasing this by 1 compensates for one extra maximum-uncertainty bit
                 (i.e. a bit in which the confidence is 50%). A low value means only an extremely
                 high-confidence hash vector will earn a positive score. With a high value, a hash
                 vector with many highly-uncertain bits can still earn a positive score. However,
                 bit errors high-confidence bits will reduce the confidence by far more than 1, so
                 even a few serious errors can overwhelm this threshold even when set high.
-            dot_vector (np.ndarray): Vector that contains the dot products of the hash vector with
+            dot_vector: Vector that contains the dot products of the hash vector with
                 the normal vectors of hyperplanes chosen by the random projection operation. This
                 vector is used to calculate the bitwise confidence scores. If the value in some
                 coordinate is very far from the mean (W_0_ALPHA), it will have very high confidence
                 (close to 1). If it is near the mean, it will have low confidence (close to 0.5).
 
         Returns:
-            confidence_score (float): the validator's overall log confidence that the hash is correct to within
+            confidence_score: the validator's overall log confidence that the hash is correct to within
                 the error threshold defined by allowable_err"""
 
         min_confidence = MIN_SCORE
@@ -252,7 +252,7 @@ class ProofOfWorkProtocol:
             defined by self.quantum_hash_length (in turn determined by protocol settings)
 
         Args:
-            block (Block): the block whose quantum hash you wish to calculate.
+            block: the block whose quantum hash you wish to calculate.
 
         Returns:
             quantum_hash: a np vector whose values should be exclusively 0s and 1s, defining the

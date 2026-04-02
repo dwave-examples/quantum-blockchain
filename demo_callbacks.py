@@ -20,22 +20,36 @@
 
 from __future__ import annotations
 
+import os
 import time
 from typing import NamedTuple
 
 import dash
 import plotly.graph_objects as go
-from dash import ALL, MATCH, ctx, set_props
+from dash import ALL, MATCH, set_props
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
+import numpy as np
 
-from demo_configs import MIN_SIMULATION_LOOP_TIME
+from demo_configs import (
+    MIN_SIMULATION_LOOP_TIME,
+    QUANTUM_HASH_LENGTH,
+    ALLOWABLE_ERR,
+    N_ZEROES,
+    RANDOM_SEED,
+)
+from demo_interface import BUTTONS, QPU_SOLVER_OPTS, SIMULATED_SOLVER_OPTS
 from src.agents.trial_manager import TrialManager
-from src.demo_enums import SolverMode, ViewOpt
-from src.protocols.trial_identification import generate_trial_id
-from src.utilities.display_update import render_miner_status
-from src.utilities.get_solvers import get_solver_lists
+from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
+from src.protocols.simulation_identification import (
+    generate_simulation_id,
+    get_simulation_params_from_id,
+    simulation_parameter_fields,
+)
+from src.utilities.display_update import change_button_visibility, render_miner_status
+from src.utilities.save_simulation_data import get_save_data_filename, save_simulation_data
 from src.utilities.spiral_plotter import SpiralPlotter
+from src.values import MAX_RNG_SEED_LEN, OUTPUTS_PATH
 
 graph_layout_dict = dict(
     autosize=False,
@@ -55,47 +69,35 @@ graph_layout_dict = dict(
 
 
 @dash.callback(
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "children", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "disabled", allow_duplicate=True),
     inputs=[
-        Input("start-simulation", "data"),
-        State("miner-slider", "value"),
-        State("blocks-input", "value"),
+        Input("simulation-save-filename", "data"),
         State("blockchain-structure-data", "data"),
-        State("qpu-solver-select", "value"),
-        State("simulated-solver-select", "value"),
-        State("solver-mode-select", "value"),
     ],
     progress=[
         Output("current-block-data", "data"),
     ],
-    running=[
-        (Output("is-active-simulation", "data"), True, False),
-    ],
-    cancel=[Input("pause-button", "n_clicks")],
+    cancel=[Input("simulation-pause-target", "data")],
     prevent_initial_call=True,
     background=True,
 )
 def simulation(
     set_progress_miner_table,  # set_progress function for 'progress' argument
-    start_simulation: bool,
-    num_miners: int,
-    num_blocks: int,
+    save_filename: str,
     stored_blockchain_data: list,
-    qpu_solver_select_val: str,
-    simulated_solver_select_val: str,
-    solver_mode: str,
-) -> tuple[dict, dict]:
+) -> tuple[list[dict], str, bool]:
     """Manages a single run of the blockchain simulation.
 
     This callback is triggered (indirectly) by the "run" and "resume" buttons. When triggered
     by the "run" button, it will complete a full run of the blockchain simulation with the solver
     scheme and the numbers of blocks and miners each defined by their respective input fields. The
     execution of this function is internally divided up into 'rounds,' where one round covers a
-    single action (mining or validation) from each miner in the trial. Each action takes roughly
-    1 second, so a round will last for roughly as many seconds as there are miners. It will
-    run a number of rounds equal to the 'num_blocks' parameter. As this callback runs, it will
-    call the 'set_progress_miner_table' function to provide regular updates to the miner table
+    single action (mining or validation) from each miner in the simulation. Each action takes
+    roughly 1 second, so a round will last for roughly as many seconds as there are miners. It
+    will run a number of rounds equal to the 'num_blocks' parameter. As this callback runs, it
+    calls the 'set_progress_miner_table' function to provide regular updates to the miner table
     (approximately 1 per second). It will also use the 'set_props' function to keep the
     'blockchain-structure-data' dcc.Store up-to-date with the same frequency, and to update each of
     the graph views once per round.
@@ -103,52 +105,34 @@ def simulation(
     Args:
         set_progress_miner_table: the progress function for passing data out to update the miner
             status table
-        start_simulation: flag to signal that the 'run' button has been clicked. Passing it
-            this way (instead of the 'run' button itself being used as an input), allows certain
-            UI updates (such as disabling/hiding components) to be processed immediately on
-            clicking 'run', before the simulation starts
-        num_miners: value of the miner slider. Determines how many miners the simulation has.
-        num_blocks: the value of the blocks input. Determines how many blocks the simulation
-            will run for.
+        save_filename: Setting this triggers the callback to run. The filename also encodes the
+            parameters of the simulation, which will be parsed to determine solver, miner, blocks
+            and random seed settings for the simulation.
         stored_blockchain_data: The data structure storing the current blockchain data.
-            This will be empty when starting a new trial, but if the trial has been paused,
-            it will contain all the data about the blocks mined up to this point, allowing the
-            trial to be restarted from the same state.
-        solver_mode: Value of the solver selector. Outputs as a
-            string-typed integer value (e.g. "1", "2"), which can just be immediately typed back
-            to int and put into the AVAILABLE_SOLVERS constant to get the solver
-
+            This will be empty when starting a new simulation, but if the simulation has been
+            paused, it will contain all the data about the blocks mined up to this point, allowing
+            the simulation to be restarted from the same state.
 
     Returns:
         Most of the output of this function is passed by 'set_progress_miner_table' or with the
         'set_props' function, so the only actual return values simply toggle button visibility
 
-        reset-button: makes the 'reset' button visible
-        pause-button: hides the 'pause' button
-    """
+        button_visibility: makes the 'save', and 'reset' buttons visible and hides the 'pause' button.
+        save_button_text: changes text to "Save Data"
+        save_button_disabled: enables the 'save' button"""
 
-    if ctx.triggered_id != "start-simulation":
+    if not save_filename:
         raise PreventUpdate
 
-    solver_mode = SolverMode(int(solver_mode))
-    available_qpu_solvers, available_simulated_solvers = get_solver_lists()
-    mode_config = {
-        SolverMode.QPU: (int(qpu_solver_select_val), available_qpu_solvers),
-        SolverMode.SIMULATED: (int(simulated_solver_select_val), available_simulated_solvers),
-    }
-    dropdown_idx, solvers = mode_config[solver_mode]
-    if dropdown_idx >= 0:
-        solvers = [solvers[dropdown_idx]]
-
-    manager = TrialManager(num_blocks, num_miners, solvers)
-
-    print(f"Starting trial with ID {generate_trial_id(manager)}")
+    simulation_id = save_filename[: sum(simulation_parameter_fields.values())]
+    manager = TrialManager(**get_simulation_params_from_id(simulation_id))
     if len(stored_blockchain_data) > 0:
-        manager.restart_trial(stored_blockchain_data)
+        manager.restart_simulation(stored_blockchain_data)
+        print("Simulation Restarts")
+    else:
+        print("Simulation Begins")
 
-    global_fig = None
-
-    while manager.blocks_mined < num_blocks or manager.round_progress > 0:
+    while manager.blocks_mined < manager.max_blocks or manager.round_progress > 0:
         iter_start_time = time.time()
         miner_id = manager.single_step()
 
@@ -178,7 +162,16 @@ def simulation(
         if iter_total_time < MIN_SIMULATION_LOOP_TIME:
             time.sleep(MIN_SIMULATION_LOOP_TIME - iter_total_time)
 
-    return {}, {"display": "none"}
+    set_props("blockchain-structure-data", {"data": manager.chain_data})
+    time.sleep(0.3)  # ensure final data update is processed before Save Button is enabled
+
+    print("Simulation Ends")
+
+    button_visibility = change_button_visibility(
+        buttons_to_show=[InterfaceButton.RESET, InterfaceButton.SAVE],
+        buttons_to_hide=[InterfaceButton.PAUSE],
+    )
+    return button_visibility, "Save Data", False
 
 
 # ======================================================================================================
@@ -240,61 +233,119 @@ def update_miner_display(
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-class RunSimulationReturn(NamedTuple):
+class StartSimulationReturn(NamedTuple):
     """Return type for the ``run_simulation`` callback function."""
 
-    run_button_style: dict = {"display": "none"}
-    reset_button_style: dict = {"display": "none"}
-    pause_button_style: dict = {}
-    start_simulation: bool = True
+    save_filename: str
+    button_styles: list = change_button_visibility(
+        buttons_to_show=[InterfaceButton.PAUSE], buttons_to_hide=[InterfaceButton.START]
+    )
     miner_slider_disabled: bool = True
     blocks_input_disabled: bool = True
     qpu_solver_select_disabled: bool = True
     simulated_solver_select_disabled: bool = True
-    simulation_is_active: bool = True
+    solver_mode_select_disabled: bool = True
     graph_loading_display: str = "show"
 
 
 @dash.callback(
-    Output("run-button", "style", allow_duplicate=True),
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
-    Output("start-simulation", "data", allow_duplicate=True),
+    Output("simulation-save-filename", "data", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
-    Output("is-active-simulation", "data", allow_duplicate=True),
+    Output("solver-mode-select", "disabled", allow_duplicate=True),
     Output("graph-loading", "display", allow_duplicate=True),
     inputs=[
-        Input("run-button", "n_clicks"),
-        State("is-active-simulation", "data"),
+        Input(BUTTONS["START"].id, "n_clicks"),
+        State("miner-slider", "value"),
+        State("blocks-input", "value"),
+        State("solver-mode-select", "value"),
+        State("qpu-solver-select", "value"),
+        State("simulated-solver-select", "value"),
+        State("simulation-save-filename", "data"),
     ],
     prevent_initial_call=True,
 )
-def run_simulation(run_click: int, simulation_is_active: bool) -> RunSimulationReturn:
+def start_simulation(
+    start_click: int,
+    miner_slider_val: int,
+    blocks_input_val: int,
+    solver_mode_val: int,
+    qpu_solver_select_val: int,
+    simulated_solver_select_val: int,
+    save_filename: str,
+) -> StartSimulationReturn:
     """Runs a simulation with the selected number of miners and blocks.
 
     Args:
-        run_click: unused
-        simulation_is_active: Returns 'True.' Flag to signal that one instance of
-            'simulation' callback is already running, so another should not be started"""
-    if simulation_is_active:
-        raise PreventUpdate
+        start_click: unused
+        miner_slider_val: value of the miner slider. Sets the number of miners in the simulation.
+        blocks_input_val: value of the blocks input. Sets how many blocks the simulation will mine.
+        solver_mode_val: value of the solver mode select. Determines whether the simulation will
+            use the QPU solvers or the simulated solvers.
+        qpu_solver_select_val: value of the QPU solver select dropdown. Determines which QPU solver
+            will be used, if any.
+        simulated_solver_select_val: value of the simulated solver select dropdown. Determines
+            which simulated solver will be used, if any.
+        save_filename: The name of the file to save the blockchain data. Only relevant if the
+            REPLICATION_ID line in demo_configs is set to a specific simulation ID, in which
+            case that simulation ID will be extracted from the save_filename and used to
+            determine the parameters of the simulation.
+    """
 
-    return RunSimulationReturn()
+    if save_filename:
+        print(
+            f"Replicating Simulation with ID {save_filename[:sum(simulation_parameter_fields.values())]}."
+        )
+        return StartSimulationReturn(save_filename)
+
+    init_rng = np.random.default_rng(RANDOM_SEED)
+    manager_prng_seed = int(init_rng.integers(0, 16**MAX_RNG_SEED_LEN - 1))
+
+    solver_mode = SolverMode(int(solver_mode_val))
+    if solver_mode is SolverMode.QPU:
+        dropdown_idx = int(qpu_solver_select_val)
+        solver_opts = QPU_SOLVER_OPTS
+    else:
+        dropdown_idx = int(simulated_solver_select_val)
+        solver_opts = SIMULATED_SOLVER_OPTS
+
+    solver_lookup = {idx: solver_name for solver_name, idx in solver_opts.items()}
+    solver_selection = (
+        list(solver_opts.keys()) if dropdown_idx == -1 else [solver_lookup[dropdown_idx]]
+    )
+    params_dict = dict(
+        max_blocks=blocks_input_val,
+        num_miners=miner_slider_val,
+        solvers=solver_selection,
+        quantum_hash_length=QUANTUM_HASH_LENGTH,
+        n_zeroes=N_ZEROES,
+        allowable_err=ALLOWABLE_ERR,
+        prng_seed=manager_prng_seed,
+    )
+
+    simulation_id = generate_simulation_id(**params_dict)
+    save_filename = get_save_data_filename(simulation_id)
+
+    print(
+        f"Starting simulation with ID {simulation_id} with {miner_slider_val} miners and {blocks_input_val} blocks."
+    )
+
+    return StartSimulationReturn(save_filename)
 
 
 # ========================================================================================
 
 
 @dash.callback(
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("resume-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
-    Output("is-active-simulation", "data", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "children", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "disabled", allow_duplicate=True),
+    Output("simulation-pause-target", "data"),
     inputs=[
-        Input("pause-button", "n_clicks"),
+        Input(BUTTONS["PAUSE"].id, "n_clicks"),
     ],
     prevent_initial_call=True,
 )
@@ -309,55 +360,93 @@ def pause_simulation(pause_click: int):
             its value is irrelevant.
 
     Returns:
-        reset-button: makes visible
-        resume-button: makes visible
-        pause-button: hides
-        is-active-simulation: setting this to False allows the 'simulation' callback
-            to be restarted, either by the 'run' button or the 'resume' button.
-    """
+        button_visibility_change: makes the 'reset', 'resume', and 'save' buttons visible and
+            hides the 'pause' button.
+        save_button_text: changes text to "Save Data"
+        save_button_disabled: enables the 'save' button
+        simulation-pause-target: Altering this Store (even from True to True) triggers the
+            cancellation of the 'simulation' callback, effectively pausing the simulation."""
 
-    return {}, {}, {"display": "none"}, False
+    visible_buttons = change_button_visibility(
+        buttons_to_show=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
+        buttons_to_hide=[InterfaceButton.PAUSE],
+    )
+
+    print("Simulation Paused")
+
+    return visible_buttons, "Save Data", False, True
 
 
 # ========================================================================================
 
 
 @dash.callback(
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("resume-button", "style", allow_duplicate=True),
-    Output("pause-button", "style", allow_duplicate=True),
-    Output("start-simulation", "data", allow_duplicate=True),
-    Output("is-active-simulation", "data", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
+    Output("simulation-save-filename", "data", allow_duplicate=True),
     inputs=[
-        Input("resume-button", "n_clicks"),
-        State("is-active-simulation", "data"),
+        Input(BUTTONS["RESUME"].id, "n_clicks"),
+        State("simulation-save-filename", "data"),
     ],
     prevent_initial_call=True,
 )
-def resume_simulation(pause_click: int, simulation_is_active: bool):
+def resume_simulation(pause_click: int, save_file: str):
     """Resumes a paused simulation. In practice, this means starting a new instance of the
     'simulation' callback, but without resetting the blockchain data. The simulation
     will then reconstruct its previous state and pick up where it left off.
 
     Args:
         pause_click: Unused.
-        simulation_is_active: Returns 'True.' Flag to signal that one instance of
-            'simulation' callback is already running, so another should not be started
 
     Returns:
-        reset-button: hides
-        resume-button: hides
-        pause-button: makes visible
-        start-simulation: Altering this Store (even from True to True) triggers the
-            'simulation' callback, in this case resuming an in-progress simulation.
-        is-active-simulation: setting this to True allows the 'simulation' callback
-            to run, if it is not already.
+        button_visibility_change: makes the 'pause' button visible and hides the 'reset', 'resume',
+            and 'save' buttons.
+        simulation-save-filename: The name of the file to save the blockchain data. This callback
+            will merely return the same value already present in this store, but doing so will
+            trigger the 'simulation' callback to fire.
     """
 
-    if simulation_is_active:
-        raise PreventUpdate
+    visible_buttons = change_button_visibility(
+        buttons_to_show=[InterfaceButton.PAUSE],
+        buttons_to_hide=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
+    )
 
-    return {"display": "none"}, {"display": "none"}, {}, True, True
+    print(f"Resuming simulation with ID {save_file[:sum(simulation_parameter_fields.values())]}")
+
+    return visible_buttons, save_file
+
+
+# =========================================================================================
+
+
+@dash.callback(
+    Output(BUTTONS["SAVE"].id, "children", allow_duplicate=True),
+    Output(BUTTONS["SAVE"].id, "disabled", allow_duplicate=True),
+    inputs=[
+        Input(BUTTONS["SAVE"].id, "n_clicks"),
+        State("blockchain-structure-data", "data"),
+        State("simulation-save-filename", "data"),
+    ],
+    prevent_initial_call=True,
+)
+def save_data(n_clicks: int, blockchain_data: list, save_filename: str) -> tuple[str, bool]:
+    """Saves the current simulation data to a file when the 'save' button is clicked. Disables
+        the 'save' button (changing its text to "Data Saved") to avoid redundant writes.
+
+    Args:
+        n_clicks: number of clicks on the 'save' button. Trigger for the callback, value is
+            otherwise irrelevant.
+        blockchain_data: The data structure storing the current blockchain data.
+        save_filename: The name of the file to save the blockchain data to, including the .csv extension.
+
+    Returns:
+        save_button_text: changes text to "Data Saved"
+        save_button_disabled: disables the 'save' button to prevent redundant saves.
+    """
+
+    save_simulation_data(blockchain_data, save_filename)
+    print(f"Simulation data saved to {os.path.join(OUTPUTS_PATH, save_filename)}.")
+    # Change button text to indicate data has been saved and disable it to prevent multiple clicks
+    return "Data Saved", True
 
 
 # ========================================================================================
@@ -368,15 +457,18 @@ class ResetSimulationReturn(NamedTuple):
     loading_text_classname: str = "display-none"
     miner_graph_and_table_classname: str = "display-none"
     view_select_and_block_status_classname: str = "visibility-hidden"
-    run_button_style: dict = {}
-    reset_button_style: dict = {"display": "none"}
-    resume_button_style: dict = {"display": "none"}
+    button_styles: list[dict] = change_button_visibility(
+        buttons_to_show=[InterfaceButton.START],
+        buttons_to_hide=[InterfaceButton.RESET, InterfaceButton.RESUME, InterfaceButton.SAVE],
+    )
     prelim_text_classname: str = ""
     miner_slider_disabled: bool = False
     blocks_input_disabled: bool = False
     qpu_solver_select_disabled: bool = False
     simulated_solver_select_disabled: bool = False
+    solver_mode_select_disabled: bool = False
     blockchain_data: list = []
+    simulation_save_filename: str = ""
     graphs: list[go.Figure] = dash.no_update
 
 
@@ -385,18 +477,18 @@ class ResetSimulationReturn(NamedTuple):
     Output("loading-text", "className", allow_duplicate=True),
     Output("miner-graph-and-table", "className", allow_duplicate=True),
     Output("view-select-and-block-status", "className", allow_duplicate=True),
-    Output("run-button", "style", allow_duplicate=True),
-    Output("reset-button", "style", allow_duplicate=True),
-    Output("resume-button", "style", allow_duplicate=True),
+    Output({"type": "button", "index": ALL}, "style", allow_duplicate=True),
     Output("prelim-text", "className", allow_duplicate=True),
     Output("miner-slider", "disabled", allow_duplicate=True),
     Output("blocks-input", "disabled", allow_duplicate=True),
     Output("qpu-solver-select", "disabled", allow_duplicate=True),
     Output("simulated-solver-select", "disabled", allow_duplicate=True),
+    Output("solver-mode-select", "disabled", allow_duplicate=True),
     Output("blockchain-structure-data", "data", allow_duplicate=True),
+    Output("simulation-save-filename", "data", allow_duplicate=True),
     Output({"type": "view-graph", "index": ALL}, "figure"),
     inputs=[
-        Input("reset-button", "n_clicks"),
+        Input(BUTTONS["RESET"].id, "n_clicks"),
         State({"type": "view-graph", "index": ALL}, "figure"),
     ],
     prevent_initial_call=True,

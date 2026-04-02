@@ -85,8 +85,8 @@ class HashSolver(ABC):
             solver type, but input and return values should stay consistent.
 
         Args:
-            hash_length (int): length (in bits) of the hash to be calculated
-            rng_seed (int): For the case of sampling from QPUs the random seed
+            hash_length: length (in bits) of the hash to be calculated
+            rng_seed: For the case of sampling from QPUs the random seed
                 sets the unitary evolution parameters
                 (for quantum experiments) and random projections defining witnesses.
                 For the case of simulated sampling, it initiates the pseudorandom
@@ -136,12 +136,12 @@ class SimulatedHashSolver(HashSolver):
         """Initializes a simulated solver from a source file or by provision of numpy arrays.
 
         Args:
-            solver_name (str): Name of the solver being simulated. Each name serves to specify a
+            solver_name: Name of the solver being simulated. Each name serves to specify a
                 lookup file for loading witness statistics.
-            simulated_path (str): Path to the directory containing the witness data.
-            mean_witnesses (np.ndarray): A numpy array of expected witness values.
-            var_witnesses (np.ndarray): A numpy array of expected witness variances.
-            var_rescaling (float): Variance rescaling allows emulation of variable sampling error
+            simulated_path: Path to the directory containing the witness data.
+            mean_witnesses: A numpy array of expected witness values.
+            var_witnesses: A numpy array of expected witness variances.
+            var_rescaling_factor: Variance rescaling allows emulation of variable sampling error
                 (or high frequency control error). Resampled witnesses are distributed as
                 ~ N(mean, variance*variance_rescaling)). If fewer/more reads are to be simulated,
                 relative to the value used in data correction we can scale accordingly."""
@@ -171,14 +171,14 @@ class SimulatedHashSolver(HashSolver):
             Simulated files for the current solver to be in place in order to function.
 
         Args:
-            hash_length (int): length of the quantum hash to use, in bits
-            rng_seed (int): a seed to use to determine which witnesses to draw from
+            hash_length: length of the quantum hash to use, in bits
+            rng_seed: a seed to use to determine which witnesses to draw from
 
         Returns:
-            quantum_hash (str): the quantum hash formatted as a hexadecimal string. Note that
+            quantum_hash: the quantum hash formatted as a hexadecimal string. Note that
                 this means that the length will be 1/4 (rounded up) of the passed hash length
                 since a hex digit can store 4 binary digits.
-            dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence
+            dot_vector: vector of hyperplane distances. Used in calculating confidence
                 scores."""
 
         prng_header = np.random.default_rng(rng_seed)
@@ -223,17 +223,17 @@ class QuantumHashSolver(HashSolver):
             to the indicated D-Wave Solver as long as this object in instantiated.
 
         Args:
-            solver_name (str): The name of the QPU solver
-            profile (str): client profile
-            num_reads (int): number of QPU reads per hash calculation
-            reference_annealing_time (float): targeted evolution time with respect to
+            solver_name: The name of the QPU solver
+            profile: client profile
+            num_reads: number of QPU reads per hash calculation
+            reference_annealing_time: targeted evolution time with respect to
                 Advantage2_prototype2 schedule.
-            energy_time_rescaling (tuple[float, float]): problem Hamiltonian and time rescaling
+            energy_time_rescaling: problem Hamiltonian and time rescaling
                 factors required to emulate Advantage2_prototype2 dynamics with the given solver.
-            embedding_directory (str): Location of embeddings
-            sampler_kwargs (dict): Arguments for the dimod sampler, defaulted to QPU fast annealing
+            embedding_directory: Location of embeddings
+            sampler_kwargs: Arguments for the dimod sampler, defaulted to QPU fast annealing
                 arguments when not specified. Non defaulted arguments are used for testing.
-            sampler (`dimod.Sampler`): when not specified the solver name and profile is used to
+            sampler: when not specified the solver name and profile is used to
                 select a QPU with the Leap client, and a suitable embedding is loaded. Non-QPU
                 samplers are used for testing."""
 
@@ -276,15 +276,15 @@ class QuantumHashSolver(HashSolver):
         """Implementation of quantum hash calculation for QPU samplers
 
         Args:
-            hash_length (int): length of the quantum hash to use, in bits
-            rng_seed (int): a seed to use to determine parameters of the quantum experiment
+            hash_length: length of the quantum hash to use, in bits
+            rng_seed: a seed to use to determine parameters of the quantum experiment
 
         Returns:
-            quantum_hash (str): the quantum hash formatted as a hexadecimal string. Note that
+            quantum_hash: the quantum hash formatted as a hexadecimal string. Note that
                 this means that the length will be 1/4 (rounded up) of the passed hash length
                 since a hex digit can store 4 binary digits.
-            dot_vector (np.ndarray): vector of hyperplane distances. Used in calculating confidence
-            sample_time (float): time spent sampling the D-Wave solver"""
+            dot_vector: vector of hyperplane distances. Used in calculating confidence
+            sample_time: time spent sampling the D-Wave solver"""
 
         h, J = quantum_cubic_utils.create_model(
             seed=rng_seed, problem_energy_scale=self.problem_energy_scale
