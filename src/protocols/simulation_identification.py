@@ -68,7 +68,7 @@ def recover_simulation_id(manager: TrialManager):
     parameters from the object and passing them to generate_simulation_id.
     
     Args:
-        manager: An intantiated TrialManager object, whose parameters will be extracted and encoded 
+        manager: An instantiated TrialManager object, whose parameters will be extracted and encoded 
             into a simulation ID."""
     
     param_dict = {}
