@@ -44,7 +44,7 @@ from demo_configs import (
 )
 from src.demo_enums import InterfaceButton, SolverMode, ViewOpt
 from src.protocols.simulation_identification import get_simulation_params_from_id
-from src.utilities.get_solvers import  get_solver_lists
+from src.utilities.get_solvers import get_solver_lists
 from src.utilities.save_simulation_data import get_save_data_filename
 
 THEME_COLOR = "#2d4376"
@@ -101,7 +101,7 @@ def slider(label: str, id: str, config: dict) -> html.Div:
 
 
 def dropdown(
-    label: str, id: str, options: list, value: str = "", disabled: bool = False
+    label: str, id: str, options: list, value: str | None = None, disabled: bool = False
 ) -> html.Div:
     """Dropdown element for option selection.
 
@@ -323,7 +323,6 @@ def create_interface():
             # First store exists only to be a target to trigger callbacks when the data is updated;
             # actual value of its data is irrelevant.
             dcc.Store(id="simulation-pause-target", data=False),
-            dcc.Store(id="is-active-simulation", data=False),
             dcc.Store(id="current-block-data", data=""),
             dcc.Store(id="blockchain-structure-data", data=[]),
             dcc.Store(id="miner-status-data", data=[]),

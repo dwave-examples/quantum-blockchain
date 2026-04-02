@@ -64,6 +64,13 @@ def generate_simulation_id(**kwargs) -> str:
 
 
 def recover_simulation_id(manager: TrialManager):
+    """ Recovers simulation ID from a TrialManager object by extracting the relevant initialization
+    parameters from the object and passing them to generate_simulation_id.
+    
+    Args:
+        manager: An intantiated TrialManager object, whose parameters will be extracted and encoded 
+            into a simulation ID."""
+    
     param_dict = {}
     for param_name in simulation_parameter_fields.keys():
         if param_name == "solvers":

@@ -14,8 +14,8 @@
 
 from src.agents.trial_manager import TrialManager
 from src.protocols.simulation_identification import (
-    generate_simulation_id,
     get_simulation_params_from_id,
+    recover_simulation_id
 )
 from src.utilities.get_solvers import get_all_solvers
 
@@ -58,7 +58,7 @@ def test_manager_state_recovery():
 
     for param_set in parameter_sets:
         orig_manager = TrialManager(*param_set)
-        manager_id = generate_simulation_id(orig_manager)
+        manager_id = recover_simulation_id(orig_manager)
         recovered_manager = TrialManager(**get_simulation_params_from_id(manager_id))
         assert (
             orig_manager.num_miners == recovered_manager.num_miners
@@ -117,7 +117,7 @@ def test_id_recovery():
         # Validation checks in get_simulation_params_from_id should
         # Catch IDs above 127 (hex values over 7f), raising an Exception.
         if int(orig_id[6:8], 16) >= 128:
-error_params = ""
+            error_params = ""
             try:
                 error_params = get_simulation_params_from_id(orig_id)
                 raised_exception = False
@@ -138,7 +138,7 @@ error_params = ""
                 solvers_available = False
             if solvers_available:
                 manager = TrialManager(**manager_params)
-                recovered_id = generate_simulation_id(manager)
+                recovered_id = recover_simulation_id(manager)
                 assert (
                     orig_id == recovered_id
                 ), f"orig_id {orig_id} and recovered_id {recovered_id} differ"
