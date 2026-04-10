@@ -20,7 +20,7 @@ THUMBNAIL = "static/dwave_logo.svg"
 APP_TITLE = "Quantum Blockchain"
 MAIN_HEADER = "Quantum Blockchain"
 DESCRIPTION = """\
-A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units
+A Proof of Quantum Work blockchain run on D-Wave Quantum Processing Units.
 """
 
 # Setting an integer value here allows for repeatability in all random aspects of the simulation

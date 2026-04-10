@@ -393,7 +393,7 @@ def generate_default_sampler(
     )
     if len(embeddings) == 0:
         raise Exception(
-            f"Embeddings not found at {embedding_directory}"
+            f"Embeddings not found at {embedding_directory} "
             "Use get_qpu_embeddings to generate embeddings/"
         )
     if automorphism_per_component:

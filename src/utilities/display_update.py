@@ -69,11 +69,9 @@ def render_miner_status(current_block_data: dict, num_miners: int, show_solvers=
 
     for miner_id, solver in current_block_data["solvers"].items():
         if "simulated_" in solver:
-            solver_str = solver.replace("simulated_", "")
-        else:
-            solver_substrings = solver.split("_system")
-            solver_str = f"{solver_substrings[0]} {solver_substrings[1]}"
-        miner_status_dict[miner_id][1] = solver_str
+            solver = solver.replace("simulated_", "")
+
+        miner_status_dict[miner_id][1] = solver
 
     table_head = html.Thead(
         html.Tr(

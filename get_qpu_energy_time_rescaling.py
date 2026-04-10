@@ -250,7 +250,7 @@ def main(
     if verbose:
         print(f"Solving for chip_id {qpu.properties['chip_id']}\n")
         print(
-            "A Kibble-Zurek model model provides a good description of the ensemble-average "
+            "A Kibble-Zurek model provides a good description of the ensemble-average "
             "expected energy for all Advantage and Advantage2 processors given a suitable "
             "selection of the device and ensemble specific parameters. "
             "<Hp> = E_0 + E_1 (t_a/t_0)^{-kappa_t} (J/R_0)^{-kappa_R}. "
