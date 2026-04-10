@@ -61,7 +61,7 @@ class SolverName(Enum):
     update src/protocols/trial_identification to allow for more solver to fit in the ID scheme.
     """
 
-    SOLVER1 = "Advantage2_system1.13"
+    SOLVER1 = "Advantage2_system1"
     SOLVER2 = "Advantage_system4.1"
     SOLVER3 = "Advantage_system6.4"
 
