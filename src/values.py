@@ -35,7 +35,7 @@ MIN_SCORE = -(2**14)
 DEFAULT_ANNEALING_TIME = 0.005
 DEFAULT_CUBIC_LATTICE_SHAPE = (4, 4, 4)  # Default dimensions of dimerized cubic lattice.
 DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
-# Energy time rescalings required to emulate Advantage2_system2.6 at
+# Energy time rescalings required to emulate Advantage2_system2 at
 # full problem energy scale. For systems of lower energy scale,
 # anneals must be run for longer, for systems of higher energy scale, the
 # problem Hamiltonian (energy) scale is reduced. See also the README Per-QPU Calibration.
