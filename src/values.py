@@ -40,7 +40,7 @@ DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
 # anneals must be run for longer, for systems of higher energy scale, the
 # problem Hamiltonian (energy) scale is reduced. See also the README Per-QPU Calibration.
 DEFAULT_ENERGY_TIME_RESCALING = {
-    "Advantage_system4.1": (1.0, 0.535),
+    "Advantage_system4": (1.0, 0.535),
     "Advantage_system6.4": (1.0, 0.488),
     "Advantage2_system1": (1.34, 1.0),
 }
@@ -55,7 +55,7 @@ DEFAULT_NUM_READS = 600  # NB - Smaller than arXiv:2503.14462.
 MAX_INITIAL_NONCE = 2**31
 MAX_RNG_SEED_LEN = 6
 
-# Value used for Advantage_system4.1 in arXiv:2503.14462. Num reads was fixed to use 1 second of QPU
+# Value used for Advantage_system4 in arXiv:2503.14462. Num reads was fixed to use 1 second of QPU
 # access time (maximum for single-programming). For the simulated data, this is the relevant value.
 SIMULATED_DATA_NUM_READS = 3860
 
