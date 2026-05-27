@@ -41,7 +41,7 @@ DEFAULT_CUBIC_BOUNDARY_CONDITIONS = (False, False, True)  # Open, Open, Periodic
 # problem Hamiltonian (energy) scale is reduced. See also the README Per-QPU Calibration.
 DEFAULT_ENERGY_TIME_RESCALING = {
     "Advantage_system4": (1.0, 0.535),
-    "Advantage_system6.4": (1.0, 0.488),
+    "Advantage_system6": (1.0, 0.488),
     "Advantage2_system1": (1.34, 1.0),
 }
 # ===================================================================================
