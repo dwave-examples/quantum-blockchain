@@ -25,7 +25,7 @@ from itertools import product
 
 import dimod
 import dwave
-import dwave_networkx as dnx
+import dwave.graphs as dwave_graphs
 import networkx as nx
 import numpy as np
 from dwave.experimental.automorphism import (
@@ -326,17 +326,17 @@ def target_dimer_orientation(qpu: DWaveSampler) -> dict:
     """
 
     if qpu.properties["topology"]["type"] == "zephyr":
-        to_coordinates = dnx.zephyr_coordinates(
+        to_coordinates = dwave_graphs.zephyr_coordinates(
             *qpu.properties["topology"]["shape"]
         ).linear_to_zephyr
         dim_orientation = 0
     elif qpu.properties["topology"]["type"] == "pegasus":
-        to_coordinates = dnx.pegasus_coordinates(
+        to_coordinates = dwave_graphs.pegasus_coordinates(
             *qpu.properties["topology"]["shape"]
         ).linear_to_pegasus
         dim_orientation = 0
     elif qpu.properties["topology"]["type"] == "chimera":
-        to_coordinates = dnx.chimera_coordinates(
+        to_coordinates = dwave_graphs.chimera_coordinates(
             *qpu.properties["topology"]["shape"]
         ).linear_to_chimera
         dim_orientation = 2
