@@ -1,6 +1,6 @@
 dash[diskcache]~=4.0
 dash-mantine-components~=2.3
-dwave-ocean-sdk~=9.3
+dwave-ocean-sdk~=9.4
 dwave-experimental==2026.2.13
 numpy<2.4  # Pending bugfix for dwave-samplers
 pytest~=9.0
