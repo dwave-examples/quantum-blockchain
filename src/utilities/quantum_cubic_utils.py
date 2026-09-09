@@ -25,12 +25,12 @@ from itertools import product
 
 import dimod
 import dwave
-import dwave_networkx as dnx
 import networkx as nx
 import numpy as np
 from dwave.experimental.automorphism import (
     AutomorphismComposite,
 )  # Module location within dwave-ocean-sdk could be subject to change.
+from dwave.graphs import chimera_coordinates, pegasus_coordinates, zephyr_coordinates
 from dwave.preprocessing.composites import SpinReversalTransformComposite
 from dwave.system import DWaveSampler
 from dwave.system.composites import ParallelEmbeddingComposite
@@ -326,17 +326,17 @@ def target_dimer_orientation(qpu: DWaveSampler) -> dict:
     """
 
     if qpu.properties["topology"]["type"] == "zephyr":
-        to_coordinates = dnx.zephyr_coordinates(
+        to_coordinates = zephyr_coordinates(
             *qpu.properties["topology"]["shape"]
         ).linear_to_zephyr
         dim_orientation = 0
     elif qpu.properties["topology"]["type"] == "pegasus":
-        to_coordinates = dnx.pegasus_coordinates(
+        to_coordinates = pegasus_coordinates(
             *qpu.properties["topology"]["shape"]
         ).linear_to_pegasus
         dim_orientation = 0
     elif qpu.properties["topology"]["type"] == "chimera":
-        to_coordinates = dnx.chimera_coordinates(
+        to_coordinates = chimera_coordinates(
             *qpu.properties["topology"]["shape"]
         ).linear_to_chimera
         dim_orientation = 2
