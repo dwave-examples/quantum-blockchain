@@ -36,8 +36,8 @@ def generate_simulation_id(**kwargs) -> str:
     set number of digits (defined in 'simulation_parameter_fields' above). Being non-numerical,
     the solver configuration must instead be encoded into an 8-digit binary number. Each solver is
     represented by a single digit, which is 1 if that solver is present in that configuration and 0
-    otherwise. The digits for the 7 current solvers are then padded with an 8th digit (always 0),
-    to enable the binary value to be converted smoothly into hexadecimal."""
+    otherwise. The digits for the 6 current solvers are then padded with leading digits (always 0)
+    to a total of 8, to enable the binary value to be converted smoothly into hexadecimal."""
 
     if set(kwargs.keys()) != set(simulation_parameter_fields.keys()):
         raise Exception(
